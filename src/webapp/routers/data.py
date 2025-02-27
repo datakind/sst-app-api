@@ -848,7 +848,6 @@ def download_url_inst_file(
                     FileTable.name == file_name,
                     FileTable.inst_id == str_to_uuid(inst_id),
                     FileTable.sst_generated,
-                    not FileTable.deleted,
                 )
             )
         )
@@ -865,7 +864,11 @@ def download_url_inst_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="File duplicates found.",
         )
-    res = query_result[0][0]
+    if query_result[0][0].deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File has been deleted.",
+        )
     return storage_control.generate_download_signed_url(
         get_external_bucket_name(inst_id), file_name
     )
