@@ -28,7 +28,7 @@ poetry install --no-interaction
 As many other open source projects, we use the famous [gitflow](https://nvie.com/posts/a-successful-git-branching-model/) to manage our branches.
 
 Summary of our git branching model:
-- Get all the latest work from the upstream `datakind/Student-Success-Tool` repository
+- Get all the latest work from the upstream `datakind/sst-app-api` repository
   (`git checkout main`)
 - Create a new branch off with a descriptive name (for example:
   `feature/new-test-macro`, `bugfix/bug-when-uploading-results`). You can

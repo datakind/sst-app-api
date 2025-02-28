@@ -22,7 +22,7 @@ Enter into the root directory of the repo.
 1. `uv sync --all-extras --dev`
 1. `coverage run -m pytest  -v -s ./src/webapp/`
 
-For all of the following, be in the repo root folder (`student-success-tool/`).
+For all of the following, be in the repo root folder (`sst-app-api/`).
 
 Spin up the app locally:
 

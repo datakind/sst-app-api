@@ -35,7 +35,7 @@ The workspace URL will look like `https://<some_id>.gcp.databricks.com`
 
 1. `databricks auth login --host <workspace_url>`
 
-For all of the following, be in the repo root folder (`student-success-tool/`).
+For all of the following, be in the repo root folder (`sst-app-api/`).
 
 Spin up the app locally:
 

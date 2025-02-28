@@ -7,7 +7,7 @@ resource "google_project_service" "services" {
 
 resource "google_artifact_registry_repository" "student_success_tool" {
   location               = var.region
-  repository_id          = "student-success-tool"
+  repository_id          = "sst-app-api"
   format                 = "DOCKER"
   cleanup_policy_dry_run = false
   cleanup_policies {
@@ -69,7 +69,7 @@ resource "google_cloudbuild_trigger" "python_apps" {
     for_each = var.environment == "dev" ? [1] : []
     content {
       owner = "datakind"
-      name  = "student-success-tool"
+      name  = "sst-app-api"
       push {
         branch = "develop"
       }
@@ -91,19 +91,19 @@ resource "google_cloudbuild_trigger" "python_apps" {
         "-f",
         "src/${each.key}/Dockerfile",
         "-t",
-        "${var.region}-docker.pkg.dev/${var.project}/student-success-tool/${each.key}:$COMMIT_SHA",
+        "${var.region}-docker.pkg.dev/${var.project}/sst-app-api/${each.key}:$COMMIT_SHA",
         "-t",
-        "${var.region}-docker.pkg.dev/${var.project}/student-success-tool/${each.key}:latest",
+        "${var.region}-docker.pkg.dev/${var.project}/sst-app-api/${each.key}:latest",
         "."
       ]
     }
     step {
       name = "gcr.io/cloud-builders/docker"
-      args = ["push", "${var.region}-docker.pkg.dev/${var.project}/student-success-tool/${each.key}:$COMMIT_SHA"]
+      args = ["push", "${var.region}-docker.pkg.dev/${var.project}/sst-app-api/${each.key}:$COMMIT_SHA"]
     }
     step {
       name = "gcr.io/cloud-builders/docker"
-      args = ["push", "${var.region}-docker.pkg.dev/${var.project}/student-success-tool/${each.key}:latest"]
+      args = ["push", "${var.region}-docker.pkg.dev/${var.project}/sst-app-api/${each.key}:latest"]
     }
     step {
       name = "gcr.io/cloud-builders/gcloud"
@@ -112,7 +112,7 @@ resource "google_cloudbuild_trigger" "python_apps" {
         "deploy",
         "${var.environment}-${each.key}",
         "--image",
-        "${var.region}-docker.pkg.dev/${var.project}/student-success-tool/${each.key}:$COMMIT_SHA",
+        "${var.region}-docker.pkg.dev/${var.project}/sst-app-api/${each.key}:$COMMIT_SHA",
         "--region",
         "${var.region}",
       ]

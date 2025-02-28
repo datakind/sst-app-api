@@ -3564,7 +3564,7 @@ wheels = [
 ]
 
 [[package]]
-name = "student-success-tool"
+name = "sst-app-api"
 version = "0.2.0.dev0"
 source = { editable = "." }
 dependencies = [
