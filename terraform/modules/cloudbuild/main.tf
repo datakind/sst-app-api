@@ -71,14 +71,14 @@ resource "google_cloudbuild_trigger" "python_apps" {
       owner = "datakind"
       name  = "student-success-tool"
       push {
-        branch = "fellows-experimental"
+        branch = "develop"
       }
     }
   }
   dynamic "source_to_build" {
     for_each = var.environment != "dev" ? [1] : []
     content {
-      ref       = "refs/heads/fellows-experimental"
+      ref       = "refs/heads/develop"
       repo_type = "GITHUB"
       uri       = "https://github.com/datakind/sst-app-api"
     }
@@ -237,7 +237,7 @@ resource "google_cloudbuild_trigger" "terraform" {
   description     = "Trigger for running Terraform apply"
   service_account = var.terraform_service_account_id
   source_to_build {
-    ref       = "refs/heads/fellows-experimental"
+    ref       = "refs/heads/develop"
     repo_type = "GITHUB"
     uri       = "https://github.com/datakind/sst-app-api"
   }

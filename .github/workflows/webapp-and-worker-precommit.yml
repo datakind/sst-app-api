@@ -1,10 +1,10 @@
-# precommit actions for fellows-experimental branch.
+# precommit actions for develop branch.
 name: test
 
 on:
   push:
     branches:
-      - 'fellows-experimental' # TODO: update branch name to dev
+      - 'develop' # TODO: update branch name to dev
 
 jobs:
   test:
