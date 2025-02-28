@@ -10,8 +10,8 @@ To get an overview of the project, please read the [README](README.md) and our [
 ## Getting started
 ### Creating Issues
 
-If you spot a problem, [search if an issue already exists](https://github.com/datakind/Student-Success-Tool/issues). If a related issue doesn't exist,
-you can open a new issue using a relevant [issue form](https://github.com/datakind/Student-Success-Tool/issues/new).
+If you spot a problem, [search if an issue already exists](https://github.com/datakind/sst-app-api/issues). If a related issue doesn't exist,
+you can open a new issue using a relevant [issue form](https://github.com/datakind/sst-app-api/issues/new).
 
 As a general rule, we don’t assign issues to anyone. If you find an issue to work on, you are welcome to open a PR with a fix.
 
@@ -107,7 +107,7 @@ You can type `pytest` to run your tests, no matter which type of test it is.
 
 ## Continuous Integration
 
-We use [GitHub Actions](https://github.com/datakind/Data-Observation-Toolkit/actions)
+We use [GitHub Actions](https://github.com/datakind/sst-app-api/actions)
 for continuous integration.
 See [here](https://docs.github.com/en/actions) for GitHub's documentation.
 

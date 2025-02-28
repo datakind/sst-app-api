@@ -8,4 +8,4 @@ If we verify a reported security vulnerability, our policy is:
 
 ## Reporting a Security Issue
 
-To report any security issues, please [raise an issue](https://github.com/datakind/Data-Observation-Toolkit/issues/new/choose) and select **Security issue*
+To report any security issues, please [raise an issue](https://github.com/datakind/sst-app-api/issues/new/choose) and select **Security issue*

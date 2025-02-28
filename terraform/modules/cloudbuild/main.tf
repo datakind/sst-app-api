@@ -80,7 +80,7 @@ resource "google_cloudbuild_trigger" "python_apps" {
     content {
       ref       = "refs/heads/fellows-experimental"
       repo_type = "GITHUB"
-      uri       = "https://github.com/datakind/student-success-tool"
+      uri       = "https://github.com/datakind/sst-app-api"
     }
   }
   build {
@@ -239,7 +239,7 @@ resource "google_cloudbuild_trigger" "terraform" {
   source_to_build {
     ref       = "refs/heads/fellows-experimental"
     repo_type = "GITHUB"
-    uri       = "https://github.com/datakind/student-success-tool"
+    uri       = "https://github.com/datakind/sst-app-api"
   }
   build {
     step {
