@@ -4,9 +4,7 @@
 import datetime
 from pydantic import BaseModel
 
-from google.cloud import storage, storage_control_v2
-from google.cloud.storage import Client
-from google.cloud.storage_control_v2 import StorageControlClient
+from google.cloud import storage
 from typing import Any
 from .config import gcs_vars, databricks_vars
 from .validation import validate_file_reader, SchemaType

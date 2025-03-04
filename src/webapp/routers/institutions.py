@@ -10,8 +10,6 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 from sqlalchemy import and_, delete
-from google.cloud import storage
-from google.cloud.storage import Client
 
 from ..utilities import (
     has_access_to_inst_or_err,
