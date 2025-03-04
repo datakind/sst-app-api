@@ -1,5 +1,5 @@
 [project]
-name = "sst-app-api"
+name = "src"
 version = "0.2.0.dev"
 description = "School-agnostic lib for implementing Student Success Tool workflows."
 readme = "README.md"
