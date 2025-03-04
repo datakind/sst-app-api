@@ -13,9 +13,6 @@ dependencies = [
     "paramiko>=3.5.0",
     "cloud-sql-python-connector[pymysql]>=1.14.0",
     "sqlalchemy>=2.0.36",
-    "pytest>=8.3.3",
-    "pylint>=3.3.2",
-    "coverage>=7.6.9",
     "pyjwt>=2.10.1",
     "passlib>=1.7.4",
     "bcrypt>=4.2.0",
@@ -31,9 +28,11 @@ Repository = "https://github.com/datakind/sst-app-api"
 
 [dependency-groups]
 dev = [
+    "coverage>=7.6.9",
     "ipykernel~=6.29",
     "jupyterlab~=4.2",
     "mypy~=1.11",
+    "pylint>=3.3.2",
     "pytest~=8.3",
     "ruff~=0.8",
 ]
