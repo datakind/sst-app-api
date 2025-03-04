@@ -243,8 +243,8 @@ class AccountHistoryTable(Base):
 association_table = Table(
     "file_batch_association_table",
     Base.metadata,
-    Column("file_val", Uuid(as_uuid=True), ForeignKey("file.id"), primary_key=True),
-    Column("batch_val", Uuid(as_uuid=True), ForeignKey("batch.id"), primary_key=True),
+    Column("file_val", Uuid(as_uuid=True), ForeignKey("file.id", ondelete="CASCADE"), primary_key=True),
+    Column("batch_val", Uuid(as_uuid=True), ForeignKey("batch.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
