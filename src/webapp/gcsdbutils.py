@@ -37,16 +37,22 @@ from .database import (
 
 # From a fully qualified file nam (i.e. everything sub-bucket name level), get the job id.
 def get_job_id(filename: str) -> int:
-    tmp = ""
-    if filename.startswith("approved/"):
-        tmp = filename.removeprefix("approved/")
-    elif filename.startswith("unapproved/"):
-        tmp = filename.removeprefix("unapproved/")
-    else:
-        raise ValueError("Unexpected filename structure.")
+    tmp = get_filename_without_approve_dir(filename)
     return int(tmp.split("/")[0])
 
 
+# Remove the approved or unapproved prefix as that isn't a property of the filename itself
+# and may change if the file gets approved or unapproved.
+def get_filename_without_approve_dir(filename: str) -> int:
+    if filename.startswith("approved/"):
+        return filename.removeprefix("approved/")
+    elif filename.startswith("unapproved/"):
+        return filename.removeprefix("unapproved/")
+    else:
+        return filename
+
+
+# This should of course be called before any prefix stripping.
 def is_file_approved(filename: str) -> bool:
     if filename.startswith("approved/"):
         return True
@@ -77,6 +83,8 @@ def update_db_from_bucket(inst_id: str, session, storage_control):
         if not f.endswith(".png") and not f.endswith(".csv"):
             continue
         file_approved = is_file_approved(f)
+        # We strip the approved/unapproved prefix since the file can move between the two and should still be considered one file.
+        f = get_filename_without_approve_dir(f)
         # Check if that file already exists in the table, otherwise add it.
         query_result = session.execute(
             select(FileTable).where(
