@@ -556,7 +556,7 @@ def trigger_inference_run(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Databricks run_pdp_inference error. "+str(e),
+            detail="Databricks run_pdp_inference error. " + str(e),
         )
     triggered_timestamp = datetime.now()
     job = JobTable(

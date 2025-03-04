@@ -114,8 +114,12 @@ class StorageControl(BaseModel):
     def delete_bucket(self, bucket_name: str) -> None:
         storage_client = storage.Client()
         # Delete the GCS bucket.  Force=True handles non-empty buckets.
+        print("[debugging_crystal]: in delete_bucket()1")
+
         bucket = storage_client.get_bucket(bucket_name)
+        print("[debugging_crystal]: in delete_bucket()2:" + str(bucket))
         bucket.delete(force=True)
+        print("[debugging_crystal]: in delete_bucket()3")
 
     def create_bucket(self, bucket_name: str) -> None:
         """

@@ -270,10 +270,12 @@ def delete_inst(
     )
     local_session.get().commit()
     # Delete GCS bucket
+    print("[debugging_crystal]: deleting bucket")
     bucket_name = get_external_bucket_name(inst_id)
+    print("[debugging_crystal]: deleting bucket" + bucket_name)
     try:
         storage_control.delete_bucket(bucket_name)
-    except ValueError as e:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Storage bucket deletion failed:" + str(e),
