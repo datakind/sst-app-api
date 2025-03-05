@@ -355,6 +355,16 @@ def retrieve_file_as_bytes(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Multiple matches found. Unexpected.",
         )
+    if query_result[0][0].sst_generated:
+        if query_result[0][0].valid:
+            file_name = "approved/" + file_name
+        else:
+            file_name = "unapproved/" + file_name
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Only SST generated files can be retrieved.",
+        )
     res = storage_control.get_file_contents(
         get_external_bucket_name(inst_id), file_name
     )
@@ -832,13 +842,6 @@ def download_url_inst_file(
     file_name = decode_url_piece(file_name)
     has_access_to_inst_or_err(inst_id, current_user)
     has_full_data_access_or_err(current_user, "file data")
-    if not file_name.startswith("approved/") and not file_name.startswith(
-        "unapproved/"
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This filepath is not allowed to be downloaded.",
-        )
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -868,6 +871,16 @@ def download_url_inst_file(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File has been deleted.",
+        )
+    if query_result[0][0].sst_generated:
+        if query_result[0][0].valid:
+            file_name = "approved/" + file_name
+        else:
+            file_name = "unapproved/" + file_name
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Only SST generated files can be downloaded.",
         )
     return storage_control.generate_download_signed_url(
         get_external_bucket_name(inst_id), file_name
