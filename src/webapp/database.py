@@ -327,6 +327,7 @@ class BatchTable(Base):
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_by = Column(Uuid(as_uuid=True), nullable=True)
     # Within a given institution, there should be no duplicated batch names.
     __table_args__ = (UniqueConstraint("name", "inst_id", name="batch_name_inst_uc"),)
 

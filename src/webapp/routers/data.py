@@ -82,7 +82,10 @@ class BatchInfo(BaseModel):
     # Date in form YYMMDD. Deletion of a batch will apply to all files in a batch,
     # unless the file is present in other batches.
     deletion_request_time: str | None = None
-    created_date: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    # The following is the user who last updated this batch.
+    updated_by: str | None = None
 
 
 class DataInfo(BaseModel):
@@ -212,7 +215,9 @@ def get_all_batches(
                 "deleted": False if elem.deleted is None else elem.deleted,
                 "completed": False if elem.completed is None else elem.completed,
                 "deletion_request_time": elem.deleted_at,
-                "created_date": elem.created_at,
+                "created_at": elem.created_at,
+                "updated_by": uuid_to_str(query_result[0][0].updated_by),
+                "updated_at": query_result[0][0].updated_at,
             }
         )
     return result_batches
@@ -296,6 +301,7 @@ def read_inst_all_output_files(
     }
 
 
+# TODO: rename this function to better reflect its behavior.
 @router.post("/{inst_id}/update-data")
 def update_data(
     inst_id: str,
@@ -420,7 +426,9 @@ def read_batch_info(
         "deleted": False if res.deleted is None else res.deleted,
         "completed": False if res.completed is None else res.completed,
         "deletion_request_time": res.deleted_at,
-        "created_date": res.created_at,
+        "created_at": res.created_at,
+        "updated_at": res.updated_at,
+        "updated_by": uuid_to_str(res.updated_by),
     }
     data_infos = []
     for elem in res.files:
@@ -548,7 +556,9 @@ def create_batch(
         "deleted": False,
         "completed": False,
         "deletion_request_time": None,
-        "created_date": query_result[0][0].created_at,
+        "created_at": query_result[0][0].created_at,
+        "updated_by": uuid_to_str(query_result[0][0].updated_by),
+        "updated_at": query_result[0][0].updated_at,
     }
 
 
@@ -676,6 +686,7 @@ def update_batch(
         existing_batch.deleted_at = func.now()
     if "completed" in update_data:
         existing_batch.completed = update_data["completed"]
+    existing_batch.updated_by = str_to_uuid(current_user.user_id)
     local_session.get().commit()
     res = (
         local_session.get()
@@ -698,7 +709,9 @@ def update_batch(
         "deleted": res[0][0].deleted,
         "completed": res[0][0].completed,
         "deletion_request_time": res[0][0].deleted_at,
-        "created_date": res[0][0].created_at,
+        "created_at": res[0][0].created_at,
+        "updated_by": uuid_to_str(query_result[0][0].updated_by),
+        "updated_at": query_result[0][0].updated_at,
     }
 
 

@@ -83,7 +83,7 @@ def same_orderless(a: DataOverview, b: DataOverview):
                 or a_elem["deleted"] != b_elem["deleted"]
                 or a_elem["completed"] != b_elem["completed"]
                 or a_elem["deletion_request_time"] != b_elem["deletion_request_time"]
-                or a_elem["created_date"] != b_elem["created_date"]
+                or a_elem["created_at"] != b_elem["created_at"]
             ):
                 return False
         if not found:
@@ -236,7 +236,7 @@ def test_read_inst_all_input_files(client: TestClient):
                     "deleted": False,
                     "completed": False,
                     "deletion_request_time": None,
-                    "created_date": "2024-12-24T20:22:20.132022",
+                    "created_at": "2024-12-24T20:22:20.132022",
                 }
             ],
             "files": [
@@ -304,7 +304,7 @@ def test_read_inst_all_output_files(client: TestClient):
                     "deleted": False,
                     "completed": False,
                     "deletion_request_time": None,
-                    "created_date": "2024-12-24T20:22:20.132022",
+                    "created_at": "2024-12-24T20:22:20.132022",
                 }
             ],
             "files": [
@@ -379,7 +379,7 @@ def test_read_batch_info(client: TestClient):
                     "deleted": False,
                     "completed": False,
                     "deletion_request_time": None,
-                    "created_date": "2024-12-24T20:22:20.132022",
+                    "created_at": "2024-12-24T20:22:20.132022",
                 }
             ],
             "files": [
