@@ -372,6 +372,7 @@ def read_inst_model_outputs(
                 "batch_name": elem.batch_name,
                 "output_filename": elem.output_filename,
                 "output_valid": False if not elem.output_valid else elem.output_valid,
+                "completed": False if not elem.completed else elem.completed,
             }
         )
     return ret_val
@@ -437,6 +438,7 @@ def read_inst_model_output(
                 "batch_name": elem.batch_name,
                 "output_filename": elem.output_filename,
                 "output_valid": False if not elem.output_valid else elem.output_valid,
+                "completed": False if not elem.completed else elem.completed,
             }
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
