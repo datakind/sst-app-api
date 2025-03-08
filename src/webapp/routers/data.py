@@ -216,8 +216,8 @@ def get_all_batches(
                 "completed": False if elem.completed is None else elem.completed,
                 "deletion_request_time": elem.deleted_at,
                 "created_at": elem.created_at,
-                "updated_by": uuid_to_str(query_result[0][0].updated_by),
-                "updated_at": query_result[0][0].updated_at,
+                "updated_by": uuid_to_str(elem.updated_by),
+                "updated_at": elem.updated_at,
             }
         )
     return result_batches
