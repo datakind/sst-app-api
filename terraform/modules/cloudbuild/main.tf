@@ -34,9 +34,9 @@ resource "google_artifact_registry_repository" "student_success_tool" {
 }
 
 resource "google_artifact_registry_repository" "sst_app_ui" {
-  location      = var.region
-  repository_id = "sst-app-ui"
-  format        = "DOCKER"
+  location               = var.region
+  repository_id          = "sst-app-ui"
+  format                 = "DOCKER"
   cleanup_policy_dry_run = false
   cleanup_policies {
     id     = "keep-latest"
