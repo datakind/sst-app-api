@@ -101,11 +101,7 @@ def update_db_from_bucket(inst_id: str, session, storage_control):
                     inst_id=str_to_uuid(inst_id),
                     sst_generated=True,
                     schemas=[
-                        (
-                            SchemaType.PNG
-                            if f.endswith(".png")
-                            else SchemaType.SST_OUTPUT
-                        )
+                        SchemaType.PNG if f.endswith(".png") else SchemaType.SST_OUTPUT
                     ],
                     valid=file_approved,
                 )

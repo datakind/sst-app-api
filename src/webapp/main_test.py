@@ -1,5 +1,4 @@
-"""Test file for the main.py file and constituent API functions.
-"""
+"""Test file for the main.py file and constituent API functions."""
 
 import pytest
 import json

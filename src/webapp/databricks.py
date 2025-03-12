@@ -1,5 +1,4 @@
-"""Databricks SDk related helper functions.
-"""
+"""Databricks SDk related helper functions."""
 
 import os
 import datetime

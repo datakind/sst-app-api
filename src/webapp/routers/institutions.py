@@ -1,5 +1,4 @@
-"""API functions related to institutions.
-"""
+"""API functions related to institutions."""
 
 import uuid
 import re

@@ -1,5 +1,4 @@
-"""Cloud storage sftp server get related helper functions.
-"""
+"""Cloud storage sftp server get related helper functions."""
 
 import paramiko
 from google.cloud import storage

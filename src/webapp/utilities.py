@@ -1,5 +1,4 @@
-"""Helper functions that may be used across multiple API router subpackages.
-"""
+"""Helper functions that may be used across multiple API router subpackages."""
 
 from typing import Annotated, Final
 

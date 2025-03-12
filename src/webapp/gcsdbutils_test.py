@@ -1,5 +1,4 @@
-"""Test file for the gcsdbutils.py file functions.
-"""
+"""Test file for the gcsdbutils.py file functions."""
 
 import pytest
 from .gcsdbutils import (

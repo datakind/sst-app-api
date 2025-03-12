@@ -1,5 +1,4 @@
-"""API functions related to users.
-"""
+"""API functions related to users."""
 
 from typing import Annotated, Any, Dict
 from fastapi import HTTPException, status, APIRouter, Depends

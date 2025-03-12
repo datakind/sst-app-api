@@ -1,5 +1,4 @@
-"""Cloud storage related helper functions.
-"""
+"""Cloud storage related helper functions."""
 
 import datetime
 from pydantic import BaseModel

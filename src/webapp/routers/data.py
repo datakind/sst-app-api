@@ -1,5 +1,4 @@
-"""API functions related to data.
-"""
+"""API functions related to data."""
 
 import uuid
 

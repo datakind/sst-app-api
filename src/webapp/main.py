@@ -1,5 +1,4 @@
-"""Main file for the SST API.
-"""
+"""Main file for the SST API."""
 
 import logging
 from typing import Any, Annotated

@@ -1,5 +1,4 @@
-"""Test file for utilities.py.
-"""
+"""Test file for utilities.py."""
 
 import pytest
 

@@ -1,5 +1,4 @@
-"""Main file for the SST Worker.
-"""
+"""Main file for the SST Worker."""
 
 import logging
 from typing import Any, Annotated

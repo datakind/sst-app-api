@@ -1,5 +1,4 @@
-"""Test file for authn.py.
-"""
+"""Test file for authn.py."""
 
 import pytest
 

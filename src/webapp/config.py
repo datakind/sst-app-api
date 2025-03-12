@@ -1,5 +1,4 @@
-"""Helper dict to retrieve OS env variables. This list includes all environment variables needed.
-"""
+"""Helper dict to retrieve OS env variables. This list includes all environment variables needed."""
 
 import os
 from dotenv import load_dotenv

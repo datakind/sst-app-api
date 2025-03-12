@@ -1,5 +1,4 @@
-"""Test file for the institutions.py file and constituent API functions.
-"""
+"""Test file for the institutions.py file and constituent API functions."""
 
 from fastapi.testclient import TestClient
 from fastapi import HTTPException

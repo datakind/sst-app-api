@@ -1,5 +1,4 @@
-"""Helper objects for unit tests across the various files.
-"""
+"""Helper objects for unit tests across the various files."""
 
 from .utilities import AccessType, BaseUser, uuid_to_str
 import uuid
