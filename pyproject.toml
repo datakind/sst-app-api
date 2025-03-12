@@ -28,6 +28,7 @@ Repository = "https://github.com/datakind/sst-app-api"
 
 [dependency-groups]
 dev = [
+    "black>=25.1.0",
     "coverage>=7.6.9",
     "ipykernel~=6.29",
     "jupyterlab~=4.2",
