@@ -31,8 +31,8 @@ jobs:
         uses: psf/black@stable
         with:
           options: "--check --verbose"
-          src: "./src"
-          use_pyproject: true
+          src: "./src/webapp"
+          version: "~= 25.0"
       - name: Using pylint (sst)
         run: |
           uv run pylint $(git ls-files './src/webapp/*.py') --errors-only
@@ -47,7 +47,7 @@ jobs:
         with:
           options: "--check --verbose"
           src: "./src/worker"
-          version: "~= 22.0"
+          version: "~= 25.0"
       - name: Using pylint (worker)
         run: |
           uv run pylint $(git ls-files './src/worker/*.py') --errors-only
