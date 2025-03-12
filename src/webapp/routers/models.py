@@ -1,5 +1,4 @@
-"""API functions related to models. !!!!! NEEDS TO BE UPDATED. !!!!!
-"""
+"""API functions related to models. !!!!! NEEDS TO BE UPDATED. !!!!!"""
 
 import uuid
 import jsonpickle
