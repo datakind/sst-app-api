@@ -37,6 +37,7 @@ resource "google_artifact_registry_repository" "sst_app_ui" {
   location      = var.region
   repository_id = "sst-app-ui"
   format        = "DOCKER"
+  cleanup_policy_dry_run = false
   cleanup_policies {
     id     = "keep-latest"
     action = "KEEP"
