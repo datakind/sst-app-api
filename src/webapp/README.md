@@ -35,6 +35,12 @@ The workspace URL will look like `https://<some_id>.gcp.databricks.com`
 
 For all of the following, be in the repo root folder (`sst-app-api/`).
 
+If you need to generate signed URLs to upload data to GCS you should impersonate a service account.
+You can use the [cloud run service account](https://console.cloud.google.com/iam-admin/iam) or create
+your own with the desired permissions.
+
+1. `gcloud auth application-default login --impersonate-service-account <service-account-email>`
+
 Spin up the app locally:
 
 1. `ENV_FILE_PATH='/full/path/to/.env' fastapi dev src/webapp/main.py`
