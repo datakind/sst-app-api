@@ -14,8 +14,7 @@ You will also need to add the permission Storage Writer or Storage Admin to your
 Enter into the root directory of the repo.
 
 
-1. Copy the `.env.example` file to `.env`
-1. Run `export ENV_FILE_PATH='/full/path/to/.env'`
+1. Copy the `./src/worker/.env.example` file to `./src/worker/.env`
 1. `python3 -m venv .venv`
 1. `source .venv/bin/activate`
 1. `pip install uv`
@@ -26,7 +25,7 @@ For all of the following, be in the repo root folder (`sst-app-api/`).
 
 Spin up the app locally:
 
-1. `fastapi dev src/webapp/main.py`
+1. `ENV_FILE_PATH='/full/path/to/.env' fastapi dev src/webapp/main.py`
 1. Go to `http://127.0.0.1:8000/docs`
 1. Hit the `Authorize` button on the top right and enter the tester credentials:
 
