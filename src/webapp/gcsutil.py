@@ -13,8 +13,6 @@ from .utilities import (
 import google.auth
 from google.auth.transport import requests
 
-
-credentials, project_id = google.auth.default()
 SIGNED_URL_EXPIRY_MIN = 30
 
 
@@ -52,10 +50,18 @@ def rename_file(
 class StorageControl(BaseModel):
     """Object to manage interfacing with GCS."""
 
+    _credentials = None
+    _project_id = None
+
+    def credentials(self):
+        if self._credentials is None or self._project_id is None:
+            self._credentials, self._project_id = google.auth.default()
+        return self._credentials
+
     def generate_upload_signed_url(self, bucket_name: str, file_name: str) -> str:
         """Generates a v4 signed URL for uploading a blob using HTTP PUT."""
         r = requests.Request()
-        credentials.refresh(r)
+        self.credentials().refresh(r)
         client = storage.Client()
         bucket = client.bucket(bucket_name)
         if not bucket.exists():
@@ -70,12 +76,12 @@ class StorageControl(BaseModel):
         blob = bucket.blob(blob_name)
 
         service_account_email = ""
-        if hasattr(credentials, "service_account_email"):
-            service_account_email = credentials.service_account_email
+        if hasattr(self.credentials(), "service_account_email"):
+            service_account_email = self.credentials().service_account_email
         url = blob.generate_signed_url(
             version="v4",
             service_account_email=service_account_email,
-            access_token=credentials.token,
+            access_token=self.credentials().token,
             # How long the url is usable for.
             expiration=datetime.timedelta(minutes=SIGNED_URL_EXPIRY_MIN),
             # Allow PUT requests using this URL.
@@ -88,7 +94,7 @@ class StorageControl(BaseModel):
     def generate_download_signed_url(self, bucket_name: str, blob_name: str) -> str:
         """Generates a v4 signed URL for downloading a blob using HTTP GET."""
         r = requests.Request()
-        credentials.refresh(r)
+        self.credentials().refresh(r)
         client = storage.Client()
         bucket = client.bucket(bucket_name)
         if not bucket.exists():
@@ -97,12 +103,12 @@ class StorageControl(BaseModel):
         if not blob.exists():
             raise ValueError(blob_name + ": File not found.")
         service_account_email = ""
-        if hasattr(credentials, "service_account_email"):
-            service_account_email = credentials.service_account_email
+        if hasattr(self.credentials(), "service_account_email"):
+            service_account_email = self.credentials().service_account_email
         url = blob.generate_signed_url(
             version="v4",
             service_account_email=service_account_email,
-            access_token=credentials.token,
+            access_token=self.credentials().token,
             # How long the url is usable for.
             expiration=datetime.timedelta(minutes=SIGNED_URL_EXPIRY_MIN),
             # Allow GET requests using this URL.
