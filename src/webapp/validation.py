@@ -3,11 +3,9 @@ pipelines, this is for general file validation.)
 """
 
 import csv
-import builtins
 
 from collections import Counter
 from typing import Final
-from io import TextIOWrapper, TextIOBase
 
 from .utilities import SchemaType
 
@@ -282,11 +280,13 @@ def detect_file_type(col_names: list[str]) -> set[SchemaType]:
 
 
 def validate_file(filename: str, allowed_types: set[SchemaType]) -> set[SchemaType]:
+    """Validates given a filename."""
     with open(filename) as f:
         return validate_file_reader(f, allowed_types)
 
 
 def get_col_names(f) -> None:
+    """Get column names."""
     try:
         # Use the sniffer to detect the columns and dialect.
         csv_dialect = csv.Sniffer().sniff(f.readline())
@@ -294,7 +294,7 @@ def get_col_names(f) -> None:
         if not csv.Sniffer().has_header(f.readline()):
             raise ValueError("CSV file malformed: Headers not found")
     except csv.Error as e:
-        raise ValueError(f"CSV file malformed: {e}")
+        raise ValueError(f"CSV file malformed: {e}") from e
     # Read the column names and store in col_names.
     f.seek(0)
     dict_reader = csv.DictReader(f, dialect=csv_dialect)
@@ -302,8 +302,8 @@ def get_col_names(f) -> None:
     return col_names
 
 
-# This returns only if a valid format was found, otherwise it raises an error
 def validate_file_reader(reader, allowed_types: set[SchemaType]) -> set[SchemaType]:
+    """Validates given a reader. Returns only if a valid format was found, otherwise raises error"""
     if not allowed_types:
         raise ValueError("CSV file schema not recognized")
     res = detect_file_type(get_col_names(reader))

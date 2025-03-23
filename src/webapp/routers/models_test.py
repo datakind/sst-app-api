@@ -1,16 +1,13 @@
-import json
+"""Test file for the models.py file and constituent API functions."""
+
+import uuid
+from unittest import mock
+import pytest
 import jsonpickle
 from fastapi.testclient import TestClient
-from fastapi import HTTPException
-import pytest
 import sqlalchemy
 from sqlalchemy.pool import StaticPool
-import uuid
-import os
-from unittest import mock
 from ..test_helper import (
-    DATA_OBJ,
-    BATCH_REQUEST,
     USR,
     USER_VALID_INST_UUID,
     USER_UUID,
@@ -26,8 +23,8 @@ from ..database import (
     InstTable,
     Base,
     get_session,
-    local_session,
     ModelTable,
+    JobTable,
 )
 from ..utilities import uuid_to_str, get_current_active_user, SchemaType
 from .models import (
@@ -37,7 +34,6 @@ from .models import (
     check_file_types_valid_schema_configs,
     SchemaConfigObj,
 )
-from collections import Counter
 from ..gcsutil import StorageControl
 from ..databricks import DatabricksControl, DatabricksInferenceRunResponse
 
@@ -50,10 +46,12 @@ FILE_UUID_2 = uuid.UUID("cb02d06c-2a59-486a-9bdd-d394a4fcb833")
 FILE_UUID_3 = uuid.UUID("fbe67a2e-50e0-40c7-b7b8-07043cb813a5")
 BATCH_UUID = uuid.UUID("5b2420f3-1035-46ab-90eb-74d5df97de43")
 created_by_UUID = uuid.UUID("0ad8b77c-49fb-459a-84b1-8d2c05722c4a")
+RUN_ID = 123
 
 
 # TODO plumb through schema configs
 def same_model_orderless(a_elem: ModelInfo, b_elem: ModelInfo):
+    """Check ModelInfo equality without order."""
     if (
         a_elem["inst_id"] != b_elem["inst_id"]
         or a_elem["name"] != b_elem["name"]
@@ -65,13 +63,19 @@ def same_model_orderless(a_elem: ModelInfo, b_elem: ModelInfo):
     return True
 
 
-def same_run_info_orderless(a_elem: ModelInfo, b_elem: ModelInfo):
+def same_run_info_orderless(a_elem: RunInfo, b_elem: RunInfo):
+    """Check RunInfo equality without order."""
     if (
         a_elem["inst_id"] != b_elem["inst_id"]
-        or a_elem["name"] != b_elem["name"]
-        or a_elem["m_id"] != b_elem["m_id"]
-        or a_elem["valid"] != b_elem["valid"]
-        or a_elem["deleted"] != b_elem["deleted"]
+        or a_elem["m_name"] != b_elem["m_name"]
+        or a_elem["run_id"] != b_elem["run_id"]
+        or a_elem["created_by"] != b_elem["created_by"]
+        or a_elem["triggered_at"] != b_elem["triggered_at"]
+        or a_elem["output_filename"] != b_elem["output_filename"]
+        or a_elem["output_valid"] != b_elem["output_valid"]
+        or a_elem["err_msg"] != b_elem["err_msg"]
+        or a_elem["batch_name"] != b_elem["batch_name"]
+        or a_elem["completed"] != b_elem["completed"]
     ):
         return False
     return True
@@ -79,6 +83,7 @@ def same_run_info_orderless(a_elem: ModelInfo, b_elem: ModelInfo):
 
 @pytest.fixture(name="session")
 def session_fixture():
+    """Unit test database setup."""
     engine = sqlalchemy.create_engine(
         "sqlite://",
         echo=True,
@@ -153,6 +158,15 @@ def session_fixture():
         ),
         valid=True,
     )
+    run_1 = JobTable(
+        id=RUN_ID,
+        model=model_1,
+        triggered_at=DATETIME_TESTING,
+        batch_name="batch_foo",
+        completed=True,
+        output_filename="file_output_one",
+        created_by=created_by_UUID,
+    )
     try:
         with sqlalchemy.orm.Session(engine) as session:
             session.add_all(
@@ -179,6 +193,7 @@ def session_fixture():
                     ),
                     file_3,
                     model_1,
+                    run_1,
                 ]
             )
             session.commit()
@@ -189,6 +204,8 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: sqlalchemy.orm.Session):
+    """Unit test mocks setup."""
+
     def get_session_override():
         return session
 
@@ -265,7 +282,21 @@ def test_read_inst_model_outputs(client: TestClient):
         + "/models/sample_model_for_school_1/runs"
     )
     assert response.status_code == 200
-    assert response.json() == []
+    assert same_run_info_orderless(
+        response.json()[0],
+        {
+            "batch_name": "batch_foo",
+            "completed": True,
+            "created_by": "0ad8b77c49fb459a84b18d2c05722c4a",
+            "err_msg": None,
+            "inst_id": "1d7c75c33eda42949c6675ea8af97b55",
+            "m_name": "sample_model_for_school_1",
+            "output_filename": "file_output_one",
+            "output_valid": False,
+            "run_id": 123,
+            "triggered_at": "2024-12-24T20:22:20.132022",
+        },
+    )
 
 
 def test_read_inst_model_output(client: TestClient):
@@ -274,9 +305,25 @@ def test_read_inst_model_output(client: TestClient):
     response = client.get(
         "/institutions/"
         + uuid_to_str(USER_VALID_INST_UUID)
-        + "/models/sample_model_for_school_1/run/1"
+        + "/models/sample_model_for_school_1/run/"
+        + str(RUN_ID)
     )
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert same_run_info_orderless(
+        response.json(),
+        {
+            "batch_name": "batch_foo",
+            "completed": True,
+            "created_by": "0ad8b77c49fb459a84b18d2c05722c4a",
+            "err_msg": None,
+            "inst_id": "1d7c75c33eda42949c6675ea8af97b55",
+            "m_name": "sample_model_for_school_1",
+            "output_filename": "file_output_one",
+            "output_valid": False,
+            "run_id": 123,
+            "triggered_at": "2024-12-24T20:22:20.132022",
+        },
+    )
 
 
 def test_create_model(client: TestClient):
@@ -341,7 +388,7 @@ def test_trigger_inference_run(client: TestClient):
     assert response.json()["m_name"] == "sample_model_for_school_1"
     assert response.json()["run_id"] == 123
     assert response.json()["created_by"] == uuid_to_str(USER_UUID)
-    assert response.json()["triggered_at"] != None
+    assert response.json()["triggered_at"] is not None
     assert response.json()["batch_name"] == "batch_foo"
 
 
@@ -424,12 +471,3 @@ def test_check_file_types_valid_schema_configs():
     assert not check_file_types_valid_schema_configs(file_types4, [sst_configs])
     assert not check_file_types_valid_schema_configs(file_types4, [pdp_configs])
     assert check_file_types_valid_schema_configs(file_types4, [custom])
-
-
-# Retrain a new model.
-def test_retrain_model(client: TestClient):
-    """Depending on timeline, fellows may not get to this."""
-    response = client.post(
-        "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/models/123"
-    )
-    assert response.status_code == 200

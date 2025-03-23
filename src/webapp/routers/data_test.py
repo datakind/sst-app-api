@@ -1,16 +1,13 @@
 """Test file for the data.py file and constituent API functions."""
 
+import uuid
+from unittest import mock
+from collections import Counter
 from fastapi.testclient import TestClient
-from fastapi import HTTPException
 import pytest
 import sqlalchemy
 from sqlalchemy.pool import StaticPool
-import uuid
-import os
-from unittest import mock
 from ..test_helper import (
-    DATA_OBJ,
-    BATCH_REQUEST,
     USR,
     USER_VALID_INST_UUID,
     USER_UUID,
@@ -25,11 +22,9 @@ from ..database import (
     InstTable,
     Base,
     get_session,
-    local_session,
 )
 from ..utilities import uuid_to_str, get_current_active_user, SchemaType
-from .data import router, DataOverview, DataInfo, BatchCreationRequest
-from collections import Counter
+from .data import router, DataOverview, DataInfo
 from ..gcsutil import StorageControl
 
 MOCK_STORAGE = mock.Mock()
@@ -42,13 +37,13 @@ BATCH_UUID = uuid.UUID("5b2420f3-1035-46ab-90eb-74d5df97de43")
 CREATOR_UUID = uuid.UUID("0ad8b77c-49fb-459a-84b1-8d2c05722c4a")
 
 
-# Orderless comparison of two iterables.
 def counter_repr(x):
+    """Orderless comparison of two iterables."""
     return {frozenset(Counter(item).items()) for item in x}
 
 
-# Compares two DataOverview objects.
 def same_file_orderless(a_elem: DataInfo, b_elem: DataInfo):
+    """Compares two DataInfo objects."""
     if (
         a_elem["inst_id"] != b_elem["inst_id"]
         or counter_repr(a_elem["batch_ids"]) != counter_repr(b_elem["batch_ids"])
@@ -66,8 +61,8 @@ def same_file_orderless(a_elem: DataInfo, b_elem: DataInfo):
     return True
 
 
-# Compares two DataOverview objects.
 def same_orderless(a: DataOverview, b: DataOverview):
+    """Compares two DataOverview objects."""
     for a_elem in a["batches"]:
         found = False
         for b_elem in b["batches"]:
@@ -102,6 +97,7 @@ def same_orderless(a: DataOverview, b: DataOverview):
 
 @pytest.fixture(name="session")
 def session_fixture():
+    """Unit test database setup."""
     engine = sqlalchemy.create_engine(
         "sqlite://",
         echo=True,
@@ -186,6 +182,8 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: sqlalchemy.orm.Session):
+    """Unit test mocks setup."""
+
     def get_session_override():
         return session
 
@@ -416,7 +414,7 @@ def test_read_batch_info(client: TestClient):
 
 
 def test_read_file_id_info(client: TestClient):
-    """Test GET /institutions/<uuid>/file/<uuid>."""
+    """Test GET /institutions/<uuid>/file-id/<uuid>."""
     response = client.get(
         "/institutions/"
         + uuid_to_str(UUID_INVALID)
@@ -481,7 +479,6 @@ def test_retrieve_file_as_bytes(client: TestClient):
     assert response.text == '{"detail":"No such output file exists."}'
 
 
-# TODO: xxx add more test cases including sst generated = true etc.
 def test_create_batch(client: TestClient):
     """Test POST /institutions/<uuid>/batch."""
     response = client.post(
@@ -506,9 +503,9 @@ def test_create_batch(client: TestClient):
     assert response.status_code == 200
     assert response.json()["name"] == "batch_foobar"
     assert response.json()["created_by"] == uuid_to_str(USER_UUID)
-    assert response.json()["deleted"] == False
-    assert response.json()["completed"] == False
-    assert response.json()["deletion_request_time"] == None
+    assert response.json()["deleted"] is False
+    assert response.json()["completed"] is False
+    assert response.json()["deletion_request_time"] is None
     assert response.json()["inst_id"] == uuid_to_str(USER_VALID_INST_UUID)
     # file_input_two isn't valid so it shouldn't be addable to a batch.
     assert "file_input_two" not in response.json()["file_names_to_ids"]
@@ -549,9 +546,9 @@ def test_update_batch(client: TestClient):
     assert response.status_code == 200
     assert response.json()["name"] == "batch_name_updated_foo"
     assert response.json()["created_by"] == uuid_to_str(CREATOR_UUID)
-    assert response.json()["deleted"] == None
-    assert response.json()["completed"] == True
-    assert response.json()["deletion_request_time"] == None
+    assert response.json()["deleted"] is None
+    assert response.json()["completed"] is True
+    assert response.json()["deletion_request_time"] is None
     assert response.json()["inst_id"] == uuid_to_str(USER_VALID_INST_UUID)
     assert response.json()["file_names_to_ids"] == {
         "file_input_two": uuid_to_str(FILE_UUID_2)
@@ -636,24 +633,3 @@ def test_validate_failure_batch(client: TestClient):
     assert response_sftp.json()["file_types"] == ["PDP_COHORT"]
     assert response_sftp.json()["inst_id"] == uuid_to_str(USER_VALID_INST_UUID)
     assert response_sftp.json()["source"] == "MANUAL_UPLOAD"
-
-
-def test_pull_pdp_sftp(client: TestClient):
-    """Test POST /institutions/345/input/pdp_sftp/."""
-    # Authorized.
-    response = client.post("/institutions/345/input/pdp_sftp")
-    # assert response.status_code == 200
-
-
-def test_upload_file(client: TestClient):
-    """Test POST /institutions/345/input/."""
-    # Authorized.
-    response = client.post("/institutions/345/input")
-    # assert response.status_code == 200
-
-
-def test_download_inst_file(client: TestClient):
-    """Test GET /institutions/<uuid>/output/<uuid>."""
-    # Authorized.
-    response = client.get("/institutions/345/output/10")
-    # assert response.status_code == 200

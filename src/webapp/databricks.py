@@ -1,18 +1,18 @@
 """Databricks SDk related helper functions."""
 
 import os
-import datetime
 from pydantic import BaseModel
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.jobs import Task, NotebookTask, Source
 from databricks.sdk.service import catalog
 
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
 
 # List of data medallion levels
-medallion_levels = ["silver", "gold", "bronze"]
-pdp_inference_job_name = "github_sourced_pdp_inference_pipeline"
+MEDALLION_LEVELS = ["silver", "gold", "bronze"]
+
+# The name of the deployed pipeline in Databricks. Must match directly.
+PDP_INFERENCE_JOB_NAME = "github_sourced_pdp_inference_pipeline"
 
 
 class DatabricksInferenceRunRequest(BaseModel):
@@ -34,10 +34,11 @@ class DatabricksInferenceRunResponse(BaseModel):
     job_run_id: int
 
 
-# Helper functions to get a file of a given file_type. For both, we will return the first file that matches the schema.
 def get_filepath_of_filetype(
     file_dict: dict[str, list[SchemaType]], file_type: SchemaType
 ):
+    """Helper functions to get a file of a given file_type.
+    For both, we will return the first file that matches the schema."""
     for k, v in file_dict.items():
         if file_type in v:
             return k
@@ -45,6 +46,7 @@ def get_filepath_of_filetype(
 
 
 def check_types(dict_values, file_type: SchemaType):
+    """Check the file type is in the dict dictionary."""
     for elem in dict_values:
         if file_type in elem:
             return True
@@ -63,31 +65,39 @@ class DatabricksControl(BaseModel):
             # this account needs to exist on Databricks as well and needs to hvae the creation and job management permissions
             google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
         )
+        if w is None:
+            raise ValueError("setup_new_inst() workspace retrieval failed.")
+
         db_inst_name = databricksify_inst_name(inst_name)
         cat_name = databricks_vars["CATALOG_NAME"]
-        for medallion in medallion_levels:
+        for medallion in MEDALLION_LEVELS:
             w.schemas.create(name=f"{db_inst_name}_{medallion}", catalog_name=cat_name)
         # Create a managed volume in the bronze schema for internal pipeline data.
         # update to include a managed volume for toml files
         created_volume_bronze = w.volumes.create(
             catalog_name=cat_name,
             schema_name=f"{db_inst_name}_bronze",
-            name=f"bronze_volume",
+            name="bronze_volume",
             volume_type=catalog.VolumeType.MANAGED,
         )
         created_volume_silver = w.volumes.create(
             catalog_name=cat_name,
             schema_name=f"{db_inst_name}_silver",
-            name=f"silver_volume",
+            name="silver_volume",
             volume_type=catalog.VolumeType.MANAGED,
         )
         created_volume_gold = w.volumes.create(
             catalog_name=cat_name,
             schema_name=f"{db_inst_name}_gold",
-            name=f"gold_volume",
+            name="gold_volume",
             volume_type=catalog.VolumeType.MANAGED,
         )
-
+        if (
+            created_volume_bronze is None
+            or created_volume_silver is None
+            or created_volume_gold is None
+        ):
+            raise ValueError("setup_new_inst() volume creation failed.")
         # Create directory on the volume
         os.makedirs(
             f"/Volumes/{cat_name}/{db_inst_name}_gold/gold_volume/configuration_files/",
@@ -99,9 +109,9 @@ class DatabricksControl(BaseModel):
             exist_ok=True,
         )
 
-    """Note that for each unique PIPELINE, we'll need a new function, this is by nature of how unique pipelines 
-    may have unique parameters and would have a unique name (i.e. the name field specified in w.jobs.list()). But any run of a given pipeline (even across institutions) can use the same function. 
-    E.g. there is one PDP inference pipeline, so one PDP inference function here."""
+    # Note that for each unique PIPELINE, we'll need a new function, this is by nature of how unique pipelines
+    # may have unique parameters and would have a unique name (i.e. the name field specified in w.jobs.list()). But any run of a given pipeline (even across institutions) can use the same function.
+    # E.g. there is one PDP inference pipeline, so one PDP inference function here.
 
     def run_pdp_inference(
         self, req: DatabricksInferenceRunRequest
@@ -119,8 +129,12 @@ class DatabricksControl(BaseModel):
             host=databricks_vars["DATABRICKS_HOST_URL"],
             google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
         )
+        if not w:
+            raise ValueError("run_pdp_inference(): Databricks workspace not found.")
         db_inst_name = databricksify_inst_name(req.inst_name)
-        job_id = next(w.jobs.list(name=pdp_inference_job_name)).job_id
+        job_id = next(w.jobs.list(name=PDP_INFERENCE_JOB_NAME)).job_id
+        if not job_id:
+            raise ValueError("run_pdp_inference(): Job was not created.")
         run_job = w.jobs.run_now(
             job_id,
             job_parameters={
@@ -140,9 +154,12 @@ class DatabricksControl(BaseModel):
                 "notification_email": req.email,
             },
         )
+        if not run_job:
+            raise ValueError("run_pdp_inference(): Job could not be run.")
         return DatabricksInferenceRunResponse(job_run_id=run_job.response.run_id)
 
     def delete_inst(self, inst_name: str) -> None:
+        """Cleanup tasks required on the Databricks side to delete an institution."""
         db_inst_name = databricksify_inst_name(inst_name)
         cat_name = databricks_vars["CATALOG_NAME"]
         w = WorkspaceClient(
@@ -151,21 +168,17 @@ class DatabricksControl(BaseModel):
             # this account needs to exist on Databricks as well and needs to have permissions.
             google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
         )
+        if not w:
+            raise ValueError("delete_inst(): Databricks workspace not found.")
         # Delete the managed volume.
         w.volumes.delete(name=f"{cat_name}.{db_inst_name}_bronze.bronze_volume")
         w.volumes.delete(name=f"{cat_name}.{db_inst_name}_silver.silver_volume")
         w.volumes.delete(name=f"{cat_name}.{db_inst_name}_gold.gold_volume")
 
-        # Delete the MLflow model.
-        # TODO how to handle deleting all models?
-        """
-        model_name = "latest_enrollment_model"
-        new_institution_model_uri = f"{cat_name}.{db_inst_name}_gold.{model_name}"
-        mlflow_client.delete_registered_model(name=new_institution_model_uri)
-        """
+        # TODO implement model deletion
 
         # Delete tables and schemas for each medallion level.
-        for medallion in medallion_levels:
+        for medallion in MEDALLION_LEVELS:
             all_tables = [
                 table.name
                 for table in w.tables.list(

@@ -4,10 +4,8 @@ import pytest
 
 from fastapi import HTTPException
 from .utilities import (
-    BaseUser,
     has_access_to_inst_or_err,
     has_full_data_access_or_err,
-    AccessType,
     uuid_to_str,
     databricksify_inst_name,
 )

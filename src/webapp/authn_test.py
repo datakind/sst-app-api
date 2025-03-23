@@ -1,9 +1,5 @@
 """Test file for authn.py."""
 
-import pytest
-
-from fastapi import HTTPException
-import uuid
 from .authn import (
     get_password_hash,
     verify_password,

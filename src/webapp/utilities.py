@@ -1,27 +1,19 @@
 """Helper functions that may be used across multiple API router subpackages."""
 
-from typing import Annotated, Final
-
-# the following needed for python pre 3.11
-from strenum import StrEnum
 import uuid
-import os
-import jwt
 import re
+from typing import Annotated, Final
+from urllib.parse import unquote
+from strenum import StrEnum  # needed for python pre 3.11
+import jwt
 from fastapi import HTTPException, status, Depends
 from pydantic import BaseModel, ConfigDict
 from jwt.exceptions import InvalidTokenError
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
 from sqlalchemy.future import select
-from urllib.parse import unquote
 from sqlalchemy import and_
 
 from .authn import (
-    verify_password,
-    TokenData,
-    oauth2_scheme,
-    get_api_key_hash,
     verify_api_key,
     oauth2_apikey_scheme,
 )
@@ -30,6 +22,7 @@ from .config import env_vars
 
 
 def decode_url_piece(src: str):
+    """Decode encoded URL."""
     return unquote(src)
 
 
@@ -221,6 +214,14 @@ class BaseUser(BaseModel):
 
 
 def get_user(sess: Session, username: str) -> BaseUser:
+    """Get user from a given username."""
+    if username == "api_key_initial":
+        return BaseUser(
+            usr=env_vars["INITIAL_API_KEY_ID"],
+            inst=None,
+            access="DATAKINDER",
+            email="api_key_initial",
+        )
     if username.startswith("api_key_"):
         api_key_uuid = username.removeprefix("api_key_")
         query_result = sess.execute(
@@ -236,34 +237,13 @@ def get_user(sess: Session, username: str) -> BaseUser:
             access=query_result[0][0].access_type,
             email=username,
         )
-    else:
-        query_result = sess.execute(
-            select(AccountTable).where(
-                AccountTable.email == username,
-            )
-        ).all()
-        if len(query_result) == 0 or len(query_result) > 1:
-            return None
-        return BaseUser(
-            usr=uuid_to_str(query_result[0][0].id),
-            inst=uuid_to_str(query_result[0][0].inst_id),
-            access=query_result[0][0].access_type,
-            email=username,
-        )
-
-
-def authenticate_user(
-    username: str, password: str, enduser: str | None, sess: Session
-) -> BaseUser:
     query_result = sess.execute(
         select(AccountTable).where(
             AccountTable.email == username,
         )
     ).all()
     if len(query_result) == 0 or len(query_result) > 1:
-        return False
-    if not verify_password(password, query_result[0][0].password):
-        return False
+        return None
     return BaseUser(
         usr=uuid_to_str(query_result[0][0].id),
         inst=uuid_to_str(query_result[0][0].inst_id),
@@ -273,7 +253,16 @@ def authenticate_user(
 
 
 def authenticate_api_key(api_key_enduser_tuple: str, sess: Session) -> BaseUser:
+    """Authenticate an API key."""
     (key, inst, enduser) = api_key_enduser_tuple
+    # Check if it's the initial API key. This doesn't have enduser or inst.
+    if key == env_vars["INITIAL_API_KEY"]:
+        return BaseUser(
+            usr=env_vars["INITIAL_API_KEY_ID"],
+            inst=None,
+            access="DATAKINDER",
+            email="api_key_initial",
+        )
     query_result = sess.execute(
         select(ApiKeyTable).where(
             ApiKeyTable.inst_id == inst,
@@ -295,7 +284,8 @@ def authenticate_api_key(api_key_enduser_tuple: str, sess: Session) -> BaseUser:
                     AccountTable.email == enduser,
                 )
                 if inst:
-                    # If there's an institution set, ensure the user is part of the institution
+                    # If there's an institution set, ensure the user is part of the institution.
+                    # Datakinders should not set an institution in the header.
                     user_query = select(AccountTable).where(
                         and_(
                             AccountTable.email == enduser,
@@ -322,9 +312,9 @@ def authenticate_api_key(api_key_enduser_tuple: str, sess: Session) -> BaseUser:
 
 async def get_current_user(
     sess: Annotated[Session, Depends(get_session)],
-    token: Annotated[str, Depends(oauth2_scheme)],
     token_from_key: Annotated[str, Depends(oauth2_apikey_scheme)],
 ) -> BaseUser:
+    """Get the user from a given token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -332,24 +322,16 @@ async def get_current_user(
     )
     usrname = None
     try:
-        token_local = None
-        if token and token_from_key:
-            # Weird to have both, but prioritize non-key token.
-            token_local = token
-        elif token_from_key:
-            token_local = token_from_key
-        elif token:
-            token_local = token
-        else:
+        if not token_from_key:
             raise credentials_exception
         payload = jwt.decode(
-            token_local, env_vars["SECRET_KEY"], algorithms=env_vars["ALGORITHM"]
+            token_from_key, env_vars["SECRET_KEY"], algorithms=env_vars["ALGORITHM"]
         )
         usrname = payload.get("sub")
         if usrname is None:
             raise credentials_exception
-    except InvalidTokenError:
-        raise credentials_exception
+    except InvalidTokenError as e:
+        raise credentials_exception from e
     user = get_user(sess, username=usrname)
     if user is None:
         raise credentials_exception
@@ -359,6 +341,7 @@ async def get_current_user(
 async def get_current_active_user(
     current_user: Annotated[BaseUser, Depends(get_current_user)],
 ):
+    """Get the active user.."""
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
@@ -394,32 +377,36 @@ def model_owner_and_higher_or_err(user: BaseUser, resource_type: str):
         )
 
 
-# At this point the value should not be empty as we checked on app startup.
 def prepend_env_prefix(name: str) -> str:
+    """Prepend the env prefix. At this point the value should not be empty as we checked on app startup."""
     return env_vars["ENV"].lower() + "_" + name
 
 
 def uuid_to_str(uuid_val: uuid.UUID) -> str:
+    """Convert UUID obj to string."""
     if uuid_val is None:
         return ""
     return uuid_val.hex
 
 
 def str_to_uuid(hex_str: str) -> uuid.UUID:
+    """Convert str to UUID obj (database needs UUID obj)."""
     return uuid.UUID(hex_str)
 
 
 def get_external_bucket_name_from_uuid(inst_id: uuid.UUID) -> str:
+    """Get the GCP bucket name which has the env prepended taking in the UUID obj."""
     return prepend_env_prefix(uuid_to_str(inst_id))
 
 
 def get_external_bucket_name(inst_id: str) -> str:
+    """Get the GCP bucket name which has the env prepended taking in the uuid as str."""
     return prepend_env_prefix(inst_id)
 
 
 def databricksify_inst_name(inst_name: str) -> str:
     """
-    Follow DK standardized rules for naming conventions.
+    Follow DK standardized rules for naming conventions used in Databricks.
     """
     name = inst_name.lower()
     # This needs to be in order from most verbose and encompassing other replacement keys to least.

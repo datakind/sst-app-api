@@ -1,17 +1,16 @@
 """Test file for the users.py file and constituent API functions."""
 
-from fastapi.testclient import TestClient
-from fastapi import HTTPException
-import pytest
-from datetime import datetime
 import uuid
+from datetime import datetime
+from fastapi.testclient import TestClient
+import pytest
 import sqlalchemy
 from sqlalchemy.pool import StaticPool
 
-from ..test_helper import USR, USER_ACCT_REQUEST, USER_ACCT, DATAKINDER
+from ..test_helper import USR, DATAKINDER
 from .users import router
 from ..main import app
-from ..database import AccountTable, InstTable, Base, get_session, local_session
+from ..database import AccountTable, InstTable, Base, get_session
 
 from ..utilities import uuid_to_str, get_current_active_user
 
@@ -24,6 +23,7 @@ INVALID_UUID = uuid.UUID("27316b89-5e04-474a-9ea4-97beaf72c9af")
 
 @pytest.fixture(name="session")
 def session_fixture():
+    """Unit test database setup."""
     engine = sqlalchemy.create_engine(
         "sqlite://",
         echo=True,
@@ -80,6 +80,8 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: sqlalchemy.orm.Session):
+    """Unit test mocks setup for non-Datakinder."""
+
     def get_session_override():
         return session
 
@@ -97,6 +99,8 @@ def client_fixture(session: sqlalchemy.orm.Session):
 
 @pytest.fixture(name="datakinder_client")
 def datakinder_client_fixture(session: sqlalchemy.orm.Session):
+    """Unit test mocks setup for datakinder."""
+
     def get_session_override():
         return session
 
@@ -156,6 +160,7 @@ def test_read_inst_user(client: TestClient):
 
 
 def test_read_inst_allowed_emails(datakinder_client: TestClient):
+    """Test GET /institutions/<uuid>/allowable-emails."""
     # Authorized.
     response = datakinder_client.get(
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/allowable-emails",
@@ -165,53 +170,3 @@ def test_read_inst_allowed_emails(datakinder_client: TestClient):
         "hello@example.com": "VIEWER",
         "testy@test.test": "MODEL_OWNER",
     }
-
-
-"""
-def test_update_inst_user(datakinder_client: TestClient):
-    # Authorized.
-    response = datakinder_client.patch(
-        "/institutions/"
-        + uuid_to_str(USER_VALID_INST_UUID)
-        + "/user/"
-        + uuid_to_str(UUID_1),
-        json={"access_type":"VIEWER"}
-    )
-    assert response.status_code == 200
-    assert response.json() == {
-        "user_id": "64dbce41111b46fe8e84c38757477ef2",
-        "name": "John Smith",
-        "inst_id": "1d7c75c33eda42949c6675ea8af97b55",
-        "access_type": "VIEWER",
-        "email": "johnsmith@example.com",
-    }
-
-
-def test_create_user_disallowed(client: TestClient):
-    # Test POST /institutions/<uuid>/users/. For various user access types.
-    # Unauthorized.
-    response = client.post(
-        "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/users",
-        json=USER_ACCT_REQUEST,
-    )
-    assert response.status_code == 401
-    assert response.json() == {
-        "detail": "Not authorized to create a more powerful user."
-    }
-
-
-def test_create_user_datakinder(datakinder_client: TestClient):
-    # Authorized.
-    response = datakinder_client.post(
-        "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/users",
-        json=USER_ACCT_REQUEST,
-    )
-    assert response.status_code == 200
-    assert response.json() == {
-        "user_id": "",
-        "name": "Taylor Smith",
-        "inst_id": "1d7c75c33eda42949c6675ea8af97b55",
-        "access_type": "DATAKINDER",
-        "email": "abc@example.com",
-    }
-"""
