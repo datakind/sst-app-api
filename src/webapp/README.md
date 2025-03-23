@@ -35,7 +35,7 @@ In the long-term, look into a way to have the API key --> token conversion be ha
 
 ## Databases
 
-All data is stored in MySQL databases (for dev/staging/prod, these are databases in GCP's Cloud SQL), the main file you'll want to look at is [src/webapp/database.py](https://github.com/datakind/sst-app-api/blob/develop/src/webapp/database.py).
+All data is stored in MySQL databases for dev/staging/prod, these are databases in GCP's Cloud SQL. In the local environment, the database is sqlite. The main file you'll want to look at for database table definitions is [src/webapp/database.py](https://github.com/datakind/sst-app-api/blob/develop/src/webapp/database.py).
 
 At time of writing, the databases the API cares about and tracks, are as follows:
 
@@ -49,6 +49,12 @@ At time of writing, the databases the API cares about and tracks, are as follows
 * Job Table ("job"): tracks Databricks jobs, storing the per-run unique job_run_id. Status of the job is also partially tracked here. Note that failed jobs are currently indistinguishable from incomplete jobs. 
 
 NOTE: naming convention is to use a singular descriptor for the table name, however, the "users" table has to follow Laravel's table naming convention, which has the users table called "users".
+
+### Tip
+
+If for any reason you want to manipulate the local database directly during local development or testing, you can do that via the sqlite commandline functionality where you can issue direct sql queries to your local sqlite database https://sqlite.org/cli.html.
+
+The local database is sqlite, the deployed databases in GCP are all mysql.
 
 ## Testing
 
