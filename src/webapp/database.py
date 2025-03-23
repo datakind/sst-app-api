@@ -1,4 +1,4 @@
-""" Database configuration."""
+"""Database configuration."""
 
 import uuid
 import datetime
