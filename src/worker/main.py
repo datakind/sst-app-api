@@ -53,7 +53,7 @@ class PdpPullResponse(BaseModel):
     """Fields for the PDP pull response."""
 
     sftp_files: list[dict]
-    pdp_inst_generated: list[dict]
+    pdp_inst_generated: list[str]
     pdp_inst_not_found: list[str]
 
 
@@ -157,17 +157,25 @@ async def execute_pdp_pull(
         sftp_vars["SFTP_HOST"], 22, sftp_vars["SFTP_USER"], sftp_vars["SFTP_PASSWORD"]
     )
     all_blobs = sftp_helper(storage_control, files)
-    signed_urls = split_csv_and_generate_signed_urls(
-        bucket_name=get_sftp_bucket_name(env_vars["ENV"]), source_blob_name=all_blobs[0]
-    )
+    valid_pdp_ids = []
+    invalid_ids = []
 
-    valid_pdp_ids, invalid_ids = fetch_institution_ids(
-        pdp_ids=list(signed_urls.keys()),
-        backend_api_key=next(key for key in api_key_enduser_tuple if key is not None),
-    )
+    for blobs in all_blobs:
+        signed_urls = split_csv_and_generate_signed_urls(
+            bucket_name=get_sftp_bucket_name(env_vars["ENV"]), source_blob_name=blobs
+        )
+
+        temp_valid_pdp_ids, temp_invalid_ids = fetch_institution_ids(
+            pdp_ids=list(signed_urls.keys()),
+            backend_api_key=next(
+                key for key in api_key_enduser_tuple if key is not None
+            ),
+        )
+        valid_pdp_ids.append(temp_valid_pdp_ids)
+        invalid_ids.append(temp_invalid_ids)
 
     return {
         "sftp_files": files,
-        "pdp_inst_generated": [valid_pdp_ids],
+        "pdp_inst_generated": valid_pdp_ids,
         "pdp_inst_not_found": invalid_ids,
     }
