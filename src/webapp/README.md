@@ -127,7 +127,7 @@ Non-error Pylint is very opinionated, and **SOMETIMES WRONG**. For example, ther
 ## Environment Variables
 
 For the deployed instances (dev, staging, prod) database related environment variables are set in the [terraform templates](../../terraform/modules/service/main.tf#L39), 
-but most are set per project in [Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager/secret/dev-worker-env-file/versions?project=dev-sst-02). To update the environment
+but most are set per project in [Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager/secret/dev-webapp-env-file/versions?project=dev-sst-02). To update the environment
 variables in secret manager, create a new version from the UI, copying the previous values with
 your changes.
 
