@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 from .main import app
-from .authn import get_current_username, get_api_key
+from .authn import get_current_username
 from unittest import mock
 from .utilities import StorageControl
 
@@ -20,14 +20,11 @@ def client_fixture():
     def storage_control_override():
         return MOCK_STORAGE
 
-    def get_api_key_override():
-        return ("valid_api_key", "end_user")
 
     app.dependency_overrides[StorageControl] = storage_control_override
 
     app.dependency_overrides[get_current_username] = get_current_username_override
 
-    app.dependency_overrides[get_api_key] = get_api_key_override
     client = TestClient(app, root_path="/workers/api/v1")
     yield client
     app.dependency_overrides.clear()
