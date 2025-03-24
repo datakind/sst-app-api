@@ -20,7 +20,6 @@ def client_fixture():
     def storage_control_override():
         return MOCK_STORAGE
 
-
     app.dependency_overrides[StorageControl] = storage_control_override
 
     app.dependency_overrides[get_current_username] = get_current_username_override

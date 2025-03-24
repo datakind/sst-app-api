@@ -1,8 +1,6 @@
 import jwt
 
-from fastapi.security import (
-    OAuth2PasswordBearer
-)
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from datetime import timedelta, datetime, timezone
 from .config import env_vars
@@ -22,7 +20,6 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
-
 
 
 def check_creds(username: str, password: str) -> bool:
