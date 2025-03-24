@@ -165,7 +165,7 @@ async def execute_pdp_pull(
 
         temp_valid_pdp_ids, temp_invalid_ids = fetch_institution_ids(
             pdp_ids=list(signed_urls.keys()),
-            backend_api_key=env_vars["BACKEND_API_KEY"]
+            backend_api_key=env_vars["BACKEND_API_KEY"],
         )
 
         valid_pdp_ids.append(temp_valid_pdp_ids)
