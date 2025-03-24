@@ -4,7 +4,6 @@ import os
 from dotenv import load_dotenv
 
 # defaults to unit test values.
-os.environ["ENV_FILE_PATH"] = "/Users/oluwadolaposalako/sst-app-api/src/.env"
 
 env_vars = {
     "ENV": "LOCAL",
