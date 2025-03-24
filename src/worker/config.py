@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 
 # defaults to unit test values.
+
 env_vars = {
     "ENV": "LOCAL",
     "SECRET_KEY": "",

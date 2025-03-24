@@ -1,5 +1,6 @@
 """Main file for the SST Worker."""
 
+import numpy as np
 import logging
 from typing import Any, Annotated
 from fastapi import FastAPI, Depends, HTTPException, status, Security
@@ -13,7 +14,7 @@ from .utilities import (
     split_csv_and_generate_signed_urls,
     fetch_institution_ids,
 )
-from .config import sftp_vars, env_vars, startup_env_vars
+from .config import sftp_vars, env_vars, startup_env_vars, gcs_vars
 from .authn import (
     Token,
     get_current_username,
@@ -51,8 +52,11 @@ class PdpPullResponse(BaseModel):
     """Fields for the PDP pull response."""
 
     sftp_files: list[dict]
-    pdp_inst_generated: list[str]
-    pdp_inst_not_found: list[str]
+    pdp_inst_generated: list[Any]
+    pdp_inst_not_found: list[Any]
+
+    class Config:
+        json_encoders = {np.int64: lambda v: int(v)}
 
 
 @app.on_event("startup")
@@ -134,7 +138,6 @@ def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) ->
                 logger.info(
                     f"Successfully processed '{sftp_source_filename}' as '{dest_filename}'."
                 )
-                return all_blobs
             except Exception as e:
                 logger.error(
                     f"Error processing '{sftp_source_filename}': {e}", exc_info=True
@@ -143,7 +146,7 @@ def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) ->
 
 
 @app.post("/execute-pdp-pull", response_model=PdpPullResponse)
-def execute_pdp_pull(
+async def execute_pdp_pull(
     req: PdpPullRequest,
     current_username: Annotated[str, Depends(get_current_username)],
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
@@ -155,13 +158,19 @@ def execute_pdp_pull(
         sftp_vars["SFTP_HOST"], 22, sftp_vars["SFTP_USER"], sftp_vars["SFTP_PASSWORD"]
     )
     all_blobs = sftp_helper(storage_control, files)
+    print(f"It's all processed {all_blobs}")
     valid_pdp_ids = []
     invalid_ids = []
 
     for blobs in all_blobs:
+        logging.debug(f"Processing {blobs}")
+        print(f"Processing {blobs}")
         signed_urls = split_csv_and_generate_signed_urls(
-            bucket_name=get_sftp_bucket_name(env_vars["ENV"]), source_blob_name=blobs
+            bucket_name=get_sftp_bucket_name(env_vars["ENV"]),
+            source_blob_name=blobs,
+            storage_account_file=gcs_vars["GCP_SERVICE_ACCOUNT_KEY_PATH"],
         )
+        logging.info(f"Signed URls generated {signed_urls}")
 
         temp_valid_pdp_ids, temp_invalid_ids = fetch_institution_ids(
             pdp_ids=list(signed_urls.keys()),
@@ -169,6 +178,7 @@ def execute_pdp_pull(
                 key for key in api_key_enduser_tuple if key is not None
             ),
         )
+
         valid_pdp_ids.append(temp_valid_pdp_ids)
         invalid_ids.append(temp_invalid_ids)
 

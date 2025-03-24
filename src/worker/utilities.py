@@ -5,13 +5,19 @@ from google.cloud import storage
 from pydantic import BaseModel
 import os
 import stat
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import io
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Union
 import requests
 import pandas as pd
 import re
+import binascii
+import collections
+import hashlib
+from urllib.parse import quote
+from google.oauth2 import service_account
+import six
 
 
 def get_sftp_bucket_name(env_var: str) -> str:
@@ -126,99 +132,6 @@ class StorageControl(BaseModel):
         storage_client.create_bucket(bucket, location="us")
 
 
-def split_csv_and_generate_signed_urls(
-    bucket_name: str, source_blob_name: str, url_expiration_minutes: int = 1440
-) -> Dict[str, Dict[str, str]]:
-    """
-    Fetches a CSV from Google Cloud Storage, splits it by a specified column, uploads the results,
-    and returns a dictionary where each key is an institution ID and the value is another dictionary
-    containing both a signed URL and file name for the uploaded file.
-
-    Parameters:
-        storage_client (storage.Client): The Google Cloud Storage client instance.
-        bucket_name (str): The name of the GCS bucket containing the source CSV.
-        source_blob_name (str): The blob name of the source CSV file.
-        destination_folder (str): The destination folder in the bucket to store split files.
-        institution_column (str): The column to split the CSV file on.
-        url_expiration_minutes (int): The duration in minutes for which the signed URLs are valid.
-
-    Returns:
-        Dict[str, Dict[str, str]]: A dictionary with institution IDs as keys and dictionaries with 'signed_url' and 'file_name' as values.
-    """
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    source_blob = bucket.blob(source_blob_name)
-
-    try:
-        logging.info(f"Attempting to download the source blob: {source_blob_name}")
-        csv_string = source_blob.download_as_text()
-        csv_data = io.StringIO(csv_string)
-        df = pd.read_csv(csv_data)
-        logging.info("CSV data successfully loaded into DataFrame.")
-    except Exception as e:
-        logging.error(f"Failed to process blob {source_blob_name}: {e}")
-        return {}
-
-    pattern = re.compile(r"(?=.*institution)(?=.*id)", re.IGNORECASE)
-    institution_column = None
-
-    # Identify the correct column based on the pattern
-    for column in df.columns:
-        if pattern.search(column):
-            institution_column = column
-            logging.info(f"Matching column found: {column}")
-            break
-
-    if not institution_column:
-        error_message = (
-            "No column found matching the pattern for 'institution' and 'id'."
-        )
-        logging.error(error_message)
-        return {"error": {"message": "Failed to download or parse CSV"}}
-
-    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    all_data = {}
-
-    # Processing the DataFrame
-    unique_inst_ids = df[institution_column].unique()
-    for inst_id in unique_inst_ids:
-        group = df[df[institution_column] == inst_id]
-        output = io.StringIO()
-        group.to_csv(output, index=False)
-        output.seek(0)
-
-        file_name = f"{source_blob_name.split('.')[0]}_{inst_id}.csv"
-        timestamped_folder = f"{inst_id}"
-        new_blob_name = f"{timestamped_folder}/{current_time}/{file_name}"
-        new_blob = storage_client.bucket(bucket_name).blob(new_blob_name)
-
-        # Attempt to upload the CSV file
-        try:
-            logging.info(
-                f"Uploading split CSV for institution ID {inst_id} to {new_blob_name}"
-            )
-            new_blob.upload_from_string(output.getvalue(), content_type="text/csv")
-        except Exception as e:
-            logging.error(f"Failed to upload CSV for institution ID {inst_id}: {e}")
-            continue
-
-        # Attempt to generate a signed URL for the new blob
-        try:
-            expiration_time = datetime.now() + timedelta(minutes=url_expiration_minutes)
-            signed_url = new_blob.generate_signed_url(expiration=expiration_time)
-            all_data[inst_id] = {"signed_url": signed_url, "file_name": file_name}
-            logging.info(
-                f"Signed URL generated successfully for institution ID {inst_id}"
-            )
-        except Exception as e:
-            logging.error(
-                f"Failed to generate signed URL for institution ID {inst_id}: {e}"
-            )
-            continue
-
-    return all_data
-
-
 def fetch_institution_ids(pdp_ids: list, backend_api_key: str) -> Any:
     """
     Fetches institution IDs for a list of PDP IDs using an API and returns a dictionary of valid IDs and a list of problematic IDs.
@@ -247,7 +160,7 @@ def fetch_institution_ids(pdp_ids: list, backend_api_key: str) -> Any:
         logging.error(f"Failed to get token: {token_response.text}")
         problematic_ids.append(f"Failed to get token: {token_response.text}")
         return (
-            inst_id_dict,
+            {},
             problematic_ids,
         )  # Return empty dict and list if no token is obtained
 
@@ -255,7 +168,7 @@ def fetch_institution_ids(pdp_ids: list, backend_api_key: str) -> Any:
     if not access_token:
         logging.error("Access token not found in the response.")
         problematic_ids.append("Access token not found in the response.")
-        return problematic_ids
+        return {}, problematic_ids
 
     # Process each PDP ID in the list
     for pdp_id in pdp_ids:
@@ -337,3 +250,204 @@ def post_file_to_signed_url(file_path: str, signed_url: str) -> str:
             return "File uploaded successfully."
         else:
             return f"Failed to upload file: {response.status_code} {response.text}"
+
+
+def generate_signed_url(
+    service_account_file: str,
+    bucket_name: str,
+    object_name: str,
+    subresource: Optional[str] = None,
+    expiration: int = 600000,
+    http_method: str = "GET",
+    query_parameters: Optional[Dict[str, Union[int, str]]] = None,
+    headers: Optional[Dict[str, str]] = None,
+) -> str:
+    escaped_object_name = quote(six.ensure_binary(object_name), safe=b"/~")
+    canonical_uri = f"/{escaped_object_name}"
+
+    datetime_now = datetime.now(tz=timezone.utc)
+    request_timestamp = datetime_now.strftime("%Y%m%dT%H%M%SZ")
+    datestamp = datetime_now.strftime("%Y%m%d")
+
+    google_credentials = service_account.Credentials.from_service_account_file(
+        service_account_file
+    )
+    client_email = google_credentials.service_account_email
+    credential_scope = f"{datestamp}/auto/storage/goog4_request"
+    credential = f"{client_email}/{credential_scope}"
+
+    if headers is None:
+        headers = dict()
+    host = f"{bucket_name}.storage.googleapis.com"
+    headers["host"] = host
+
+    canonical_headers = ""
+    ordered_headers = collections.OrderedDict(sorted(headers.items()))
+    for k, v in ordered_headers.items():
+        lower_k = str(k).lower()
+        strip_v = str(v).lower()
+        canonical_headers += f"{lower_k}:{strip_v}\n"
+
+    signed_headers = ""
+    for k, _ in ordered_headers.items():
+        lower_k = str(k).lower()
+        signed_headers += f"{lower_k};"
+    signed_headers = signed_headers[:-1]  # remove trailing ';'
+
+    if query_parameters is None:
+        query_parameters = dict()
+    query_parameters["X-Goog-Algorithm"] = "GOOG4-RSA-SHA256"
+    query_parameters["X-Goog-Credential"] = credential
+    query_parameters["X-Goog-Date"] = request_timestamp
+    query_parameters["X-Goog-Expires"] = expiration
+    query_parameters["X-Goog-SignedHeaders"] = signed_headers
+    if subresource:
+        query_parameters[subresource] = ""
+
+    canonical_query_string = ""
+    ordered_query_parameters = collections.OrderedDict(sorted(query_parameters.items()))
+    for k, v in ordered_query_parameters.items():
+        encoded_k = quote(str(k), safe="")
+        encoded_v = quote(str(v), safe="")
+        canonical_query_string += f"{encoded_k}={encoded_v}&"
+    canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
+
+    canonical_request = "\n".join(
+        [
+            http_method,
+            canonical_uri,
+            canonical_query_string,
+            canonical_headers,
+            signed_headers,
+            "UNSIGNED-PAYLOAD",
+        ]
+    )
+
+    canonical_request_hash = hashlib.sha256(canonical_request.encode()).hexdigest()
+
+    string_to_sign = "\n".join(
+        [
+            "GOOG4-RSA-SHA256",
+            request_timestamp,
+            credential_scope,
+            canonical_request_hash,
+        ]
+    )
+
+    # signer.sign() signs using RSA-SHA256 with PKCS1v15 padding
+    signature = binascii.hexlify(
+        google_credentials.signer.sign(string_to_sign)
+    ).decode()
+
+    scheme_and_host = "{}://{}".format("https", host)
+    signed_url = "{}{}?{}&x-goog-signature={}".format(
+        scheme_and_host, canonical_uri, canonical_query_string, signature
+    )
+
+    return signed_url
+
+
+def split_csv_and_generate_signed_urls(
+    bucket_name: str, source_blob_name: str, storage_account_file: str
+) -> Dict[str, Dict[str, str]]:
+    """
+    Fetches a CSV from Google Cloud Storage, splits it by a specified column, uploads the results,
+    and returns a dictionary where each key is an institution ID and the value is another dictionary
+    containing both a signed URL and file name for the uploaded file.
+
+    Parameters:
+        storage_client (storage.Client): The Google Cloud Storage client instance.
+        bucket_name (str): The name of the GCS bucket containing the source CSV.
+        source_blob_name (str): The blob name of the source CSV file.
+        destination_folder (str): The destination folder in the bucket to store split files.
+        institution_column (str): The column to split the CSV file on.
+        url_expiration_minutes (int): The duration in minutes for which the signed URLs are valid.
+
+    Returns:
+        Dict[str, Dict[str, str]]: A dictionary with institution IDs as keys and dictionaries with 'signed_url' and 'file_name' as values.
+    """
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    source_blob = bucket.blob(source_blob_name)
+
+    try:
+        logging.debug(f"Attempting to download the source blob: {source_blob_name}")
+        print(f"Attempting to download the source blob: {source_blob_name}")
+        csv_string = source_blob.download_as_text()
+        csv_data = io.StringIO(csv_string)
+        df = pd.read_csv(csv_data)
+        logging.debug("CSV data successfully loaded into DataFrame.")
+        print("CSV data successfully loaded into DataFrame.")
+    except Exception as e:
+        logging.error(f"Failed to process blob {source_blob_name}: {e}")
+        return {}
+
+    pattern = re.compile(r"(?=.*institution)(?=.*id)", re.IGNORECASE)
+    institution_column = None
+
+    # Identify the correct column based on the pattern
+    for column in df.columns:
+        if pattern.search(column):
+            institution_column = column
+            logging.debug(f"Matching column found: {column}")
+            break
+
+    if not institution_column:
+        error_message = (
+            "No column found matching the pattern for 'institution' and 'id'."
+        )
+        logging.debug(error_message)
+        return {"error": {"message": "Failed to download or parse CSV"}}
+
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    all_data = {}
+
+    # Processing the DataFrame
+    unique_inst_ids = df[institution_column].unique()
+    for inst_id in unique_inst_ids:
+        group = df[df[institution_column] == inst_id]
+        output = io.StringIO()
+        group.to_csv(output, index=False)
+        output.seek(0)
+
+        file_name = f"{source_blob_name.split('.')[0]}_{inst_id}.csv"
+        timestamped_folder = f"{inst_id}"
+        new_blob_name = f"{timestamped_folder}/{current_time}/{file_name}"
+        new_blob = storage_client.bucket(bucket_name).blob(new_blob_name)
+
+        # Attempt to upload the CSV file
+        try:
+            logging.debug(
+                f"Uploading split CSV for institution ID {inst_id} to {new_blob_name}"
+            )
+            print(
+                f"Uploading split CSV for institution ID {inst_id} to {new_blob_name}"
+            )
+            new_blob.upload_from_string(output.getvalue(), content_type="text/csv")
+        except Exception as e:
+            logging.error(f"Failed to upload CSV for institution ID {inst_id}: {e}")
+            continue
+
+        # Attempt to generate a signed URL for the new blob
+        try:
+            signed_url = generate_signed_url(
+                service_account_file=storage_account_file,
+                bucket_name=bucket_name,
+                object_name=new_blob_name,
+            )
+            # new_blob.generate_signed_url(expiration=expiration_time)
+            all_data[str(inst_id)] = {
+                "signed_url": str(signed_url),
+                "file_name": str(file_name),
+            }
+            logging.info(
+                f"Signed URL generated successfully for institution ID {inst_id}"
+            )
+            print(f"Signed URL generated successfully for institution ID {inst_id}")
+        except Exception as e:
+            logging.error(
+                f"Failed to generate signed URL for institution ID {inst_id}: {e}"
+            )
+            continue
+    print(all_data)
+    return all_data
