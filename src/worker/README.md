@@ -88,6 +88,13 @@ For convenience: the .env.example username/password combo for the local env are:
 
 Non-error Pylint is very opinionated, and **SOMETIMES WRONG**. For example, there exist warnings to switch `== NONE` to `is None` for SQL query where clauses. THIS WILL CAUSE THE SQL QUERY TO NOT WORK -- (it appears to be due to how SqlAlchemy understands the clauses). So be careful when following the recommendations from pylint. While the worker doesn't have database actions, there may be other such cases.
 
+## Environment Variables
+
+For the deployed instances (dev, staging, prod) database related environment variables are set in the [terraform templates](../../terraform/modules/service/main.tf#L39), 
+but most are set per project in [Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager/secret/dev-worker-env-file/versions?project=dev-sst-02). To update the environment
+variables in secret manager, create a new version from the UI, copying the previous values with
+your changes.
+
 ## Other notes
 
 The .env processing file is config.py -- make sure any new environment variables get added to this file so that the program will ensure its required on start up time and so that you can access it in other files using the config.py's maps.
