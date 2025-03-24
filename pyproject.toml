@@ -24,7 +24,10 @@ dependencies = [
     "requests>=2.0.0",
     "types-requests",
     "types-paramiko",
-    "pandas"
+    "pandas",
+    "collection",
+    "six",
+    "types-six"
 ]
 
 [project.urls]
