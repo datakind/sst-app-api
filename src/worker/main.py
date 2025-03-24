@@ -14,7 +14,7 @@ from .utilities import (
     split_csv_and_generate_signed_urls,
     fetch_institution_ids,
 )
-from .config import sftp_vars, env_vars, startup_env_vars, gcs_vars
+from .config import sftp_vars, env_vars, startup_env_vars
 from .authn import (
     Token,
     get_current_username,
@@ -167,8 +167,7 @@ async def execute_pdp_pull(
         print(f"Processing {blobs}")
         signed_urls = split_csv_and_generate_signed_urls(
             bucket_name=get_sftp_bucket_name(env_vars["ENV"]),
-            source_blob_name=blobs,
-            storage_account_file=gcs_vars["GCP_SERVICE_ACCOUNT_KEY_PATH"],
+            source_blob_name=blobs
         )
         logging.info(f"Signed URls generated {signed_urls}")
 
