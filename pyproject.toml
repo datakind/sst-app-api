@@ -23,7 +23,8 @@ dependencies = [
     "jsonpickle>=4.0.1",
     "requests>=2.0.0",
     "types-requests",
-    "types-paramiko"
+    "types-paramiko",
+    "pandas"
 ]
 
 [project.urls]
