@@ -128,7 +128,7 @@ class StorageControl(BaseModel):
         storage_client.create_bucket(bucket, location="us")
 
 
-def fetch_institution_ids(pdp_ids: list, backend_api_key: str) -> Any:
+def fetch_institution_ids(pdp_ids: List[str], backend_api_key: str) -> Any:
     """
     Fetches institution IDs for a list of PDP IDs using an API and returns a dictionary of valid IDs and a list of problematic IDs.
 
@@ -137,28 +137,29 @@ def fetch_institution_ids(pdp_ids: list, backend_api_key: str) -> Any:
         backend_api_key (str): API key required for authorization.
 
     Returns:
-        dict: A dictionary mapping PDP ID to Institution ID for successful fetches.
-        list: List of PDP IDs that were problematic or not found.
+        tuple: A tuple containing a dictionary mapping PDP IDs to Institution IDs and a list of problematic PDP IDs.
     """
     if not backend_api_key:
         raise ValueError("Missing BACKEND_API_KEY in environment variables.")
 
     # Dictionary to store successful PDP ID to Institution ID mappings
-    inst_id_dict: Dict[str, str] = {}  # Explicit type annotation
-    problematic_ids: list = []  # List to track problematic IDs
+    inst_id_dict: Dict[str, str] = {}
+    # List to track problematic IDs
+    problematic_ids: List[str] = []
+
+    # Create a custom session with trust_env disabled to avoid using .netrc credentials.
+    session = requests.Session()
+    session.trust_env = False
 
     # Obtain the access token
-    token_response = requests.post(
+    token_response = session.post(
         "https://dev-sst.datakind.org/api/v1/token-from-api-key",
         headers={"accept": "application/json", "X-API-KEY": backend_api_key},
     )
     if token_response.status_code != 200:
         logging.error(f"Failed to get token: {token_response.text}")
         problematic_ids.append(f"Failed to get token: {token_response.text}")
-        return (
-            {},
-            problematic_ids,
-        )  # Return empty dict and list if no token is obtained
+        return {}, problematic_ids
 
     access_token = token_response.json().get("access_token")
     if not access_token:
@@ -168,7 +169,7 @@ def fetch_institution_ids(pdp_ids: list, backend_api_key: str) -> Any:
 
     # Process each PDP ID in the list
     for pdp_id in pdp_ids:
-        inst_response = requests.post(
+        inst_response = session.post(
             f"https://dev-sst.datakind.org/api/v1/institutions/pdp-id/{pdp_id}",
             headers={
                 "accept": "application/json",
