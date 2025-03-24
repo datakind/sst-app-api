@@ -46,7 +46,7 @@ subnet_ip_cidr_range = "10.1.0.0/24" # A unique range within the vpc_host_projec
 
 ## Application of the Configuration
 
-First, for each environment you must
+On first application, for each environment you must
 - [Configure Google Auth Platform](https://console.cloud.google.com/auth/overview)
 - [Connect GitHub Repositories](https://console.cloud.google.com/cloud-build/repositories/2nd-gen)
 
@@ -71,7 +71,7 @@ terraform apply -var="project=my-project" -var="region=us-central1"
 
 ### Environment Secrets
 
-The application of the templates creates initial <env>-<service>-env-file secrets for the [Cloud Run services](https://console.cloud.google.com/run). Using [Secret Manager](https://console.cloud.google.com/security/secret-manager) you must add a new version containing all the secrets needed to run the application.
+The initial application of the templates creates initial <env>-<service>-env-file secrets for the [Cloud Run services](https://console.cloud.google.com/run). Using [Secret Manager](https://console.cloud.google.com/security/secret-manager) you must add a new version containing all the secrets needed to run the application.
 
 ### DNS Configs
 
@@ -93,6 +93,11 @@ Name: @ (or your subdomain, e.g., www)
 Value: [Your Load Balancer IP Address]
 TTL: 3600 (or your preferred TTL)
 ```
+
+### Cloud Build Trigger
+
+After applying the templates for the first time, a [cloud build trigger](https://console.cloud.google.com/cloud-build/triggers?project=dev-sst-02)
+is create that can be used as an alternative to the command line for applying template updates. Use of this trigger is optional, and the service account must be manually granted the correct permissions to apply updates.
 
 ## Configuration Details
 
