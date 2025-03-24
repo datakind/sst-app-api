@@ -26,7 +26,8 @@ dependencies = [
     "types-paramiko",
     "pandas",
     "collection",
-    "six"
+    "six",
+    "types-six"
 ]
 
 [project.urls]

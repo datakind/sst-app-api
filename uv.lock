@@ -2579,6 +2579,7 @@ dependencies = [
     { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "types-paramiko" },
     { name = "types-requests" },
+    { name = "types-six" },
 ]
 
 [package.dev-dependencies]
@@ -2617,6 +2618,7 @@ requires-dist = [
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = "~=2.0" },
     { name = "types-paramiko" },
     { name = "types-requests" },
+    { name = "types-six" },
 ]
 
 [package.metadata.requires-dev]
@@ -2803,6 +2805,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/09/1a/beaeff79ef9efd186566ba5f0d95b44ae21f6d31e9413bcfbef3489b6ae3/types_requests-2.32.0.20250306.tar.gz", hash = "sha256:0962352694ec5b2f95fda877ee60a159abdf84a0fc6fdace599f20acb41a03d1", size = 23012 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/26/645d89f56004aa0ba3b96fec27793e3c7e62b40982ee069e52568922b6db/types_requests-2.32.0.20250306-py3-none-any.whl", hash = "sha256:25f2cbb5c8710b2022f8bbee7b2b66f319ef14aeea2f35d80f18c9dbf3b60a0b", size = 20673 },
+]
+
+[[package]]
+name = "types-six"
+version = "1.17.0.20250304"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a1/41/7cefd7170bad86c30d955d58c3b8fae74ff1a0770a8ababc66d5bcf2f840/types_six-1.17.0.20250304.tar.gz", hash = "sha256:eeb240f9faec63ddd0498d6c0b6abd0496b154a66f960c004d4d733cf31bb4bd", size = 15567 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/a6/25ece9902968d99416c7e001969ca71ee092871e4a0fd3a1c13fb0b3d93c/types_six-1.17.0.20250304-py3-none-any.whl", hash = "sha256:e482df1d439375f4b7c1f2540b1b8584aea82850164a296203ead4a7024fe14f", size = 20071 },
 ]
 
 [[package]]
