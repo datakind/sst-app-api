@@ -1,9 +1,8 @@
 """API functions related to institutions."""
 
-import uuid
 import re
 
-from typing import Annotated, Any, Union, Dict
+from typing import Annotated, Any, Dict
 from fastapi import HTTPException, status, APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -12,7 +11,6 @@ from sqlalchemy import and_, delete
 
 from ..utilities import (
     has_access_to_inst_or_err,
-    has_full_data_access_or_err,
     BaseUser,
     AccessType,
     get_external_bucket_name_from_uuid,
@@ -29,10 +27,7 @@ from ..gcsutil import StorageControl
 from ..database import (
     get_session,
     InstTable,
-    AccountTable,
-    AccountHistoryTable,
     local_session,
-    VAR_CHAR_STANDARD_LENGTH,
 )
 
 from ..databricks import DatabricksControl
@@ -40,19 +35,6 @@ from ..databricks import DatabricksControl
 router = APIRouter(
     tags=["institutions"],
 )
-
-# TODO: possibly delete the following
-# The following are the default top-level folders created in a new GCS bucket.
-# softdelete/ is the folder where files in soft-deletion (from user requests or retention time-up) are held prior to deletion.
-# Files in softdelete/ should not be visible to even datakinders unless they are in a debugging group -- they can view these files from the gcs console.
-DEFAULT_FOLDERS = [
-    "unvalidated",  # for inputs
-    "validated",  # for inputs
-    "output/metadata",
-    "unapproved",  # for outputs
-    "approved",  # for outputs
-    "softdelete",  # TODO: we might not need this folder
-]
 
 
 class InstitutionCreationRequest(BaseModel):
@@ -62,12 +44,13 @@ class InstitutionCreationRequest(BaseModel):
     """
 
     # The name should be unique amongst all other institutions.
-    name: str
+    name: str | None = None
     state: UsState | None = None
     allowed_schemas: list[SchemaType] | None = None
     # Emails allowed to register under this institution
     allowed_emails: Dict[str, AccessType] | None = None
-    # The following is a shortcut to specifying the allowed_schemas list and will mean that the allowed_schemas will be augmented with the PDP_SCHEMA_GROUP.
+    # The following is a shortcut to specifying the allowed_schemas list and will mean
+    # that the allowed_schemas will be augmented with the PDP_SCHEMA_GROUP.
     is_pdp: bool | None = None
     pdp_id: str | None = None
     retention_days: int | None = None
@@ -93,9 +76,6 @@ def read_all_inst(
     """Returns overview data on all institutions.
 
     Only visible to Datakinders.
-
-    Args:
-        current_user: the user making the request.
     """
     if not current_user.is_datakinder():
         raise HTTPException(
@@ -110,9 +90,9 @@ def read_all_inst(
             {
                 "inst_id": uuid_to_str(elem[0].id),
                 "name": elem[0].name,
-                "retention_days": elem[0].retention_days,
                 "state": elem[0].state,
-                # TODO add datetime for creation times
+                "retention_days": elem[0].retention_days,
+                "pdp_id": None if elem[0].pdp_id is None else elem[0].pdp_id,
             }
         )
     return res
@@ -129,14 +109,16 @@ def create_institution(
     """Create a new institution.
 
     Only available to Datakinders.
-
-    Args:
-        current_user: the user making the request.
     """
     if not current_user.is_datakinder():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authorized to create an institution.",
+        )
+    if not req.name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please set the institution name.",
         )
     if (req.is_pdp and not req.pdp_id) or (req.pdp_id and not req.is_pdp):
         raise HTTPException(
@@ -194,7 +176,7 @@ def create_institution(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database write of the institution creation failed.",
             )
-        elif len(query_result) > 1:
+        if len(query_result) > 1:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database write of the institution created duplicate entries.",
@@ -207,14 +189,14 @@ def create_institution(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Storage bucket creation failed:" + str(e),
-            )
+            ) from e
         try:
             databricks_control.setup_new_inst(query_result[0][0].name)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Databricks setup failed:" + str(e),
-            )
+            ) from e
     if len(query_result) > 1:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -229,7 +211,88 @@ def create_institution(
     }
 
 
-# TODO: add tests
+@router.patch("/institutions/{inst_id}", response_model=Institution)
+def update_inst(
+    inst_id: str,
+    request: InstitutionCreationRequest,
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    sql_session: Annotated[Session, Depends(get_session)],
+) -> Any:
+    """Modifies an existing institution. Only some fields are allowed to be modified."""
+    if not current_user.is_datakinder():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authorized to modify an institution.",
+        )
+
+    update_data = request.model_dump(exclude_unset=True)
+    local_session.set(sql_session)
+    # Check that the batch exists.
+    query_result = (
+        local_session.get()
+        .execute(
+            select(InstTable).where(
+                InstTable.id == str_to_uuid(inst_id),
+            )
+        )
+        .all()
+    )
+    if not query_result or len(query_result) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unexpected number of institutions found with this id. Expected 1 got "
+            + str(len(query_result)),
+        )
+    existing_inst = query_result[0][0]
+    if "name" in update_data:
+        if update_data["name"] != existing_inst.name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Institution names cannot be changed.",
+            )
+    if (
+        "is_pdp" in update_data
+        and update_data["is_pdp"]
+        and "pdp_id" not in update_data
+        and not existing_inst.pdp_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="If is_pdp is set, pdp_id must also be set.",
+        )
+
+    if "state" in update_data:
+        existing_inst.state = update_data["state"]
+    if "allowed_schemas" in update_data:
+        existing_inst.allowed_schemas = update_data["allowed_schemas"]
+    if "allowed_emails" in update_data:
+        existing_inst.allowed_emails = update_data["allowed_emails"]
+    if "is_pdp" in update_data:
+        existing_inst.is_pdp = update_data["is_pdp"]
+    if "pdp_id" in update_data:
+        existing_inst.pdp_id = update_data["pdp_id"]
+    if "retention_days" in update_data:
+        existing_inst.retention_days = update_data["retention_days"]
+
+    local_session.get().commit()
+    res = (
+        local_session.get()
+        .execute(
+            select(InstTable).where(
+                InstTable.id == str_to_uuid(inst_id),
+            )
+        )
+        .all()
+    )
+    return {
+        "inst_id": uuid_to_str(res[0][0].id),
+        "name": res[0][0].name,
+        "state": res[0][0].state,
+        "pdp_id": res[0][0].pdp_id,
+        "retention_days": res[0][0].retention_days,
+    }
+
+
 @router.delete("/institutions/{inst_id}", response_model=None)
 def delete_inst(
     inst_id: str,
@@ -241,9 +304,6 @@ def delete_inst(
     """Delete an existing institution.
 
     Only available to Datakinders.
-
-    Args:
-        current_user: the user making the request.
     """
     if not current_user.is_datakinder():
         raise HTTPException(
@@ -269,16 +329,14 @@ def delete_inst(
     )
     local_session.get().commit()
     # Delete GCS bucket
-    print("[debugging_crystal]: deleting bucket")
     bucket_name = get_external_bucket_name(inst_id)
-    print("[debugging_crystal]: deleting bucket" + bucket_name)
     try:
         storage_control.delete_bucket(bucket_name)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Storage bucket deletion failed:" + str(e),
-        )
+        ) from e
     # Delete all databricks managed pieces.
     try:
         databricks_control.delete_inst(inst_name)
@@ -286,7 +344,7 @@ def delete_inst(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Databricks deletion failed:" + str(e),
-        )
+        ) from e
 
 
 # All other API transactions require the UUID as an identifier, this allows the UUID lookup by human readable name.
@@ -299,9 +357,6 @@ def read_inst_name(
     """Returns overview data on a specific institution.
 
     The root-level API view. Only visible to users of that institution or Datakinder access types.
-
-    Args:
-        current_user: the user making the request.
     """
     local_session.set(sql_session)
     query_result = (
@@ -337,13 +392,7 @@ def read_inst_pdp_id(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> Any:
-    """Returns overview data on a specific institution.
-
-    The root-level API view. Only visible to users of that institution or Datakinder access types.
-
-    Args:
-        current_user: the user making the request.
-    """
+    """Returns the uuid for a school given its pdp_id. Endpoint allowed for any user."""
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -379,9 +428,6 @@ def read_inst_id(
     """Returns overview data on a specific institution.
 
     The root-level API view. Only visible to users of that institution or Datakinder access types.
-
-    Args:
-        current_user: the user making the request.
     """
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)

@@ -11,6 +11,8 @@ env_vars = {
     "ACCESS_TOKEN_EXPIRE_MINUTES": "120",
     # The Issuers env var will be stored as an array of emails.
     "API_KEY_ISSUERS": [],
+    "INITIAL_API_KEY": "",
+    "INITIAL_API_KEY_ID": "",
 }
 
 # The INSTANCE_HOST is the private IP of CLoudSQL instance e.g. '127.0.0.1' ('172.17.0.1' if deployed to GAE Flex)
@@ -50,8 +52,8 @@ databricks_vars = {
 }
 
 
-# Setup function to get environment variables. Should be called at startup time.
 def startup_env_vars():
+    """Setup function to get environment variables. Should be called at startup time."""
     env_file = os.environ.get("ENV_FILE_PATH")
     if not env_file:
         raise ValueError(
@@ -81,8 +83,7 @@ def startup_env_vars():
                 "ENV environment variable not one of: PROD, STAGING, DEV, LOCAL."
             )
         if (
-            name == "ACCESS_TOKEN_EXPIRE_MINUTES"
-            or name == "ACCESS_TOKEN_EXPIRE_MINUTES"
+            name in ("ACCESS_TOKEN_EXPIRE_MINUTES", "ACCESS_TOKEN_EXPIRE_MINUTES")
         ) and not env_var.isdigit():
             raise ValueError(
                 "ACCESS_TOKEN_EXPIRE_MINUTES and ACCESS_TOKEN_EXPIRE_MINUTES environment variables must be an int."
@@ -111,8 +112,8 @@ def startup_env_vars():
             databricks_vars[name] = env_var
 
 
-# Setup function to get db environment variables. Should be called at db startup time.
 def setup_database_vars():
+    """Setup function to get db environment variables. Should be called at db startup time."""
     global engine_vars
     for name in engine_vars:
         env_var = os.environ.get(name)

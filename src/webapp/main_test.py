@@ -1,22 +1,19 @@
 """Test file for the main.py file and constituent API functions."""
 
-import pytest
 import json
-
+import pytest
 from fastapi.testclient import TestClient
-from .main import app
 import sqlalchemy
 from sqlalchemy.pool import StaticPool
-import uuid
+from .main import app
 from .database import (
     AccountTable,
     InstTable,
     Base,
     get_session,
-    local_session,
     ApiKeyTable,
 )
-from .authn import get_password_hash, get_api_key_hash, verify_api_key
+from .authn import get_password_hash, get_api_key_hash
 from .test_helper import (
     DATAKINDER,
     USER_VALID_INST_UUID,
@@ -27,11 +24,12 @@ from .test_helper import (
     UNASSIGNED_USER,
     SAMPLE_UUID,
 )
-from .utilities import get_current_active_user, uuid_to_str
+from .utilities import get_current_active_user
 
 
 @pytest.fixture(name="session")
 def session_fixture():
+    """Unit test database setup."""
     engine = sqlalchemy.create_engine(
         "sqlite://",
         echo=True,
@@ -106,6 +104,8 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: sqlalchemy.orm.Session):
+    """Unit test mocks setup for DATAKINDER type."""
+
     def get_session_override():
         return session
 
@@ -122,6 +122,8 @@ def client_fixture(session: sqlalchemy.orm.Session):
 
 @pytest.fixture(name="user_client")
 def user_client_fixture(session: sqlalchemy.orm.Session):
+    """Unit test mocks setup for non-Datakinder type."""
+
     def get_session_override():
         return session
 
@@ -139,16 +141,6 @@ def user_client_fixture(session: sqlalchemy.orm.Session):
 def test_get_root(client: TestClient):
     """Test GET /."""
     response = client.get("/")
-    assert response.status_code == 200
-
-
-def test_retrieve_token(client: TestClient):
-    """Test POST /token."""
-    response = client.post(
-        "/token",
-        data={"username": "johnsmith@example.com", "password": "xxxx"},
-        headers={"content-type": "application/x-www-form-urlencoded"},
-    )
     assert response.status_code == 200
 
 

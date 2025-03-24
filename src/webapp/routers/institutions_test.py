@@ -1,14 +1,13 @@
 """Test file for the institutions.py file and constituent API functions."""
 
-from fastapi.testclient import TestClient
-from fastapi import HTTPException
-import pytest
-from datetime import datetime
-import sqlalchemy
-from sqlalchemy.pool import StaticPool
 import uuid
 import os
+from datetime import datetime
 from unittest import mock
+import pytest
+import sqlalchemy
+from fastapi.testclient import TestClient
+from sqlalchemy.pool import StaticPool
 
 from . import institutions
 from ..test_helper import (
@@ -21,7 +20,7 @@ from ..test_helper import (
 
 from ..utilities import uuid_to_str, get_current_active_user
 from ..main import app
-from ..database import InstTable, Base, get_session, local_session
+from ..database import InstTable, Base, get_session
 from ..gcsutil import StorageControl
 from ..databricks import DatabricksControl
 
@@ -38,6 +37,7 @@ MOCK_DATABRICKS = mock.Mock()
 
 @pytest.fixture(name="session")
 def session_fixture():
+    """Unit test database setup."""
     engine = sqlalchemy.create_engine(
         "sqlite://",
         echo=True,
@@ -82,6 +82,8 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: sqlalchemy.orm.Session):
+    """Unit test mocks setup for a non-DATAKINDER type."""
+
     def get_session_override():
         return session
 
@@ -107,6 +109,8 @@ def client_fixture(session: sqlalchemy.orm.Session):
 
 @pytest.fixture(name="datakinder_client")
 def datakinder_client_fixture(session: sqlalchemy.orm.Session):
+    """Unit test mocks setup for a DATAKINDER type."""
+
     def get_session_override():
         return session
 
@@ -143,7 +147,7 @@ def test_read_all_inst(client: TestClient):
 
 
 def test_read_all_inst_datakinder(datakinder_client: TestClient):
-    """Test GET /institutions."""
+    """Test GET /institutions using DATAKINDER type."""
     # Authorized.
     response = datakinder_client.get("/institutions")
     assert response.status_code == 200
@@ -151,7 +155,7 @@ def test_read_all_inst_datakinder(datakinder_client: TestClient):
         {
             "inst_id": uuid_to_str(UUID_1),
             "name": "school_1",
-            "pdp_id": None,
+            "pdp_id": "456",
             "retention_days": None,
             "state": "GA",
         },
@@ -165,7 +169,7 @@ def test_read_all_inst_datakinder(datakinder_client: TestClient):
         {
             "inst_id": uuid_to_str(USER_VALID_INST_UUID),
             "name": "valid_school",
-            "pdp_id": None,
+            "pdp_id": "12345",
             "retention_days": None,
             "state": "NY",
         },
@@ -173,7 +177,7 @@ def test_read_all_inst_datakinder(datakinder_client: TestClient):
 
 
 def test_read_inst_by_name(client: TestClient):
-    # Test GET /institutions/<uuid>. For various user access types.
+    """Test GET /institutions/name/<name>. For various user access types."""
     # Unauthorized.
     response = client.get("/institutions/name/school_1")
 
@@ -190,7 +194,7 @@ def test_read_inst_by_name(client: TestClient):
 
 
 def test_read_inst_by_pdp_id(client: TestClient):
-    # Test GET /institutions/<uuid>. For various user access types.
+    """Test GET /institutions/pdp-id/<pdp_id>. For various user access types."""
     # Unauthorized.
     response = client.get("/institutions/pdp-id/456")
 
@@ -207,7 +211,7 @@ def test_read_inst_by_pdp_id(client: TestClient):
 
 
 def test_read_inst(client: TestClient):
-    # Test GET /institutions/<uuid>. For various user access types.
+    """Test GET /institutions/<uuid>. For various user access types."""
     # Unauthorized.
     response = client.get("/institutions/" + uuid_to_str(UUID_1))
 
@@ -224,7 +228,7 @@ def test_read_inst(client: TestClient):
 
 
 def test_create_inst_unauth(client):
-    # Test POST /institutions. For various user access types.
+    """Test POST /institutions. For various user access types."""
     os.environ["ENV"] = "DEV"
     # Unauthorized.
     response = client.post("/institutions", json=INSTITUTION_REQ)
@@ -233,9 +237,7 @@ def test_create_inst_unauth(client):
 
 
 def test_create_inst(datakinder_client):
-    # Test POST /institutions. For various user access types.
-    os.environ["ENV"] = "DEV"
-    assert "DEV" == os.environ.get("ENV")
+    """Test POST /institutions. For various user access types."""
     MOCK_STORAGE.create_bucket.return_value = None
     MOCK_STORAGE.create_folders.return_value = None
     MOCK_DATABRICKS.setup_new_inst.return_value = None
@@ -247,7 +249,7 @@ def test_create_inst(datakinder_client):
     assert response.json()["state"] == "NY"
     assert response.json()["pdp_id"] == "12345"
     assert response.json()["retention_days"] == 1
-    assert response.json()["inst_id"] != None
+    assert response.json()["inst_id"] is not None
 
     response = datakinder_client.post("/institutions", json=INSTITUTION_REQ_BAREBONES)
     assert response.status_code == 200
@@ -266,3 +268,43 @@ def test_create_inst(datakinder_client):
         response.text
         == '{"detail":"Only alphanumeric characters, -, _, &, and a space are allowed in institution names."}'
     )
+
+
+def test_edit_inst(datakinder_client):
+    """Test PATCH /institutions/<uuid>. For various user access types."""
+    MOCK_STORAGE.create_bucket.return_value = None
+    MOCK_STORAGE.create_folders.return_value = None
+    MOCK_DATABRICKS.setup_new_inst.return_value = None
+
+    # Authorized.
+    response = datakinder_client.patch(
+        "/institutions/" + uuid_to_str(UUID_1),
+        json={"name": "Testing A & M - Main Campus _ hello"},
+    )
+    assert response.status_code == 400
+    assert response.text == '{"detail":"Institution names cannot be changed."}'
+
+    response = datakinder_client.patch(
+        "/institutions/" + uuid_to_str(UUID_1), json={"state": "NY", "pdp_id": "123"}
+    )
+    assert response.status_code == 200
+    assert response.json()["name"] == "school_1"
+    assert response.json()["state"] == "NY"
+    assert response.json()["pdp_id"] == "123"
+
+
+def test_delete_inst(datakinder_client):
+    """Test DELETE /institutions/<uuid>. For various user access types."""
+    MOCK_STORAGE.delete_bucket.return_value = None
+    MOCK_DATABRICKS.delete_inst.return_value = None
+
+    response = datakinder_client.get("/institutions/" + uuid_to_str(UUID_1))
+    assert response.status_code == 200
+    assert response.json()["name"] == "school_1"
+
+    # Authorized.
+    response_delete = datakinder_client.delete("/institutions/" + uuid_to_str(UUID_1))
+    assert response_delete.status_code == 200
+
+    response2 = datakinder_client.get("/institutions/" + uuid_to_str(UUID_1))
+    assert response2.status_code == 404

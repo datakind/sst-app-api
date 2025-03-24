@@ -2,75 +2,53 @@
 Helper functions that use storage and session.
 """
 
-import uuid
-
-from typing import Annotated, Any, Tuple, Dict
-from pydantic import BaseModel
-from sqlalchemy import and_, or_, update
-from datetime import datetime, date
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, update
 from sqlalchemy.future import select
-from sqlalchemy.sql import func
 
 from .utilities import (
-    has_access_to_inst_or_err,
-    has_full_data_access_or_err,
-    BaseUser,
-    model_owner_and_higher_or_err,
-    uuid_to_str,
     str_to_uuid,
-    get_current_active_user,
-    DataSource,
     get_external_bucket_name,
     SchemaType,
 )
 
 from .database import (
-    get_session,
-    local_session,
-    BatchTable,
     FileTable,
-    InstTable,
     JobTable,
 )
 
 
-# From a fully qualified file nam (i.e. everything sub-bucket name level), get the job id.
 def get_job_id(filename: str) -> int:
+    """From a fully qualified file name (i.e. everything sub-bucket name level), get the job id."""
     tmp = get_filename_without_approve_dir(filename)
     return int(tmp.split("/")[0])
 
 
-# Remove the approved or unapproved prefix as that isn't a property of the filename itself
-# and may change if the file gets approved or unapproved.
 def get_filename_without_approve_dir(filename: str) -> int:
+    """Remove the approved or unapproved prefix as that isn't a property of the filename itself
+    and may change if the file gets approved or unapproved."""
     if filename.startswith("approved/"):
         return filename.removeprefix("approved/")
-    elif filename.startswith("unapproved/"):
+    if filename.startswith("unapproved/"):
         return filename.removeprefix("unapproved/")
-    else:
-        return filename
+    return filename
 
 
-# This should of course be called before any prefix stripping.
 def is_file_approved(filename: str) -> bool:
+    """Checks if a file is approved, which is based on its bucket in GCP.
+    This should of course be called before any prefix stripping."""
     if filename.startswith("approved/"):
         return True
-    elif filename.startswith("unapproved/"):
+    if filename.startswith("unapproved/"):
         return False
-    else:
-        raise ValueError("Unexpected filename structure.")
-
-
-# Updates the sql tables by checking if there are new files in the bucket.
-"""
-Note that while all output files will be added to the file table, potentially with their own approval status, the JobTable will only refer to the csv inference output and indicate validity (approval) value for that file.
-This means that for a single run it's possible to have some output files be approved and some be unapproved but that is confusing and we discourage it.
-Note that deleted files are handled upon file retrieval, not here.
-"""
+    raise ValueError("Unexpected filename structure.")
 
 
 def update_db_from_bucket(inst_id: str, session, storage_control):
+    """Updates the sql tables by checking if there are new files in the bucket.
+
+    Note that while all output files will be added to the file table, potentially with their own approval status, the JobTable will only refer to the csv inference output and indicate validity (approval) value for that file.
+    This means that for a single run it's possible to have some output files be approved and some be unapproved but that is confusing and we discourage it.
+    Note that deleted files are handled upon file retrieval, not here."""
     dir_prefix = ["approved/", "unapproved/"]
     all_files = []
     for d in dir_prefix:

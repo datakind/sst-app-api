@@ -1,16 +1,14 @@
 """API functions related to data."""
 
 import uuid
-
-from typing import Annotated, Any, Tuple, Dict
-from fastapi import APIRouter, Depends, HTTPException, status, Response
-from pydantic import BaseModel
-from sqlalchemy import and_, or_, update
 from datetime import datetime, date
+
+from typing import Annotated, Any, Dict
+from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status, Response
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
-from ..validation import validate_file_reader
-from sqlalchemy.sql import func
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -32,7 +30,6 @@ from ..database import (
     BatchTable,
     FileTable,
     InstTable,
-    JobTable,
 )
 
 from ..gcsdbutils import update_db_from_bucket
@@ -131,6 +128,8 @@ class ValidationResult(BaseModel):
 
 
 class DataOverview(BaseModel):
+    """All data for a given institution (batches and files)."""
+
     batches: list[BatchInfo]
     files: list[DataInfo]
 
@@ -144,6 +143,7 @@ def get_all_files(
     sess: Session,
     storage_control,
 ) -> list[DataInfo]:
+    """Retrieve all files."""
     # Update from bucket
     if sst_generated_value:
         update_db_from_bucket(inst_id, sess, storage_control)
@@ -185,20 +185,17 @@ def get_all_files(
     return result_files
 
 
-# Some batches are associated with output. This function lets you decide if you want only those batches.
 def get_all_batches(
     inst_id: str, output_batches_only: bool, sess: Session
 ) -> list[BatchInfo]:
-    query_result_batches = (
-        local_session.get()
-        .execute(select(BatchTable).where(BatchTable.inst_id == str_to_uuid(inst_id)))
-        .all()
-    )
+    """Some batches are associated with output. This function lets you decide if you want only those batches."""
+    query_result_batches = sess.execute(
+        select(BatchTable).where(BatchTable.inst_id == str_to_uuid(inst_id))
+    ).all()
     result_batches = []
     for e in query_result_batches:
         # Note that batches may show file ids of invalid or unapproved files.
         # And will show input and output files.
-        # TODO: is this the behavior we want?
         elem = e[0]
         if output_batches_only:
             output_files = [x for x in elem.files if x.sst_generated]
@@ -222,12 +219,15 @@ def get_all_batches(
     return result_batches
 
 
-# the input is of type sqlalchemy.orm.collections.InstrumentedSet
 def uuids_to_strs(files) -> set[str]:
+    """Convert a set of uuids to strings.
+    The input is of type sqlalchemy.orm.collections.InstrumentedSet.
+    """
     return [uuid_to_str(x.id) for x in files]
 
 
 def strs_to_uuids(files) -> set[uuid.UUID]:
+    """Convert a set of strs to uuids."""
     return [str_to_uuid(x) for x in files]
 
 
@@ -240,9 +240,6 @@ def read_inst_all_input_files(
     """Returns top-level overview of input data (date uploaded, size, file names etc.).
 
     Only visible to data owners of that institution or higher.
-
-    Args:
-        current_user: the user making the request.
     """
     has_access_to_inst_or_err(inst_id, current_user)
     has_full_data_access_or_err(current_user, "input data")
@@ -255,21 +252,6 @@ def read_inst_all_input_files(
     }
 
 
-@router.get("/{inst_id}/input-debugging", response_model=list[str])
-def get_all_files_in_bucket(
-    inst_id: str,
-    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
-    storage_control: Annotated[StorageControl, Depends(StorageControl)],
-) -> Any:
-    """DEBUGGING ENDPOINT. DELETE ONCE SHIPPED."""
-    if not current_user.is_datakinder:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Debugging endpoint needs to be datakinder.",
-        )
-    return storage_control.list_blobs_in_folder(get_external_bucket_name(inst_id), "")
-
-
 @router.get("/{inst_id}/output", response_model=DataOverview)
 def read_inst_all_output_files(
     inst_id: str,
@@ -280,9 +262,6 @@ def read_inst_all_output_files(
     """Returns top-level overview of output data (date uploaded, size, file names etc.) and batch info.
 
     Only visible to data owners of that institution or higher.
-
-    Args:
-        current_user: the user making the request.
     """
     has_access_to_inst_or_err(inst_id, current_user)
     has_full_data_access_or_err(current_user, "output data")
@@ -308,6 +287,9 @@ def update_data(
     sql_session: Annotated[Session, Depends(get_session)],
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
 ) -> Any:
+    """Updates the database depending on what's new in the bucket. For instance, if
+    a pipeline run completed and there are new outputs in the bucket, we want to
+    update the database so that the API can be aware of these changes."""
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     update_db_from_bucket(inst_id, local_session.get(), storage_control)
@@ -325,9 +307,6 @@ def retrieve_file_as_bytes(
     """Returns top-level overview of output data (date uploaded, size, file names etc.) and batch info.
 
     Only visible to data owners of that institution or higher.
-
-    Args:
-        current_user: the user making the request.
     """
     file_name = decode_url_piece(file_name)
     has_access_to_inst_or_err(inst_id, current_user)
@@ -386,9 +365,6 @@ def read_batch_info(
     """Returns batch info and files in that batch.
 
     Only visible to users of that institution or Datakinder access types.
-
-    Args:
-        current_user: the user making the request.
     """
     has_access_to_inst_or_err(inst_id, current_user)
     has_full_data_access_or_err(current_user, "batch data")
@@ -451,9 +427,6 @@ def read_batch_info(
     return {"batches": [batch_info], "files": data_infos}
 
 
-# TODO XXX ADD INSTITUTION ID AND QUALIFIERS ON ALL DB CHECKS
-
-
 @router.post("/{inst_id}/batch", response_model=BatchInfo)
 def create_batch(
     inst_id: str,
@@ -461,11 +434,7 @@ def create_batch(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> Any:
-    """Create a new batch.
-
-    Args:
-        current_user: the user making the request.
-    """
+    """Create a new batch."""
     has_access_to_inst_or_err(inst_id, current_user)
     model_owner_and_higher_or_err(current_user, "batch")
     local_session.set(sql_session)
@@ -534,7 +503,7 @@ def create_batch(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database write of the batch creation failed.",
             )
-        elif len(query_result) > 1:
+        if len(query_result) > 1:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database write of the batch created duplicate entries.",
@@ -561,19 +530,6 @@ def create_batch(
     }
 
 
-def construct_modify_query(modify_vals: dict, batch_id: str) -> Any:
-    query = update(BatchTable).where(BatchTable.id == str_to_uuid(batch_id))
-    if "name" in modify_vals:
-        query.values(name=modify_vals["name"])
-    if "deleted" in modify_vals:
-        if modify_vals["deleted"]:
-            query.values(deleted_at=func.now())
-        query.values(deleted=modify_vals["deleted"])
-    if "completed" in modify_vals:
-        query.values(completed=modify_vals["completed"])
-    return query
-
-
 @router.patch("/{inst_id}/batch/{batch_id}", response_model=BatchInfo)
 def update_batch(
     inst_id: str,
@@ -582,15 +538,11 @@ def update_batch(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> Any:
-    """Modifies an existing batch. Only some fields are allowed to be modified.
-
-    Args:
-        current_user: the user making the request.
-    """
+    """Modifies an existing batch. Only some fields are allowed to be modified."""
     has_access_to_inst_or_err(inst_id, current_user)
     model_owner_and_higher_or_err(current_user, "modify batch")
 
-    update_data = request.model_dump(exclude_unset=True)
+    update_data_req = request.model_dump(exclude_unset=True)
     local_session.set(sql_session)
     # Check that the batch exists.
     query_result = (
@@ -610,7 +562,7 @@ def update_batch(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Batch not found.",
         )
-    elif len(query_result) > 1:
+    if len(query_result) > 1:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Multiple batches with same unique id found.",
@@ -621,11 +573,16 @@ def update_batch(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Batch is set for deletion, no modifications allowed.",
         )
-    if "file_ids" in update_data or "file_names" in update_data:
+    if "deleted" in update_data_req and update_data_req["deleted"]:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Batch deletion not yet implemented.",
+        )
+    if "file_ids" in update_data_req or "file_names" in update_data_req:
         existing_batch.files.clear()
 
-    if "file_ids" in update_data:
-        for f in strs_to_uuids(update_data["file_ids"]):
+    if "file_ids" in update_data_req:
+        for f in strs_to_uuids(update_data_req["file_ids"]):
             # Check that the files requested for this batch exists
             query_result_file = (
                 local_session.get()
@@ -644,14 +601,14 @@ def update_batch(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="file in request not found.",
                 )
-            elif len(query_result_file) > 1:
+            if len(query_result_file) > 1:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Multiple files in request with same unique id found.",
                 )
             existing_batch.files.add(query_result_file[0][0])
-    if "file_names" in update_data:
-        for f in update_data["file_names"]:
+    if "file_names" in update_data_req:
+        for f in update_data_req["file_names"]:
             # Check that the files requested for this batch exists
             query_result_file = (
                 local_session.get()
@@ -670,21 +627,17 @@ def update_batch(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="file in request not found.",
                 )
-            elif len(query_result_file) > 1:
+            if len(query_result_file) > 1:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Multiple files in request with same unique id found.",
                 )
             existing_batch.files.add(query_result_file[0][0])
 
-    if "name" in update_data:
-        existing_batch.name = update_data["name"]
-    if "deleted" in update_data and update_data["deleted"]:
-        # if the user tries to set deleted to false, that is a noop. Deletions can't be undone.
-        existing_batch.deleted = True
-        existing_batch.deleted_at = func.now()
-    if "completed" in update_data:
-        existing_batch.completed = update_data["completed"]
+    if "name" in update_data_req:
+        existing_batch.name = update_data_req["name"]
+    if "completed" in update_data_req:
+        existing_batch.completed = update_data_req["completed"]
     existing_batch.updated_by = str_to_uuid(current_user.user_id)
     local_session.get().commit()
     res = (
@@ -714,9 +667,6 @@ def update_batch(
     }
 
 
-# TODO: check expiration of files and batches
-
-
 @router.get("/{inst_id}/file-id/{file_id}", response_model=DataInfo)
 def read_file_id_info(
     inst_id: str,
@@ -727,9 +677,6 @@ def read_file_id_info(
     """Returns details on a given file.
 
     Only visible to users of that institution or Datakinder access types.
-
-    Args:
-        current_user: the user making the request.
     """
     has_access_to_inst_or_err(inst_id, current_user)
     has_full_data_access_or_err(current_user, "file data")
@@ -781,14 +728,10 @@ def read_file_info(
     file_name: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
-    # storage_control: Annotated[StorageControl, Depends(StorageControl)],
 ) -> Any:
     """Returns a given file's data.
 
     Only visible to users of that institution or Datakinder access types.
-
-    Args:
-        current_user: the user making the request.
     """
     file_name = decode_url_piece(file_name)
     has_access_to_inst_or_err(inst_id, current_user)
@@ -835,7 +778,6 @@ def read_file_info(
     }
 
 
-# TODO: ADD TESTS for the below
 @router.get("/{inst_id}/download-url/{file_name:path}", response_model=str)
 def download_url_inst_file(
     inst_id: str,
@@ -847,9 +789,6 @@ def download_url_inst_file(
     """Enables download of output files (approved and unapproved).
 
     Only visible to users of that institution or Datakinder access types.
-
-    Args:
-        current_user: the user making the request.
     """
     file_name = decode_url_piece(file_name)
     has_access_to_inst_or_err(inst_id, current_user)
@@ -899,12 +838,6 @@ def download_url_inst_file(
     )
 
 
-# the process to upload a file would involve three API calls:
-# 1. Get the GCS upload URL
-# 2. Post to the GCS upload URL
-# 3. Validate the file
-
-
 def validation_helper(
     source_str: str,
     inst_id: str,
@@ -913,6 +846,7 @@ def validation_helper(
     storage_control: StorageControl,
     sql_session: Session,
 ) -> Any:
+    """Helper function for file validation."""
     has_access_to_inst_or_err(inst_id, current_user)
     if file_name.find("/") != -1:
         raise HTTPException(
@@ -948,7 +882,7 @@ def validation_helper(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File type is not valid and/or not accepted by this institution: "
             + str(e),
-        )
+        ) from e
     new_file_record = FileTable(
         name=file_name,
         inst_id=str_to_uuid(inst_id),
@@ -1013,11 +947,7 @@ def get_upload_url(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
 ) -> Any:
-    """Returns a signed URL for uploading data to a specific institution.
-
-    Args:
-        current_user: the user making the request.
-    """
+    """Returns a signed URL for uploading data to a specific institution."""
     file_name = decode_url_piece(file_name)
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)

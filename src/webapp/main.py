@@ -2,12 +2,13 @@
 
 import logging
 from typing import Any, Annotated
+from datetime import timedelta
+import secrets
 from fastapi import FastAPI, Depends, HTTPException, status, Security
 from fastapi.responses import FileResponse
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from datetime import timedelta
 from pydantic import BaseModel
-import secrets
+from sqlalchemy.future import select
+from sqlalchemy import update
 from .routers import models, users, data, institutions
 from .database import (
     setup_db,
@@ -21,11 +22,7 @@ from .database import (
     ApiKeyTable,
 )
 from .config import env_vars, startup_env_vars
-
-from sqlalchemy.future import select
-from sqlalchemy import update
 from .utilities import (
-    authenticate_user,
     BaseUser,
     get_current_active_user,
     uuid_to_str,
@@ -34,12 +31,12 @@ from .utilities import (
     authenticate_api_key,
     ApiKeyRequest,
     ApiKeyResponse,
-    get_api_key_hash,
 )
 from .authn import (
     Token,
     create_access_token,
     get_api_key,
+    get_api_key_hash,
 )
 
 # Set the logging
@@ -56,15 +53,6 @@ app = FastAPI(
     root_path="/api/v1",
 )
 
-"""
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-"""
 
 app.include_router(institutions.router)
 app.include_router(models.router)
@@ -84,14 +72,15 @@ class SelfInfo(BaseModel):
 
 @app.on_event("startup")
 def on_startup():
+    """Startup function."""
     print("Starting up app...")
     startup_env_vars()
     setup_db(env_vars["ENV"])
 
 
-# On shutdown, we have to cleanup the GCP database connections
 @app.on_event("shutdown")
 async def shutdown_event():
+    """Shut down function. We have to cleanup the GCP database connections"""
     print("Performing shutdown tasks...")
     await db_engine.dispose()
 
@@ -103,38 +92,12 @@ def read_root() -> Any:
     return FileResponse("src/webapp/index.html")
 
 
-@app.post("/token")
-async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    sql_session: Annotated[Session, Depends(get_session)],
-) -> Token:
-    local_session.set(sql_session)
-    enduser = None
-    if len(form_data.scopes) == 1 and form_data.scopes[0]:
-        enduser = form_data.scopes[0]
-    user = authenticate_user(
-        form_data.username, form_data.password, enduser, local_session.get()
-    )
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(
-        minutes=int(env_vars["ACCESS_TOKEN_EXPIRE_MINUTES"])
-    )
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
-    return Token(access_token=access_token, token_type="bearer")
-
-
 @app.post("/token-from-api-key")
 async def access_token_from_api_key(
     sql_session: Annotated[Session, Depends(get_session)],
     api_key_enduser_tuple: str = Security(get_api_key),
 ) -> Token:
+    """Generate a token from an API key."""
     local_session.set(sql_session)
     user = authenticate_api_key(api_key_enduser_tuple, local_session.get())
     if not user:
@@ -152,12 +115,13 @@ async def access_token_from_api_key(
     return Token(access_token=access_token, token_type="bearer")
 
 
-# Get users that don't have institution specifications. (either datakinders or people who haven't set their institution yet)
 @app.get("/non-inst-users", response_model=list[users.UserAccount])
 async def read_cross_inst_users(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ):
+    """Get users that don't have institution specifications.
+    (datakinders or people who haven't set their institution yet)."""
     if not current_user.is_datakinder():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -190,13 +154,13 @@ async def read_cross_inst_users(
     return res
 
 
-# Set access type to datakinder for a list of existing users (by email).
 @app.post("/datakinders")
 async def set_datakinders(
     emails: list[str],
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> list[str]:
+    """Set access type to datakinder for a list of existing users (by email)."""
     if not current_user.is_datakinder():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -233,13 +197,14 @@ async def set_datakinders(
     return res
 
 
-# THE USER MUST MAKE SURE TO REMEMBER THE API KEY. The database will only store a hash.
 @app.post("/generate-api-key")
 async def generate_api_key(
     req: ApiKeyRequest,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> ApiKeyResponse:
+    """Generate an API key. THE USER MUST MAKE SURE TO REMEMBER THE API KEY.
+    The database will only store a hash."""
     if (
         not current_user.is_datakinder()
         or current_user.email not in env_vars["API_KEY_ISSUERS"]
@@ -278,7 +243,7 @@ async def generate_api_key(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database write of the API key failed.",
         )
-    elif len(query_result) > 1:
+    if len(query_result) > 1:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database write of the API key duplicate entries.",
@@ -300,10 +265,8 @@ def read_self_info(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> Any:
-    """Gets the institution and access type of the current_user if set anywhere in allowed_emails. Allowed for any user to check themself.
-
-    Args:
-        current_user: the user making the request.
+    """Gets the institution and access type of the current_user if set anywhere in allowed_emails.
+    Allowed for any user to check themself.
     """
     if current_user.is_datakinder():
         return {

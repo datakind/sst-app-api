@@ -2,16 +2,15 @@
 
 import datetime
 from pydantic import BaseModel
-
 from google.cloud import storage
-from typing import Any
+import google.auth
+from google.auth.transport import requests
+
 from .config import gcs_vars, databricks_vars
-from .validation import validate_file_reader, SchemaType
+from .validation import validate_file_reader
 from .utilities import (
     SchemaType,
 )
-import google.auth
-from google.auth.transport import requests
 
 SIGNED_URL_EXPIRY_MIN = 30
 
@@ -44,9 +43,6 @@ def rename_file(
 
 
 # Wrapping the usages in a class makes it easier to unit test via mocks.
-
-
-# Wrapping the usages in a class makes it easier to unit test via mocks.
 class StorageControl(BaseModel):
     """Object to manage interfacing with GCS."""
 
@@ -54,6 +50,7 @@ class StorageControl(BaseModel):
     _project_id = None
 
     def credentials(self):
+        """Retrieve GCS creds."""
         if self._credentials is None or self._project_id is None:
             self._credentials, self._project_id = google.auth.default()
         return self._credentials
@@ -117,6 +114,7 @@ class StorageControl(BaseModel):
         return url
 
     def delete_bucket(self, bucket_name: str) -> None:
+        """Delete a given bucket."""
         storage_client = storage.Client()
         # Delete the GCS bucket.  Force=True handles non-empty buckets.
         print("[debugging_crystal]: in delete_bucket()1")
@@ -214,8 +212,8 @@ class StorageControl(BaseModel):
             res.append(blob.name)
 
         if delimiter:
-            for prefix in blobs.prefixes:
-                res.append(prefix)
+            for p in blobs.prefixes:
+                res.append(p)
         return res
 
     def download_file(
@@ -240,6 +238,7 @@ class StorageControl(BaseModel):
         blob.download_to_filename(destination_file_name)
 
     def move_file(self, bucket_name: str, prev_name: str, new_name: str):
+        """Rename a file."""
         storage_client = storage.Client()
         bucket = storage_client.bucket(bucket_name)
         if not bucket.exists():
@@ -254,6 +253,7 @@ class StorageControl(BaseModel):
         blob.delete()
 
     def delete_file(self, bucket_name: str, file_name: str):
+        """Delete a file."""
         storage_client = storage.Client()
         bucket = storage_client.bucket(bucket_name)
         if not bucket.exists():
@@ -266,6 +266,7 @@ class StorageControl(BaseModel):
     def validate_file(
         self, bucket_name: str, file_name: str, allowed_schemas: set[SchemaType]
     ) -> set[SchemaType]:
+        """Validate that a file is one of the allowed schemas."""
         client = storage.Client()
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(f"unvalidated/{file_name}")
@@ -285,14 +286,9 @@ class StorageControl(BaseModel):
         return schems
 
     def get_file_contents(self, bucket_name: str, file_name: str):
-        """Returns file as a bytes object."""
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaa1")
+        """Returns a file as a bytes object."""
         storage_client = storage.Client()
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaa2")
         bucket = storage_client.get_bucket(bucket_name)
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaa3")
         blob = bucket.blob(file_name)
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaa4")
         res = blob.download_as_bytes()
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaa5")
         return res

@@ -1,15 +1,13 @@
-"""API functions related to models. !!!!! NEEDS TO BE UPDATED. !!!!!"""
+"""API functions related to models."""
 
-import uuid
+from datetime import datetime
+from typing import Annotated, Any
 import jsonpickle
-from typing import Annotated, Any, Tuple, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import and_, or_, update
-from datetime import datetime, date
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
-from ..validation import validate_file_reader
 from ..databricks import DatabricksControl, DatabricksInferenceRunRequest
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -19,7 +17,6 @@ from ..utilities import (
     uuid_to_str,
     str_to_uuid,
     get_current_active_user,
-    DataSource,
     get_external_bucket_name,
     SchemaType,
     decode_url_piece,
@@ -28,7 +25,6 @@ from ..database import (
     get_session,
     local_session,
     BatchTable,
-    FileTable,
     InstTable,
     ModelTable,
     JobTable,
@@ -45,6 +41,8 @@ router = APIRouter(
 
 
 class SchemaConfigObj(BaseModel):
+    """The Schema configuration for a model. What's considered valid for that model."""
+
     schema_type: SchemaType
     # If both of the following is set to False, you have to have 1 and only 1 of these file types. If both are set to True, you can have any number of these file types.
     # If optional is set to True, you can have 0 of these.
@@ -53,11 +51,11 @@ class SchemaConfigObj(BaseModel):
     multiple_allowed: bool = False
 
 
-# what happens if one meets multiple schema types f has filetype a, b and
 def check_file_types_valid_schema_configs(
     file_types: list[list[SchemaType]],
     valid_schema_configs: list[list[SchemaConfigObj]],
 ) -> bool:
+    """Check that a list of files are valid for a given schema configuration."""
     for config in valid_schema_configs:
         found = True
         map_file_to_schema_config_obj = {}
@@ -90,6 +88,8 @@ def check_file_types_valid_schema_configs(
 
 
 class ModelCreationRequest(BaseModel):
+    """Model creation request object."""
+
     name: str
     # valid = False, means the model is not ready for use.
     valid: bool = False
@@ -148,9 +148,6 @@ def read_inst_models(
     """Returns top-level view of all models attributed to a given institution. Versions and model history are not retained in the model table. That will need to be looked up in Databricks.
 
     Only visible to data owners of that institution or higher.
-
-    Args:
-        current_user: the user making the request.
     """
     has_access_to_inst_or_err(inst_id, current_user)
     has_full_data_access_or_err(current_user, "models")
@@ -192,9 +189,6 @@ def create_model(
 
     Only visible to model owners of that institution or higher. This function may take a
     list of training data batch ids.
-
-    Args:
-        current_user: the user making the request.
     """
     # TODO add validity check for the schema config obj
     has_access_to_inst_or_err(inst_id, current_user)
@@ -239,7 +233,7 @@ def create_model(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database write of the model creation failed.",
             )
-        elif len(query_result) > 1:
+        if len(query_result) > 1:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database write of the model created duplicate entries.",
@@ -269,9 +263,6 @@ def read_inst_model(
     """Returns a specific model's details e.g. model card.
 
     Only visible to data owners of that institution or higher.
-
-    Args:
-        current_user: the user making the request.
     """
     model_name = decode_url_piece(model_name)
     has_access_to_inst_or_err(inst_id, current_user)
@@ -321,9 +312,6 @@ def read_inst_model_outputs(
 
     Only visible to users of that institution or Datakinder access types.
     Returns a list of runs in order of most recent to least recent based on triggering time.
-
-    Args:
-        current_user: the user making the request.
     """
     model_name = decode_url_piece(model_name)
     has_access_to_inst_or_err(inst_id, current_user)
@@ -377,7 +365,6 @@ def read_inst_model_outputs(
     return ret_val
 
 
-# TODO add tests for runinfo returning endpoints
 @router.get(
     "/{inst_id}/models/{model_name}/run/{run_id}",
     response_model=RunInfo,
@@ -394,9 +381,6 @@ def read_inst_model_output(
 
     Only visible to users of that institution or Datakinder access types.
     If a viewer has record allowlist restrictions applied, only those records are returned.
-
-    Args:
-        current_user: the user making the request.
     """
     model_name = decode_url_piece(model_name)
     has_access_to_inst_or_err(inst_id, current_user)
@@ -427,7 +411,7 @@ def read_inst_model_output(
     local_session.get().commit()
     for elem in query_result[0][0].jobs or []:
         if elem.id == run_id:
-            # TODO xxx: if the output_filename is empty make a query to Databricks
+            # TODO: if the output_filename is empty make a query to Databricks
             return {
                 "inst_id": uuid_to_str(query_result[0][0].inst_id),
                 "m_name": query_result[0][0].name,
@@ -446,6 +430,7 @@ def read_inst_model_output(
 
 
 def convert_files_to_dict(files):
+    """Convert files to a dictionary."""
     res = {}
     for f in files:
         # TODO: construct the filepath instead -- where does the filepath need to start? bucket level?
@@ -468,9 +453,6 @@ def trigger_inference_run(
     """Returns top-level info around all executions of a given model.
 
     Only visible to users of that institution or Datakinder access types.
-
-    Args:
-        current_user: the user making the request.
     """
     model_name = decode_url_piece(model_name)
     has_access_to_inst_or_err(inst_id, current_user)
@@ -558,7 +540,7 @@ def trigger_inference_run(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Databricks run_pdp_inference error. " + str(e),
-        )
+        ) from e
     triggered_timestamp = datetime.now()
     job = JobTable(
         id=res.job_run_id,
@@ -578,24 +560,3 @@ def trigger_inference_run(
         "batch_name": req.batch_name,
         "output_valid": False,
     }
-
-
-# TODO: DK to implement
-@router.post("/{inst_id}/models/{model_id}")
-def retrain_model(
-    inst_id: str,
-    model_id: str,
-    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
-    sql_session: Annotated[Session, Depends(get_session)],
-) -> Any:
-    """Retrain an existing model.
-
-    Only visible to model owners of that institution or higher. This function takes a
-    list of training data batch ids.
-
-    Args:
-        current_user: the user making the request.
-    """
-    has_access_to_inst_or_err(inst_id, current_user)
-    model_owner_and_higher_or_err(current_user, "model training")
-    return
