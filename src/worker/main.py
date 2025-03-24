@@ -2,18 +2,20 @@
 
 import logging
 from typing import Any, Annotated
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Security
 from fastapi.responses import FileResponse
 
 from pydantic import BaseModel
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm
 from .utilities import (
     get_sftp_bucket_name,
     StorageControl,
+    split_csv_and_generate_signed_urls,
+    fetch_institution_ids
 )
 from .config import sftp_vars, env_vars, startup_env_vars
-from .authn import Token, get_current_username, check_creds, create_access_token
-from datetime import timedelta, datetime, timezone
+from .authn import Token, get_current_username, check_creds, create_access_token, get_api_key
+from datetime import timedelta
 
 # Set the logging
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
@@ -104,6 +106,7 @@ def execute_pdp_pull(
     req: PdpPullRequest,
     current_username: Annotated[str, Depends(get_current_username)],
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
+    api_key_enduser_tuple: str = Security(get_api_key),
 ) -> Any:
     """Performs the PDP pull of the file."""
     storage_control.create_bucket_if_not_exists(get_sftp_bucket_name(env_vars["ENV"]))

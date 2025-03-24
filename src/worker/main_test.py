@@ -1,16 +1,13 @@
 """Test file for the main.py file and constituent API functions."""
 
 import pytest
-import json
-from typing import Any, Annotated
+from typing import Any
 
 from fastapi.testclient import TestClient
 from .main import app
-import uuid
 from .authn import get_current_username, get_api_key
 from unittest import mock
 from .utilities import StorageControl
-from unittest.mock import patch
 
 MOCK_STORAGE = mock.Mock()
 
