@@ -15,12 +15,7 @@ from .utilities import (
     fetch_institution_ids,
 )
 from .config import sftp_vars, env_vars, startup_env_vars
-from .authn import (
-    Token,
-    get_current_username,
-    check_creds,
-    create_access_token
-)
+from .authn import Token, get_current_username, check_creds, create_access_token
 from datetime import timedelta
 import os
 
@@ -148,7 +143,7 @@ def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) ->
 async def execute_pdp_pull(
     req: PdpPullRequest,
     current_username: Annotated[str, Depends(get_current_username)],
-    storage_control: Annotated[StorageControl, Depends(StorageControl)]
+    storage_control: Annotated[StorageControl, Depends(StorageControl)],
 ) -> Any:
     """Performs the PDP pull of the file."""
     storage_control.create_bucket_if_not_exists(get_sftp_bucket_name(env_vars["ENV"]))
