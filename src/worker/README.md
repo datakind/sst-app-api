@@ -20,6 +20,10 @@ This username/password combination can be used to generate a token. Which can th
 1. Hit the authorize button on the top right, enter username/password in the OAuth2PasswordBearer form.
 2. You are authenticated! You can execute the other endpoints from the swagger UI directly. You can modify the request body then hit execute and see the results.
 
+## GCP Storage Access
+
+The worker does need direct access to GCP storage. It accesses the <env>_sftp_ingestion bucket (and should create it for a given environment if it does not already exist) which is where it first pulls the SFTP ingested data from.
+
 ## Testing
 
 Unit test files are named `<file_under_test>_test.py` to correspond with the files they are testing. Unit tests only test behavior introduced by logic written in those files and do not test any integration with other systems. To respect test isolation, we have the following levels of testing:
@@ -51,7 +55,7 @@ Package management is done via [uv](https://docs.astral.sh/uv/). When adding a n
 
 Enter into the root directory of the repo.
 
-1. Copy the `./src/worker/.env.example` file to `./src/worker/.env`
+1. Copy the `./src/worker/.env.example` file to `./src/worker/.env`. Populate any needed fields.
 1. `python3 -m venv .venv`
 1. `source .venv/bin/activate`
 1. `pip install uv`
@@ -63,7 +67,7 @@ For all of the following, the steps above are pre-requisites and you should be i
 
 ### Spin up the app locally:
 
-1. `export ENV_FILE_PATH=<full_path_to_your_webapp_.env_file>` 
+1. `export ENV_FILE_PATH=<full_path_to_your_worker_.env_file>` 
 1. `fastapi dev src/worker/main.py --port 8000`
 1. Go to `http://127.0.0.1:8000/worker/api/v1/docs`
 1. Hit the `Authorize` button on the top right and enter the username/password.
@@ -84,6 +88,11 @@ For convenience: the .env.example username/password combo for the local env are:
 
 Non-error Pylint is very opinionated, and **SOMETIMES WRONG**. For example, there exist warnings to switch `== NONE` to `is None` for SQL query where clauses. THIS WILL CAUSE THE SQL QUERY TO NOT WORK -- (it appears to be due to how SqlAlchemy understands the clauses). So be careful when following the recommendations from pylint. While the worker doesn't have database actions, there may be other such cases.
 
+## Other notes
+
+The .env processing file is config.py -- make sure any new environment variables get added to this file so that the program will ensure its required on start up time and so that you can access it in other files using the config.py's maps.
+
+For the bearer token, it appears FastAPI likes the bearer token to be structured like so: `Bearer <token_value>` as the field set in the authorization header.
 
 ## Local VSCode Debugging
 
