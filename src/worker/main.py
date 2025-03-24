@@ -166,8 +166,7 @@ async def execute_pdp_pull(
         logging.debug(f"Processing {blobs}")
         print(f"Processing {blobs}")
         signed_urls = split_csv_and_generate_signed_urls(
-            bucket_name=get_sftp_bucket_name(env_vars["ENV"]),
-            source_blob_name=blobs
+            bucket_name=get_sftp_bucket_name(env_vars["ENV"]), source_blob_name=blobs
         )
         logging.info(f"Signed URls generated {signed_urls}")
 

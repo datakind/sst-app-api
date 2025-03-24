@@ -247,17 +247,17 @@ def post_file_to_signed_url(file_path: str, signed_url: str) -> str:
         else:
             return f"Failed to upload file: {response.status_code} {response.text}"
 
+
 def generate_signed_url(
-    bucket_name: str,
-    object_name: str,
-    expiration: int = 600000) -> str:
+    bucket_name: str, object_name: str, expiration: int = 600000
+) -> str:
     """
     Generates a signed URL for a Cloud Storage object using V4 signing.
     This function is production-ready with error handling and logging.
-    
+
     Returns:
         tuple: A tuple containing the signed URL and an HTTP status code.
-    
+
     Raises:
         Exception: Re-raises exceptions encountered during the process.
     """
@@ -284,7 +284,9 @@ def generate_signed_url(
         bucket = client.get_bucket(bucket_name)
         blob = bucket.get_blob(object_name)
         if blob is None:
-            raise ValueError(f"Blob '{object_name}' not found in bucket '{bucket_name}'.")
+            raise ValueError(
+                f"Blob '{object_name}' not found in bucket '{bucket_name}'."
+            )
         logging.info("Accessed bucket and blob successfully.")
     except Exception as e:
         logging.error("Failed to access bucket or blob: %s", e)
@@ -305,7 +307,7 @@ def generate_signed_url(
             expiration=expires,
             service_account_email=service_account_email,
             access_token=credentials.token,
-            method="GET"
+            method="GET",
         )
         logging.info("Signed URL generated successfully.")
     except Exception as e:
@@ -313,6 +315,7 @@ def generate_signed_url(
         raise Exception("Signed URL generation error") from e
 
     return str(signed_url)
+
 
 def split_csv_and_generate_signed_urls(
     bucket_name: str, source_blob_name: str
