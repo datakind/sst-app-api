@@ -23,6 +23,7 @@ from .authn import (
 )
 from datetime import timedelta
 import os
+
 # Set the logging
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)

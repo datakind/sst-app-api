@@ -21,6 +21,10 @@ dependencies = [
     "strenum>=0.4.15",
     "tomli~=2.0; python_version<'3.11'",
     "jsonpickle>=4.0.1",
+    "requests>=2.0.0",
+    "types-requests",
+    "types-paramiko",
+    "pandas"
 ]
 
 [project.urls]
