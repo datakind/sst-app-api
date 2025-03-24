@@ -3,7 +3,7 @@
 import numpy as np
 import logging
 from typing import Any, Annotated
-from fastapi import FastAPI, Depends, HTTPException, status, Security
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
 from pydantic import BaseModel
@@ -15,13 +15,7 @@ from .utilities import (
     fetch_institution_ids,
 )
 from .config import sftp_vars, env_vars, startup_env_vars
-from .authn import (
-    Token,
-    get_current_username,
-    check_creds,
-    create_access_token,
-    get_api_key,
-)
+from .authn import Token, get_current_username, check_creds, create_access_token
 from datetime import timedelta
 import os
 
@@ -150,7 +144,6 @@ async def execute_pdp_pull(
     req: PdpPullRequest,
     current_username: Annotated[str, Depends(get_current_username)],
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
-    api_key_enduser_tuple: str = Security(get_api_key),
 ) -> Any:
     """Performs the PDP pull of the file."""
     storage_control.create_bucket_if_not_exists(get_sftp_bucket_name(env_vars["ENV"]))
@@ -172,9 +165,7 @@ async def execute_pdp_pull(
 
         temp_valid_pdp_ids, temp_invalid_ids = fetch_institution_ids(
             pdp_ids=list(signed_urls.keys()),
-            backend_api_key=next(
-                key for key in api_key_enduser_tuple if key is not None
-            ),
+            backend_api_key=env_vars["BACKEND_API_KEY"],
         )
 
         valid_pdp_ids.append(temp_valid_pdp_ids)
