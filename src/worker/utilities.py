@@ -240,8 +240,13 @@ def fetch_upload_url(
         return "Access token not found in the response."
 
     # Make the GET request to the API
-    response = requests.get(f"{webapp_url}/api/v1/institutions/{institution_id}/upload-url/{file_name}", 
-                            headers={"accept": "application/json", "Authorization": f"Bearer {access_token}"})
+    response = requests.get(
+        f"{webapp_url}/api/v1/institutions/{institution_id}/upload-url/{file_name}",
+        headers={
+            "accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        },
+    )
 
     # Check if the request was successful
     if response.status_code == 200:
