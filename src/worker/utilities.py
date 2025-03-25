@@ -424,7 +424,7 @@ def split_csv_and_generate_signed_urls(
         logger.debug(error_message)
         return {"error": {"message": "Failed to download or parse CSV"}}
 
-    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    current_time = datetime.now().strftime("%Y%m%d_%H")
     all_data = {}
 
     # Processing the DataFrame
@@ -540,14 +540,14 @@ def validate_sftp_file(
     url = f"{webapp_url}/api/v1/institutions/{institution_id}/input/validate-sftp/{file_name}"
     headers = {"accept": "application/json", "Authorization": f"Bearer {access_token}"}
 
-    logging.debug(f"Sending validation request to {url}")
+    logger.debug(f"Sending validation request to {url}")
 
     response = requests.post(url, headers=headers)
 
     if response.status_code == 200:
-        logging.info("File validation successfully initiated.")
+        logger.info("File validation successfully initiated.")
         return "File validation successfully initiated."
     else:
         error_message = f"Failed to initiate file validation: {response.status_code} {response.text}"
-        logging.error(error_message)
+        logger.error(error_message)
         return error_message

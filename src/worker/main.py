@@ -108,7 +108,7 @@ async def execute_pdp_pull(
         get_sftp_bucket_name(env_vars["BUCKET_ENV"])
     )
     files = storage_control.list_sftp_files(
-        sftp_vars["SFTP_HOST"], 22, sftp_vars["SFTP_USER"], sftp_vars["SFTP_PASSWORD"]
+        sftp_vars["SFTP_HOST"], 22, sftp_vars["SFTP_USER"], sftp_vars["SFTP_PASSWORD"], remote_path="./receive"
     )
 
     all_blobs = sftp_helper(storage_control, files)
