@@ -512,9 +512,13 @@ def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) ->
                 dest_filename,
             )
             all_blobs.append(dest_filename)
-            logger.info(f"Successfully processed '{sftp_source_filename}' as '{dest_filename}'.")
+            logger.info(
+                f"Successfully processed '{sftp_source_filename}' as '{dest_filename}'."
+            )
         except Exception as e:
-            logger.error(f"Error processing '{sftp_source_filename}': {e}", exc_info=True)
+            logger.error(
+                f"Error processing '{sftp_source_filename}': {e}", exc_info=True
+            )
 
     return all_blobs
 
