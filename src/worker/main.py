@@ -126,7 +126,7 @@ async def process_file(
                 webapp_url=env_vars["WEBAPP_URL"],
                 backend_api_key=env_vars["BACKEND_API_KEY"],
             )
-            logger.info(">>>> Upload URL successfully retrieved")
+            logger.info(f">>>> Upload URL successfully retrieved {upload_url}")
             transfer_status = transfer_file(
                 download_url=signed_urls[ids]["signed_url"].strip('"'),
                 upload_signed_url=upload_url.strip('"'),
