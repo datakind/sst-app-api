@@ -11,8 +11,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from .utilities import (
     get_sftp_bucket_name,
     StorageControl,
-    split_csv_and_generate_signed_urls,
     fetch_institution_ids,
+    split_csv_and_generate_signed_urls,
+    fetch_upload_url,
 )
 from .config import sftp_vars, env_vars, startup_env_vars
 from .authn import Token, get_current_username, check_creds, create_access_token
@@ -146,33 +147,50 @@ async def execute_pdp_pull(
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
 ) -> Any:
     """Performs the PDP pull of the file."""
-    storage_control.create_bucket_if_not_exists(get_sftp_bucket_name(env_vars["ENV"]))
+
+    storage_control.create_bucket_if_not_exists(
+        get_sftp_bucket_name(env_vars["BUCKET_ENV"])
+    )
+    print(sftp_vars["SFTP_HOST"])
     files = storage_control.list_sftp_files(
         sftp_vars["SFTP_HOST"], 22, sftp_vars["SFTP_USER"], sftp_vars["SFTP_PASSWORD"]
     )
+
     all_blobs = sftp_helper(storage_control, files)
     print(f"It's all processed {all_blobs}")
-    valid_pdp_ids = []
+    valid_inst_ids = []
     invalid_ids = []
 
     for blobs in all_blobs:
         logging.debug(f"Processing {blobs}")
         print(f"Processing {blobs}")
         signed_urls = split_csv_and_generate_signed_urls(
-            bucket_name=get_sftp_bucket_name(env_vars["ENV"]), source_blob_name=blobs
+            bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"]),
+            source_blob_name=blobs,
         )
         logging.info(f"Signed URls generated {signed_urls}")
 
-        temp_valid_pdp_ids, temp_invalid_ids = fetch_institution_ids(
+        temp_valid_inst_ids, temp_invalid_ids = fetch_institution_ids(
             pdp_ids=list(signed_urls.keys()),
             backend_api_key=env_vars["BACKEND_API_KEY"],
+            webapp_url=env_vars["WEBAPP_URL"],
         )
 
-        valid_pdp_ids.append(temp_valid_pdp_ids)
+        valid_inst_ids.append(temp_valid_inst_ids)
         invalid_ids.append(temp_invalid_ids)
+
+        if temp_valid_inst_ids:
+            for ids in temp_valid_inst_ids:
+                upload_url = fetch_upload_url(
+                    file_name=blobs,
+                    institution_id=ids,
+                    webapp_url=env_vars["WEBAPP_URL"],
+                    backend_api_key=env_vars["BACKEND_API_KEY"],
+                )
+                print(upload_url)
 
     return {
         "sftp_files": files,
-        "pdp_inst_generated": valid_pdp_ids,
+        "pdp_inst_generated": valid_inst_ids,
         "pdp_inst_not_found": invalid_ids,
     }

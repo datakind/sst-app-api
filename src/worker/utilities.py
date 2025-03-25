@@ -69,10 +69,14 @@ class StorageControl(BaseModel):
             List[Dict[str, Any]]: A list of dictionaries for each file with keys 'path', 'size', and 'modified'.
         """
         file_list: List[Dict[str, Any]] = []
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        with paramiko.Transport((sftp_host, sftp_port)) as transport:
-            transport.connect(username=sftp_user, password=sftp_password)
-            sftp = paramiko.SFTPClient.from_transport(transport)
+        try:
+            # Connect using the SSH key
+            ssh.connect(sftp_host, username=sftp_user, password=sftp_password)
+
+            sftp = ssh.open_sftp()
             if sftp is None:
                 raise RuntimeError("Failed to create SFTP client.")
 
@@ -99,6 +103,10 @@ class StorageControl(BaseModel):
 
             recursive_list(remote_path)
             sftp.close()
+            ssh.close()
+        except Exception as e:
+            ssh.close()
+            raise e  # Re-raise the exception after closing the connection
 
         return file_list
 
@@ -128,7 +136,7 @@ class StorageControl(BaseModel):
         storage_client.create_bucket(bucket, location="us")
 
 
-def fetch_institution_ids(pdp_ids: List[str], backend_api_key: str) -> Any:
+def get_token(backend_api_key: str, webapp_url: str) -> Any:
     """
     Fetches institution IDs for a list of PDP IDs using an API and returns a dictionary of valid IDs and a list of problematic IDs.
 
@@ -142,26 +150,40 @@ def fetch_institution_ids(pdp_ids: List[str], backend_api_key: str) -> Any:
     if not backend_api_key:
         raise ValueError("Missing BACKEND_API_KEY in environment variables.")
 
+    token_response = requests.post(
+        f"{webapp_url}/api/v1/token-from-api-key",
+        headers={"accept": "application/json", "X-API-KEY": backend_api_key},
+    )
+    if token_response.status_code != 200:
+        logging.error(f"Failed to get token: {token_response.text}")
+        return f"Failed to get token: {token_response.text}"
+
+    access_token = token_response.json().get("access_token")
+
+    return access_token
+
+
+def fetch_institution_ids(
+    pdp_ids: List[str], backend_api_key: str, webapp_url: str
+) -> Any:
+    """
+    Fetches institution IDs for a list of PDP IDs using an API and returns a dictionary of valid IDs and a list of problematic IDs.
+
+    Args:
+        pdp_ids (list): List of PDP IDs to process.
+        backend_api_key (str): API key required for authorization.
+
+    Returns:
+        tuple: A tuple containing a dictionary mapping PDP IDs to Institution IDs and a list of problematic PDP IDs.
+    """
+
     # Dictionary to store successful PDP ID to Institution ID mappings
     inst_id_dict: Dict[str, str] = {}
     # List to track problematic IDs
     problematic_ids: List[str] = []
 
-    # Create a custom session with trust_env disabled to avoid using .netrc credentials.
-    session = requests.Session()
-    session.trust_env = False
-
     # Obtain the access token
-    token_response = session.post(
-        "https://dev-sst.datakind.org/api/v1/token-from-api-key",
-        headers={"accept": "application/json", "X-API-KEY": backend_api_key},
-    )
-    if token_response.status_code != 200:
-        logging.error(f"Failed to get token: {token_response.text}")
-        problematic_ids.append(f"Failed to get token: {token_response.text}")
-        return {}, problematic_ids
-
-    access_token = token_response.json().get("access_token")
+    access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
     if not access_token:
         logging.error("Access token not found in the response.")
         problematic_ids.append("Access token not found in the response.")
@@ -169,8 +191,8 @@ def fetch_institution_ids(pdp_ids: List[str], backend_api_key: str) -> Any:
 
     # Process each PDP ID in the list
     for pdp_id in pdp_ids:
-        inst_response = session.post(
-            f"https://dev-sst.datakind.org/api/v1/institutions/pdp-id/{pdp_id}",
+        inst_response = requests.get(
+            f"{webapp_url}/api/v1/institutions/pdp-id/{pdp_id}",
             headers={
                 "accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -195,7 +217,9 @@ def fetch_institution_ids(pdp_ids: List[str], backend_api_key: str) -> Any:
     return inst_id_dict, problematic_ids
 
 
-def fetch_upload_url(file_name: str, institution_id: int, access_token: str) -> str:
+def fetch_upload_url(
+    file_name: str, institution_id: int, webapp_url: str, backend_api_key: str
+) -> str:
     """
     Fetches an upload URL from an API for a given file and institution.
 
@@ -208,9 +232,14 @@ def fetch_upload_url(file_name: str, institution_id: int, access_token: str) -> 
     str: The upload URL or an error message.
     """
     # Construct the URL with institution_id and file_name as parameters
-    url = f"https://dev-sst.datakind.org/api/v1/institutions/{institution_id}/upload-url/{file_name}"
+    url = f"{webapp_url}/api/v1/institutions/{institution_id}/upload-url/{file_name}"
 
     # Set the headers including the Authorization header
+    access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
+    if not access_token:
+        logging.error("Access token not found in the response.")
+        return "Access token not found in the response."
+
     headers = {"accept": "application/json", "Authorization": f"Bearer {access_token}"}
 
     # Make the GET request to the API
@@ -419,5 +448,4 @@ def split_csv_and_generate_signed_urls(
                 f"Failed to generate signed URL for institution ID {inst_id}: {e}"
             )
             continue
-    print(all_data)
     return all_data
