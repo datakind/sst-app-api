@@ -44,7 +44,7 @@ class StorageControl(BaseModel):
 
         if blob.exists():
             logger.debug(
-                f"File {blob_name} already exists in the bucket {bucket_name}. Skipping upload."
+                f">>>> File {blob_name} already exists in the bucket {bucket_name}. Skipping upload."
             )
             return  # Exit the function if the file already exists.
 
@@ -329,18 +329,18 @@ def generate_signed_url(
     try:
         # Obtain default credentials and project ID.
         credentials, project_id = google.auth.default()
-        logger.info("Obtained default credentials.")
+        logger.info(">>>> Obtained default credentials.")
     except Exception as e:
-        logger.error("Failed to get default credentials: %s", e)
+        logger.error("<<<< ???? Failed to get default credentials: %s", e)
         raise Exception("Credential error") from e
 
     try:
         # Refresh credentials to ensure an access token is available.
         request_obj = google_requests.Request()
         credentials.refresh(request_obj)
-        logger.info("Credentials refreshed successfully.")
+        logger.info(">>>> Credentials refreshed successfully.")
     except Exception as e:
-        logger.error("Failed to refresh credentials: %s", e)
+        logger.error("<<<< ???? Failed to refresh credentials: %s", e)
         raise Exception("Credential refresh error") from e
 
     try:
@@ -352,9 +352,9 @@ def generate_signed_url(
             raise ValueError(
                 f"Blob '{object_name}' not found in bucket '{bucket_name}'."
             )
-        logger.info("Accessed bucket and blob successfully.")
+        logger.info(">>>> Accessed bucket and blob successfully.")
     except Exception as e:
-        logger.error("Failed to access bucket or blob: %s", e)
+        logger.error("<<<< ???? Failed to access bucket or blob: %s", e)
         raise Exception("Bucket/blob access error") from e
 
     # Set expiration for the signed URL.
@@ -364,7 +364,7 @@ def generate_signed_url(
     service_account_email = ""  # Fallback value.
     if hasattr(credentials, "service_account_email"):
         service_account_email = credentials.service_account_email
-    logger.info("Using service account email: %s", service_account_email)
+    logger.debug(">>>> ???? Using service account email: %s", service_account_email)
 
     try:
         # Generate the signed URL.
@@ -374,9 +374,9 @@ def generate_signed_url(
             access_token=credentials.token,
             method="GET",
         )
-        logger.info("Signed URL generated successfully.")
+        logger.debug(">>>> Signed URL generated successfully.")
     except Exception as e:
-        logger.error("Failed to generate signed URL: %s", e)
+        logger.error("<<<< ???? Failed to generate signed URL: %s", e)
         raise Exception("Signed URL generation error") from e
 
     return str(signed_url)
