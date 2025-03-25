@@ -14,6 +14,7 @@ from .utilities import (
     fetch_institution_ids,
     split_csv_and_generate_signed_urls,
     fetch_upload_url,
+    transfer_file,
 )
 from .config import sftp_vars, env_vars, startup_env_vars
 from .authn import Token, get_current_username, check_creds, create_access_token
@@ -49,6 +50,7 @@ class PdpPullResponse(BaseModel):
     sftp_files: list[dict]
     pdp_inst_generated: list[Any]
     pdp_inst_not_found: list[Any]
+    upload_status: dict
 
     class Config:
         json_encoders = {np.int64: lambda v: int(v)}
@@ -160,6 +162,7 @@ async def execute_pdp_pull(
     print(f"It's all processed {all_blobs}")
     valid_inst_ids = []
     invalid_ids = []
+    uploads = {}
 
     for blobs in all_blobs:
         logging.debug(f"Processing {blobs}")
@@ -181,17 +184,26 @@ async def execute_pdp_pull(
 
         if temp_valid_inst_ids:
             for ids in temp_valid_inst_ids:
-                print(ids)
                 upload_url = fetch_upload_url(
                     file_name=blobs,
-                    institution_id=ids,
+                    institution_id=temp_valid_inst_ids[ids],
                     webapp_url=env_vars["WEBAPP_URL"],
                     backend_api_key=env_vars["BACKEND_API_KEY"],
                 )
                 print(upload_url)
 
+                transfer_status = transfer_file(
+                    download_url=signed_urls[ids]["signed_url"],
+                    upload_signed_url=upload_url,
+                )
+                uploads[str(ids)] = {
+                    "file_name": str(signed_urls[ids]["file_name"]),
+                    "status": str(transfer_status),
+                }
+
     return {
         "sftp_files": files,
         "pdp_inst_generated": valid_inst_ids,
         "pdp_inst_not_found": invalid_ids,
+        "upload_status": uploads,
     }

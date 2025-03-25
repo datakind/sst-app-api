@@ -255,30 +255,38 @@ def fetch_upload_url(
         return f"Error fetching URL: {response.status_code} {response.text}"
 
 
-def post_file_to_signed_url(file_path: str, signed_url: str) -> str:
+def transfer_file(download_url: str, upload_signed_url: str) -> str:
     """
-    Posts a file to a provided signed URL.
+    Downloads a file from a URL and uploads it directly to a signed URL.
 
     Args:
-    file_path (str): The local path to the file you want to upload.
-    signed_url (str): The signed URL to which the file should be uploaded.
+    download_url (str): The URL from which the file will be downloaded.
+    upload_signed_url (str): The signed URL to which the file should be uploaded.
 
     Returns:
     str: The response from the server after attempting to upload.
     """
-    # Open the file in binary mode
-    with open(file_path, "rb") as file:
-        # Prepare the files dictionary for uploading
-        files = {"file": (file_path, file)}
+    # Download the file content
+    download_response = requests.get(download_url)
+    if download_response.status_code != 200:
+        return f"Failed to download file: {download_response.status_code} {download_response.text}"
 
-        # POST the file to the signed URL
-        response = requests.post(signed_url, files=files)
+    # Get the file content from the download
+    file_content = download_response.content
 
-        # Check the response
-        if response.status_code == 200:
-            return "File uploaded successfully."
-        else:
-            return f"Failed to upload file: {response.status_code} {response.text}"
+    # POST the file content to the signed upload URL
+    upload_headers = {
+        "Content-Type": "application/octet-stream"
+    }  # Ensure headers are set if needed
+    upload_response = requests.put(
+        upload_signed_url, data=file_content, headers=upload_headers
+    )
+
+    # Check the response
+    if upload_response.status_code == 200:
+        return "File transferred successfully."
+    else:
+        return f"Failed to transfer file: {upload_response.status_code} {upload_response.text}"
 
 
 def generate_signed_url(
