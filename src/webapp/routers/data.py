@@ -951,6 +951,11 @@ def get_upload_url(
     file_name = decode_url_piece(file_name)
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
-    return storage_control.generate_upload_signed_url(
-        get_external_bucket_name(inst_id), file_name
-    )
+    try:
+        signed_url = storage_control.generate_upload_signed_url(
+            get_external_bucket_name(inst_id), file_name
+        )
+        return signed_url
+    except ValueError as ve:
+        # Return a 400 error with the specific message from ValueError
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
