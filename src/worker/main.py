@@ -197,8 +197,10 @@ async def execute_pdp_pull(
                     upload_signed_url=upload_url,
                 )
                 uploads[str(ids)] = {
-                    "file_name": str(signed_urls[ids]["file_name"]),
-                    "status": str(transfer_status),
+                    "file_name": signed_urls[ids]["file_name"].strip().strip('"'),
+                    "status": transfer_status.strip()
+                    if isinstance(transfer_status, str)
+                    else transfer_status,
                 }
 
     return {
