@@ -448,56 +448,33 @@ def split_csv_and_generate_signed_urls(
         new_blob_name = f"{timestamped_folder}/{current_time}/{file_name}"
         new_blob = storage_client.bucket(bucket_name).blob(new_blob_name)
 
-        # Attempt to upload the CSV file
-        if new_blob.exist():
-            logger.debug(f"File {new_blob_name} already exist")
+        # Check if blob exists and upload if not
+        if not new_blob.exists():
             try:
-                signed_url = generate_signed_url(
-                    bucket_name=bucket_name,
-                    object_name=new_blob_name,
-                )
-                # new_blob.generate_signed_url(expiration=expiration_time)
-                all_data[str(inst_id)] = {
-                    "signed_url": str(signed_url),
-                    "file_name": str(file_name),
-                }
                 logger.info(
-                    f"Signed URL generated successfully for institution ID {inst_id}"
+                    f"Uploading new CSV for institution ID {inst_id} to {new_blob_name}"
                 )
+                new_blob.upload_from_string(output.getvalue(), content_type="text/csv")
             except Exception as e:
-                logger.error(
-                    f"Failed to generate signed URL for institution ID {inst_id}: {e}"
-                )
+                logger.error(f"Failed to upload CSV for institution ID {inst_id}: {e}")
                 continue
-            continue
-        try:
-            logger.debug(
-                f"Uploading split CSV for institution ID {inst_id} to {new_blob_name}"
-            )
-            new_blob.upload_from_string(output.getvalue(), content_type="text/csv")
-        except Exception as e:
-            logger.error(f"Failed to upload CSV for institution ID {inst_id}: {e}")
-            continue
 
-        # Attempt to generate a signed URL for the new blob
+        # Generate a signed URL for the new or existing blob
         try:
             signed_url = generate_signed_url(
                 bucket_name=bucket_name,
                 object_name=new_blob_name,
             )
-            # new_blob.generate_signed_url(expiration=expiration_time)
             all_data[str(inst_id)] = {
-                "signed_url": str(signed_url),
-                "file_name": str(file_name),
+                "signed_url": signed_url,
+                "file_name": file_name,
             }
-            logger.info(
-                f"Signed URL generated successfully for institution ID {inst_id}"
-            )
+            logger.info(f"Signed URL generated for institution ID {inst_id}")
         except Exception as e:
             logger.error(
                 f"Failed to generate signed URL for institution ID {inst_id}: {e}"
             )
-            continue
+
     return all_data
 
 
