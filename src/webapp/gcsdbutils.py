@@ -108,6 +108,12 @@ def update_db_from_bucket(inst_id: str, session, storage_control):
                     .values(valid=file_approved)
                 )
                 session.execute(query)
+                query = (
+                    update(JobTable)
+                    .where(JobTable.id == get_job_id(f))
+                    .values(output_valid=file_approved)
+                )
+                session.execute(query)
         else:
             raise ValueError("Attempted creation of file with duplicate name.")
     for elem in new_files_to_add_to_database:

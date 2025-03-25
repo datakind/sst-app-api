@@ -124,6 +124,13 @@ $ curl -X 'GET' \
 
 Non-error Pylint is very opinionated, and **SOMETIMES WRONG**. For example, there exist warnings to switch `== NONE` to `is None` for SQL query where clauses. THIS WILL CAUSE THE SQL QUERY TO NOT WORK -- (it appears to be due to how SqlAlchemy understands the clauses). So be careful when following the recommendations from pylint.
 
+## Environment Variables
+
+For the deployed instances (dev, staging, prod) database related environment variables are set in the [terraform templates](../../terraform/modules/service/main.tf#L39), 
+but most are set per project in [Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager/secret/dev-webapp-env-file/versions?project=dev-sst-02). To update the environment
+variables in secret manager, create a new version from the UI, copying the previous values with
+your changes.
+
 ## Usage Notes
 
 Some general things that may be helpful to call out.
