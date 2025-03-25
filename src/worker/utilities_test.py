@@ -1,6 +1,5 @@
 """Test file for utilities.py."""
 
-
 from .utilities import get_sftp_bucket_name
 
 
