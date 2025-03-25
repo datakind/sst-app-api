@@ -477,7 +477,6 @@ def split_csv_and_generate_signed_urls(
 
     return all_data
 
-
 def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) -> list:
     """
     For each source file in sftp_source_filenames, copies the file from the SFTP
