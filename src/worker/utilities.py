@@ -491,11 +491,9 @@ def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) ->
     for sftp_source_filename in sftp_source_filenames:
         # Extract the base filename and prepare the destination filename
         source_filename = sftp_source_filename["path"]
-        logger.debug(f"Processing source file: {source_filename}")
         # Extract the base filename.
         base_filename = os.path.basename(source_filename)
         dest_filename = f"{base_filename}"
-        logger.debug(f"Destination filename will be: {dest_filename}")
 
         # Check if the file has already been processed
         if dest_filename in all_blobs:
