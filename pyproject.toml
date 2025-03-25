@@ -26,8 +26,7 @@ dependencies = [
     "types-paramiko",
     "pandas",
     "six",
-    "types-six",
-    "google-cloud-iam"
+    "types-six"
 ]
 
 [project.urls]
