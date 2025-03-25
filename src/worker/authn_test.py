@@ -1,8 +1,6 @@
 """Test file for authn.py."""
 
-import pytest
 
-from fastapi import HTTPException
 
 PASSWORD_STR = "pass123"
 
