@@ -50,7 +50,7 @@ class PdpPullResponse(BaseModel):
     sftp_files: list[dict]
     pdp_inst_generated: list[Any]
     pdp_inst_not_found: list[Any]
-    upload_status: list[Any]
+    upload_status: dict
 
     class Config:
         json_encoders = {np.int64: lambda v: int(v)}

@@ -1,7 +1,5 @@
 """Test file for authn.py."""
 
-
-
 PASSWORD_STR = "pass123"
 
 
