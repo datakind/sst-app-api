@@ -232,7 +232,6 @@ def fetch_upload_url(
     str: The upload URL or an error message.
     """
     # Construct the URL with institution_id and file_name as parameters
-    url = f"{webapp_url}/api/v1/institutions/{institution_id}/upload-url/{file_name}"
 
     # Set the headers including the Authorization header
     access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
@@ -240,10 +239,14 @@ def fetch_upload_url(
         logging.error("Access token not found in the response.")
         return "Access token not found in the response."
 
-    headers = {"accept": "application/json", "Authorization": f"Bearer {access_token}"}
-
     # Make the GET request to the API
-    response = requests.get(url, headers=headers)
+    response = requests.get(
+        f"{webapp_url}/api/v1/institutions/{institution_id}/upload-url/{file_name}",
+        headers={
+            "accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        },
+    )
 
     # Check if the request was successful
     if response.status_code == 200:
