@@ -8,6 +8,8 @@ from .main import app
 from .authn import get_current_username
 from unittest import mock
 from .utilities import StorageControl
+from unittest.mock import patch, MagicMock
+from .config import env_vars
 
 MOCK_STORAGE = mock.Mock()
 
@@ -45,16 +47,36 @@ def test_retrieve_token(client: TestClient) -> Any:
     assert response.status_code == 200
 
 
-def test_execute_pdp_pull(client: TestClient) -> Any:
-    """Test POST /execute-pdp-pull."""
+@patch("google.auth.default")
+def test_execute_pdp_pull(
+    mock_auth_default: Any, client: TestClient, monkeypatch: Any
+) -> None:
+    """Test POST /execute-pdp-pull with mocked authentication."""
+    # Set up dummy credentials with the correct universe_domain.
+    monkeypatch.setitem(env_vars, "BACKEND_API_KEY", "dummy_api_key")
+    monkeypatch.setitem(env_vars, "BUCKET_ENV", "testbucket")
+    monkeypatch.setitem(env_vars, "WEBAPP_URL", "https://example.com")
+    dummy_credentials = MagicMock()
+    dummy_credentials.token = "fake-token"
+    dummy_credentials.universe_domain = "googleapis.com"  # Set the expected domain
+    mock_auth_default.return_value = (dummy_credentials, "dummy-project")
+
     MOCK_STORAGE.copy_from_sftp_to_gcs.side_effect = (
-        lambda filename: f"processed_{filename}"
+        lambda sftp_host,
+        sftp_port,
+        sftp_user,
+        sftp_password,
+        sftp_file,
+        bucket_name,
+        blob_name: None
     )
     MOCK_STORAGE.create_bucket_if_not_exists.return_value = None
     MOCK_STORAGE.list_sftp_files.return_value = [
         {"path": "file1.csv"},
         {"path": "file2.csv"},
     ]
+    # Optionally, if there's a process_file or similar function, you can mock it too.
+    # For this test, we're focusing on the overall endpoint behavior.
 
     response = client.post("/execute-pdp-pull", json={"placeholder": "val"})
 

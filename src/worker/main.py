@@ -16,7 +16,7 @@ from .utilities import (
     split_csv_and_generate_signed_urls,
     fetch_upload_url,
     transfer_file,
-    sftp_helper,
+    sftp_file_to_gcs_helper,
     validate_sftp_file,
 )
 from .config import sftp_vars, env_vars, startup_env_vars
@@ -101,12 +101,12 @@ async def process_file(
     storage_control: StorageControl, blob: str, env_vars: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Process a single file: generate URLs, transfer, and validate."""
-    logger.debug(f"Processing {blob}")
+    logger.debug(f">>>> Splitting {blob} to extract institution data")
     signed_urls = split_csv_and_generate_signed_urls(
         bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"]),
         source_blob_name=blob,
     )
-    logger.info(f"Signed URLs generated {signed_urls}")
+    logger.info(f">>>> Signed URLs, File names generated for {blob}")
 
     temp_valid_inst_ids, temp_invalid_ids = fetch_institution_ids(
         pdp_ids=list(signed_urls.keys()),
@@ -116,9 +116,9 @@ async def process_file(
 
     uploads = {}
     if temp_valid_inst_ids:
-        logger.info(f"Working on {temp_valid_inst_ids}")
+        logger.info(f">>>> Attempting to transfer {temp_valid_inst_ids}")
         for ids in temp_valid_inst_ids:
-            logger.info(f"----------Generating upload url and moving {ids}---------")
+            logger.debug(f"----------Generating upload url and moving {ids}---------")
             inst_id = temp_valid_inst_ids[ids]
             upload_url = fetch_upload_url(
                 file_name=blob,
@@ -126,7 +126,7 @@ async def process_file(
                 webapp_url=env_vars["WEBAPP_URL"],
                 backend_api_key=env_vars["BACKEND_API_KEY"],
             )
-
+            logger.info(">>>> Upload URL successfully retrieved")
             transfer_status = transfer_file(
                 download_url=signed_urls[ids]["signed_url"].strip('"'),
                 upload_signed_url=upload_url.strip('"'),
@@ -174,18 +174,16 @@ async def execute_pdp_pull(
         remote_path="./receive",
     )
 
-    all_blobs = sftp_helper(storage_control, files)
     results = []
-    for blob in all_blobs:
-        result = await process_file(storage_control, blob, env_vars)
+    for file in files:
+        gcs_blob = sftp_file_to_gcs_helper(storage_control, file)
+        result = await process_file(storage_control, gcs_blob, env_vars)
         results.append(result)
 
     # Aggregate results to return
     return {
         "sftp_files": files,
-        "pdp_inst_generated": [result["valid_inst_ids"] for result in results],
-        "pdp_inst_not_found": [result["invalid_ids"] for result in results],
-        "upload_status": {
-            key: val for result in results for key, val in result["uploads"].items()
-        },
+        "pdp_inst_generated": list(result["valid_inst_ids"]),
+        "pdp_inst_not_found": list(result["invalid_ids"]),
+        "upload_status": dict(result["uploads"]),
     }
