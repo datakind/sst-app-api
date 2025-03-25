@@ -73,7 +73,6 @@ class StorageControl(BaseModel):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         try:
-            
             # Connect using the SSH key
             ssh.connect(sftp_host, username=sftp_user, password=sftp_password)
 
@@ -157,13 +156,16 @@ def get_token(backend_api_key: str, webapp_url: str) -> Any:
     )
     if token_response.status_code != 200:
         logging.error(f"Failed to get token: {token_response.text}")
-        return (f"Failed to get token: {token_response.text}")
+        return f"Failed to get token: {token_response.text}"
 
     access_token = token_response.json().get("access_token")
 
     return access_token
 
-def fetch_institution_ids(pdp_ids: List[str], backend_api_key: str, webapp_url: str) -> Any:
+
+def fetch_institution_ids(
+    pdp_ids: List[str], backend_api_key: str, webapp_url: str
+) -> Any:
     """
     Fetches institution IDs for a list of PDP IDs using an API and returns a dictionary of valid IDs and a list of problematic IDs.
 
@@ -181,12 +183,12 @@ def fetch_institution_ids(pdp_ids: List[str], backend_api_key: str, webapp_url: 
     problematic_ids: List[str] = []
 
     # Obtain the access token
-    access_token=get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
+    access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
     if not access_token:
         logging.error("Access token not found in the response.")
         problematic_ids.append("Access token not found in the response.")
         return {}, problematic_ids
-    
+
     # Process each PDP ID in the list
     for pdp_id in pdp_ids:
         inst_response = requests.get(
@@ -215,7 +217,9 @@ def fetch_institution_ids(pdp_ids: List[str], backend_api_key: str, webapp_url: 
     return inst_id_dict, problematic_ids
 
 
-def fetch_upload_url(file_name: str, institution_id: int, webapp_url: str, backend_api_key: str) -> str:
+def fetch_upload_url(
+    file_name: str, institution_id: int, webapp_url: str, backend_api_key: str
+) -> str:
     """
     Fetches an upload URL from an API for a given file and institution.
 
@@ -231,11 +235,11 @@ def fetch_upload_url(file_name: str, institution_id: int, webapp_url: str, backe
     url = f"{webapp_url}/api/v1/institutions/{institution_id}/upload-url/{file_name}"
 
     # Set the headers including the Authorization header
-    access_token=get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
+    access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
     if not access_token:
         logging.error("Access token not found in the response.")
-        return ("Access token not found in the response.")
-    
+        return "Access token not found in the response."
+
     headers = {"accept": "application/json", "Authorization": f"Bearer {access_token}"}
 
     # Make the GET request to the API

@@ -14,7 +14,7 @@ env_vars = {
     "PASSWORD": "tester-pw",
     "BACKEND_API_KEY": "",
     "WEBAPP_URL": "",
-    "BUCKET_ENV": ""
+    "BUCKET_ENV": "",
 }
 
 gcs_vars = {
