@@ -276,8 +276,8 @@ def transfer_file(download_url: str, upload_signed_url: str) -> str:
 
     # POST the file content to the signed upload URL
     upload_headers = {
-        "Content-Type": "application/octet-stream"
-    }  # Ensure headers are set if needed
+        "Content-Type": "text/csv"  # Match the content type used when generating the signed URL
+    }
     upload_response = requests.put(
         upload_signed_url, data=file_content, headers=upload_headers
     )
