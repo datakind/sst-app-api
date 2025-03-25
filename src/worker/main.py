@@ -181,6 +181,7 @@ async def execute_pdp_pull(
 
         if temp_valid_inst_ids:
             for ids in temp_valid_inst_ids:
+                print(ids)
                 upload_url = fetch_upload_url(
                     file_name=blobs,
                     institution_id=ids,
