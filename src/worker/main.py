@@ -181,7 +181,7 @@ async def execute_pdp_pull(
 
         valid_inst_ids.append(temp_valid_inst_ids)
         invalid_ids.append(temp_invalid_ids)
-
+        print(signed_urls[ids]["signed_url"].strip('"'))
         if temp_valid_inst_ids:
             for ids in temp_valid_inst_ids:
                 upload_url = fetch_upload_url(
@@ -193,8 +193,8 @@ async def execute_pdp_pull(
                 print(upload_url)
 
                 transfer_status = transfer_file(
-                    download_url=signed_urls[ids]["signed_url"].strip().strip('"'),
-                    upload_signed_url=upload_url.strip().strip('"'),
+                    download_url=signed_urls[ids]["signed_url"].strip('"'),
+                    upload_signed_url=upload_url.strip('"'),
                 )
                 uploads[str(ids)] = {
                     "file_name": signed_urls[ids]["file_name"].strip().strip('"'),
