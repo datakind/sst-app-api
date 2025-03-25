@@ -43,7 +43,9 @@ class StorageControl(BaseModel):
         blob = bucket.blob(blob_name)
 
         if blob.exists():
-            logger.debug(f"File {blob_name} already exists in the bucket {bucket_name}. Skipping upload.")
+            logger.debug(
+                f"File {blob_name} already exists in the bucket {bucket_name}. Skipping upload."
+            )
             return  # Exit the function if the file already exists.
 
         with paramiko.Transport((sftp_host, sftp_port)) as transport:
