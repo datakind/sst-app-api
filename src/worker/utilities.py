@@ -257,8 +257,10 @@ def fetch_upload_url(
 
     # Check if the request was successful
     if response.status_code == 200:
+        logger.info(response.text)
         return response.text  # or response.json() if the response is JSON
     else:
+        logger.error(f"Error fetching URL: {response.status_code} {response.text}")
         return f"Error fetching URL: {response.status_code} {response.text}"
 
 
@@ -445,9 +447,6 @@ def split_csv_and_generate_signed_urls(
             logger.debug(
                 f"Uploading split CSV for institution ID {inst_id} to {new_blob_name}"
             )
-            print(
-                f"Uploading split CSV for institution ID {inst_id} to {new_blob_name}"
-            )
             new_blob.upload_from_string(output.getvalue(), content_type="text/csv")
         except Exception as e:
             logger.error(f"Failed to upload CSV for institution ID {inst_id}: {e}")
@@ -467,7 +466,6 @@ def split_csv_and_generate_signed_urls(
             logger.info(
                 f"Signed URL generated successfully for institution ID {inst_id}"
             )
-            print(f"Signed URL generated successfully for institution ID {inst_id}")
         except Exception as e:
             logger.error(
                 f"Failed to generate signed URL for institution ID {inst_id}: {e}"
@@ -486,15 +484,25 @@ def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) ->
         storage_control (StorageControl): An instance with a method `copy_from_sftp_to_gcs`.
         sftp_source_filenames (list): A list of file paths on the SFTP server.
     """
+    all_blobs = []  # List to keep track of all processed files
     num_files = len(sftp_source_filenames)
     logger.info(f"Starting sftp_helper for {num_files} file(s).")
-    all_blobs = []
+
     for sftp_source_filename in sftp_source_filenames:
-        sftp_source_filename = sftp_source_filename["path"]
-        logger.debug(f"Processing source file: {sftp_source_filename}")
+        # Extract the base filename and prepare the destination filename
+        source_filename = sftp_source_filename["path"]
+        logger.debug(f"Processing source file: {source_filename}")
         # Extract the base filename.
-        base_filename = os.path.basename(sftp_source_filename)
+        base_filename = os.path.basename(source_filename)
         dest_filename = f"{base_filename}"
+        logger.debug(f"Destination filename will be: {dest_filename}")
+
+        # Check if the file has already been processed
+        if dest_filename in all_blobs:
+            logger.info(f"Skipping already processed file: {dest_filename}")
+            continue
+
+        logger.debug(f"Processing source file: {source_filename}")
         logger.debug(f"Destination filename will be: {dest_filename}")
 
         try:
@@ -503,18 +511,17 @@ def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) ->
                 22,
                 sftp_vars["SFTP_USER"],
                 sftp_vars["SFTP_PASSWORD"],
-                sftp_source_filename,
+                source_filename,
                 get_sftp_bucket_name(env_vars["ENV"]),
                 dest_filename,
             )
             all_blobs.append(dest_filename)
             logger.info(
-                f"Successfully processed '{sftp_source_filename}' as '{dest_filename}'."
+                f"Successfully processed '{source_filename}' as '{dest_filename}'."
             )
         except Exception as e:
-            logger.error(
-                f"Error processing '{sftp_source_filename}': {e}", exc_info=True
-            )
+            logger.error(f"Error processing '{source_filename}': {e}", exc_info=True)
+
     return all_blobs
 
 
