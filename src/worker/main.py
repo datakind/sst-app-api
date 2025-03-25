@@ -2,7 +2,8 @@
 
 import numpy as np
 import logging
-from typing import Any, Annotated
+from typing import Any, Annotated, Dict
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
@@ -96,6 +97,64 @@ async def login_for_access_token(
     return Token(access_token=access_token, token_type="bearer")
 
 
+async def process_file(
+    storage_control: StorageControl, blob: str, env_vars: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Process a single file: generate URLs, transfer, and validate."""
+    logger.debug(f"Processing {blob}")
+    signed_urls = split_csv_and_generate_signed_urls(
+        bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"]),
+        source_blob_name=blob,
+    )
+    logger.info(f"Signed URLs generated {signed_urls}")
+
+    temp_valid_inst_ids, temp_invalid_ids = fetch_institution_ids(
+        pdp_ids=list(signed_urls.keys()),
+        backend_api_key=env_vars["BACKEND_API_KEY"],
+        webapp_url=env_vars["WEBAPP_URL"],
+    )
+
+    uploads = {}
+    if temp_valid_inst_ids:
+        logger.info(f"Working on {temp_valid_inst_ids}")
+        for ids in temp_valid_inst_ids:
+            logger.info(f"----------Generating upload url and moving {ids}---------")
+            inst_id = temp_valid_inst_ids[ids]
+            upload_url = fetch_upload_url(
+                file_name=blob,
+                institution_id=inst_id,
+                webapp_url=env_vars["WEBAPP_URL"],
+                backend_api_key=env_vars["BACKEND_API_KEY"],
+            )
+
+            transfer_status = transfer_file(
+                download_url=signed_urls[ids]["signed_url"].strip('"'),
+                upload_signed_url=upload_url.strip('"'),
+            )
+
+            validation_status = validate_sftp_file(
+                file_name=blob,
+                institution_id=inst_id,
+                webapp_url=env_vars["WEBAPP_URL"],
+                backend_api_key=env_vars["BACKEND_API_KEY"],
+            )
+
+            uploads[str(ids)] = {
+                "file_name": signed_urls[ids]["file_name"].strip().strip('"'),
+                "transfer_status": (
+                    transfer_status.strip()
+                    if isinstance(transfer_status, str)
+                    else transfer_status
+                ),
+                "validation_status": validation_status,
+            }
+    return {
+        "valid_inst_ids": temp_valid_inst_ids,
+        "invalid_ids": temp_invalid_ids,
+        "uploads": uploads,
+    }
+
+
 @app.post("/execute-pdp-pull", response_model=PdpPullResponse)
 async def execute_pdp_pull(
     req: PdpPullRequest,
@@ -116,62 +175,17 @@ async def execute_pdp_pull(
     )
 
     all_blobs = sftp_helper(storage_control, files)
-    valid_inst_ids = []
-    invalid_ids = []
-    uploads = {}
+    results = []
+    for blob in all_blobs:
+        result = await process_file(storage_control, blob, env_vars)
+        results.append(result)
 
-    for blobs in all_blobs:
-        logger.debug(f"Processing {blobs}")
-        print(f"Processing {blobs}")
-        signed_urls = split_csv_and_generate_signed_urls(
-            bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"]),
-            source_blob_name=blobs,
-        )
-        logger.info(f"Signed URls generated {signed_urls}")
-
-        temp_valid_inst_ids, temp_invalid_ids = fetch_institution_ids(
-            pdp_ids=list(signed_urls.keys()),
-            backend_api_key=env_vars["BACKEND_API_KEY"],
-            webapp_url=env_vars["WEBAPP_URL"],
-        )
-
-        valid_inst_ids.append(temp_valid_inst_ids)
-        invalid_ids.append(temp_invalid_ids)
-        if temp_valid_inst_ids:
-            for ids in temp_valid_inst_ids:
-                inst_id = temp_valid_inst_ids[ids]
-                upload_url = fetch_upload_url(
-                    file_name=blobs,
-                    institution_id=inst_id,
-                    webapp_url=env_vars["WEBAPP_URL"],
-                    backend_api_key=env_vars["BACKEND_API_KEY"],
-                )
-
-                transfer_status = transfer_file(
-                    download_url=signed_urls[ids]["signed_url"].strip('"'),
-                    upload_signed_url=upload_url.strip('"'),
-                )
-
-                validation_status = validate_sftp_file(
-                    file_name=blobs,
-                    institution_id=inst_id,
-                    webapp_url=env_vars["WEBAPP_URL"],
-                    backend_api_key=env_vars["BACKEND_API_KEY"],
-                )
-
-                uploads[str(ids)] = {
-                    "file_name": signed_urls[ids]["file_name"].strip().strip('"'),
-                    "transfer_status": (
-                        transfer_status.strip()
-                        if isinstance(transfer_status, str)
-                        else transfer_status
-                    ),
-                    "validation_status": validation_status,
-                }
-
+    # Aggregate results to return
     return {
         "sftp_files": files,
-        "pdp_inst_generated": valid_inst_ids,
-        "pdp_inst_not_found": invalid_ids,
-        "upload_status": uploads,
+        "pdp_inst_generated": [result["valid_inst_ids"] for result in results],
+        "pdp_inst_not_found": [result["invalid_ids"] for result in results],
+        "upload_status": {
+            key: val for result in results for key, val in result["uploads"].items()
+        },
     }
