@@ -64,5 +64,5 @@ def test_execute_pdp_pull(client: TestClient) -> Any:
         "sftp_files": [{"path": "file1.csv"}, {"path": "file2.csv"}],
         "pdp_inst_generated": [],
         "pdp_inst_not_found": [],
-        "upload_status": {}
+        "upload_status": {},
     }
