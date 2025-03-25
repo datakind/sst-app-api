@@ -193,8 +193,8 @@ async def execute_pdp_pull(
                 print(upload_url)
 
                 transfer_status = transfer_file(
-                    download_url=signed_urls[ids]["signed_url"],
-                    upload_signed_url=upload_url,
+                    download_url=signed_urls[ids]["signed_url"].strip().strip('"'),
+                    upload_signed_url=upload_url.strip().strip('"'),
                 )
                 uploads[str(ids)] = {
                     "file_name": signed_urls[ids]["file_name"].strip().strip('"'),
