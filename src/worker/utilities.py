@@ -194,11 +194,11 @@ def fetch_institution_ids(
     inst_id_dict: Dict[str, str] = {}
     # List to track problematic IDs
     problematic_ids: List[str] = []
-
+    logger.info(f">>>> Fetching institution ids for {pdp_ids}")
     # Obtain the access token
     access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
     if not access_token:
-        logger.error("Access token not found in the response.")
+        logger.error("<<<< ???? Access token not found in the response.")
         problematic_ids.append("Access token not found in the response.")
         return {}, problematic_ids
 
@@ -219,11 +219,11 @@ def fetch_institution_ids(
             if inst_id:
                 inst_id_dict[pdp_id] = inst_id
             else:
-                logger.error(f"No institution ID found for PDP ID: {pdp_id}")
+                logger.error(f"<<<< ???? No institution ID found for PDP ID: {pdp_id}")
                 problematic_ids.append(pdp_id)
         else:
             logger.error(
-                f"Failed to fetch institution ID for PDP ID {pdp_id}: {inst_response.text}"
+                f"<<<< ???? Failed to fetch institution ID for PDP ID {pdp_id}: {inst_response.text}"
             )
             problematic_ids.append(pdp_id)
 
@@ -249,7 +249,7 @@ def fetch_upload_url(
     # Set the headers including the Authorization header
     access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
     if not access_token:
-        logger.error("Access token not found in the response.")
+        logger.error("<<<< ???? Access token not found in the response.")
         return "Access token not found in the response."
 
     # Make the GET request to the API
@@ -266,7 +266,9 @@ def fetch_upload_url(
         logger.info(response.text)
         return response.text  # or response.json() if the response is JSON
     else:
-        logger.error(f"Error fetching URL: {response.status_code} {response.text}")
+        logger.error(
+            f"<<<< ???? Error fetching URL: {response.status_code} {response.text}"
+        )
         return f"Error fetching URL: {response.status_code} {response.text}"
 
 
@@ -285,7 +287,7 @@ def transfer_file(download_url: str, upload_signed_url: str) -> str:
     download_response = requests.get(download_url)
     if download_response.status_code != 200:
         logger.error(
-            f"Failed to download file: {download_response.status_code} {download_response.text}"
+            f"<<<< ???? Failed to download file: {download_response.status_code} {download_response.text}"
         )
         return f"Failed to download file: {download_response.status_code} {download_response.text}"
 
@@ -302,11 +304,11 @@ def transfer_file(download_url: str, upload_signed_url: str) -> str:
 
     # Check the response
     if upload_response.status_code == 200:
-        logger.info("File transferred successfully.")
+        logger.info(">>>> File transferred successfully.")
         return "File transferred successfully."
     else:
         logger.error(
-            f"Failed to transfer file: {upload_response.status_code} {upload_response.text}"
+            f"<<<< ???? Failed to transfer file: {upload_response.status_code} {upload_response.text}"
         )
         return f"Failed to transfer file: {upload_response.status_code} {upload_response.text}"
 
@@ -404,15 +406,17 @@ def split_csv_and_generate_signed_urls(
     source_blob = bucket.blob(source_blob_name)
 
     try:
-        logger.debug(f"Attempting to download the source blob: {source_blob_name}")
-        print(f"Attempting to download the source blob: {source_blob_name}")
+        logger.debug(
+            f">>>> Attempting to download the source blob to memory: {source_blob_name}"
+        )
         csv_string = source_blob.download_as_text()
         csv_data = io.StringIO(csv_string)
         df = pd.read_csv(csv_data)
-        logger.debug("CSV data successfully loaded into DataFrame.")
-        print("CSV data successfully loaded into DataFrame.")
+        logger.debug(
+            f">>>> {source_blob_name} data successfully loaded into DataFrame."
+        )
     except Exception as e:
-        logger.error(f"Failed to process blob {source_blob_name}: {e}")
+        logger.error(f"<<<< ???? Failed to process blob {source_blob_name}: {e}")
         return {}
 
     pattern = re.compile(r"(?=.*institution)(?=.*id)", re.IGNORECASE)
@@ -422,12 +426,12 @@ def split_csv_and_generate_signed_urls(
     for column in df.columns:
         if pattern.search(column):
             institution_column = column
-            logger.debug(f"Matching column found: {column}")
+            logger.debug(f">>>> Matching column found: {column} in {source_blob_name}")
             break
 
     if not institution_column:
         error_message = (
-            "No column found matching the pattern for 'institution' and 'id'."
+            "<<<< ???? No column found matching the pattern for 'institution' and 'id'."
         )
         logger.debug(error_message)
         return {"error": {"message": "Failed to download or parse CSV"}}
@@ -452,11 +456,13 @@ def split_csv_and_generate_signed_urls(
         if not new_blob.exists():
             try:
                 logger.info(
-                    f"Uploading new CSV for institution ID {inst_id} to {new_blob_name}"
+                    f">>>> Uploading new CSV for institution ID {inst_id} to {new_blob_name}"
                 )
                 new_blob.upload_from_string(output.getvalue(), content_type="text/csv")
             except Exception as e:
-                logger.error(f"Failed to upload CSV for institution ID {inst_id}: {e}")
+                logger.error(
+                    f"<<<< ???? Failed to upload CSV for institution ID {inst_id}: {e}"
+                )
                 continue
 
         # Generate a signed URL for the new or existing blob
@@ -469,16 +475,18 @@ def split_csv_and_generate_signed_urls(
                 "signed_url": signed_url,
                 "file_name": file_name,
             }
-            logger.info(f"Signed URL generated for institution ID {inst_id}")
+            logger.info(f">>>> Signed URL generated for institution ID {inst_id}")
         except Exception as e:
             logger.error(
-                f"Failed to generate signed URL for institution ID {inst_id}: {e}"
+                f"<<<< ???? Failed to generate signed URL for institution ID {inst_id}: {e}"
             )
 
     return all_data
 
 
-def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) -> list:
+def sftp_file_to_gcs_helper(
+    storage_control: StorageControl, sftp_source_filename: dict
+) -> str:
     """
     For each source file in sftp_source_filenames, copies the file from the SFTP
     server to GCS. The destination filename is automatically generated by prefixing
@@ -488,43 +496,45 @@ def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) ->
         storage_control (StorageControl): An instance with a method `copy_from_sftp_to_gcs`.
         sftp_source_filenames (list): A list of file paths on the SFTP server.
     """
-    all_blobs = []  # List to keep track of all processed files
-    num_files = len(sftp_source_filenames)
-    logger.info(f"Starting sftp_helper for {num_files} file(s).")
+    # all_blobs = []  # List to keep track of all processed files
+    logger.info(
+        f"<<<<<<<<<>>>>>>>>> Starting sftp to gcs copy for {sftp_source_filename} file(s). <<<<<<<<<<<>>>>>>>>>>>>>"
+    )
+    # for sftp_source_filename in sftp_source_filenames:
+    # Extract the base filename and prepare the destination filename
+    source_filename = sftp_source_filename["path"]
+    # Extract the base filename.
+    base_filename = os.path.basename(source_filename)
+    dest_filename = f"{base_filename}"
 
-    for sftp_source_filename in sftp_source_filenames:
-        # Extract the base filename and prepare the destination filename
-        source_filename = sftp_source_filename["path"]
-        # Extract the base filename.
-        base_filename = os.path.basename(source_filename)
-        dest_filename = f"{base_filename}"
+    # Check if the file has already been processed
+    # if dest_filename in all_blobs:
+    #    logger.info(f"Skipping already processed file: {dest_filename}")
+    #    continue
 
-        # Check if the file has already been processed
-        if dest_filename in all_blobs:
-            logger.info(f"Skipping already processed file: {dest_filename}")
-            continue
+    logger.debug(f">>>> Processing source file: {source_filename}")
+    logger.debug(f">>>> Destination filename will be: {dest_filename}")
 
-        logger.debug(f"Processing source file: {source_filename}")
-        logger.debug(f"Destination filename will be: {dest_filename}")
+    try:
+        storage_control.copy_from_sftp_to_gcs(
+            sftp_vars["SFTP_HOST"],
+            22,
+            sftp_vars["SFTP_USER"],
+            sftp_vars["SFTP_PASSWORD"],
+            source_filename,
+            get_sftp_bucket_name(env_vars["ENV"]),
+            dest_filename,
+        )
+        # all_blobs.append(dest_filename)
+        logger.info(
+            f">>>> Successfully processed '{source_filename}' as '{dest_filename}'."
+        )
+    except Exception as e:
+        logger.error(
+            f"<<<< ????? Error processing '{source_filename}': {e}", exc_info=True
+        )
 
-        try:
-            storage_control.copy_from_sftp_to_gcs(
-                sftp_vars["SFTP_HOST"],
-                22,
-                sftp_vars["SFTP_USER"],
-                sftp_vars["SFTP_PASSWORD"],
-                source_filename,
-                get_sftp_bucket_name(env_vars["ENV"]),
-                dest_filename,
-            )
-            all_blobs.append(dest_filename)
-            logger.info(
-                f"Successfully processed '{source_filename}' as '{dest_filename}'."
-            )
-        except Exception as e:
-            logger.error(f"Error processing '{source_filename}': {e}", exc_info=True)
-
-    return all_blobs
+    return dest_filename
 
 
 def validate_sftp_file(
@@ -543,20 +553,20 @@ def validate_sftp_file(
     """
     access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
     if not access_token:
-        logger.error("Access token not found in the response.")
+        logger.error("<<<< ???? Access token not found in the response.")
         return "Access token not found in the response."
 
     url = f"{webapp_url}/api/v1/institutions/{institution_id}/input/validate-sftp/{file_name}"
     headers = {"accept": "application/json", "Authorization": f"Bearer {access_token}"}
 
-    logger.debug(f"Sending validation request to {url}")
+    logger.debug(f">>>> Sending validation request to {url}")
 
     response = requests.post(url, headers=headers)
 
     if response.status_code == 200:
-        logger.info("File validation successfully initiated.")
+        logger.info(">>>> File validation successfully initiated.")
         return "File validation successfully initiated."
     else:
-        error_message = f"Failed to initiate file validation: {response.status_code} {response.text}"
+        error_message = f"<<<< ???? Failed to initiate file validation: {response.status_code} {response.text}"
         logger.error(error_message)
         return error_message
