@@ -13,9 +13,7 @@ env_vars = {
     "USERNAME": "tester-user",
     "PASSWORD": "tester-pw",
     "BACKEND_API_KEY": "",
-    "WEBAPP_URL": "",
-    "BUCKET_ENV": "",
-    "INITIAL_API_KEY": "",
+    "WEBAPP_URL": ""
 }
 
 gcs_vars = {
