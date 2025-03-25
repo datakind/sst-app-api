@@ -14,6 +14,11 @@ import pandas as pd
 import re
 import google.auth
 import google.auth.transport.requests as google_requests
+from .config import sftp_vars, env_vars
+
+logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def get_sftp_bucket_name(env_var: str) -> str:
@@ -78,6 +83,7 @@ class StorageControl(BaseModel):
 
             sftp = ssh.open_sftp()
             if sftp is None:
+                logger.debug("Failed to create SFTP client.")
                 raise RuntimeError("Failed to create SFTP client.")
 
             def recursive_list(path: str) -> None:
@@ -148,6 +154,7 @@ def get_token(backend_api_key: str, webapp_url: str) -> Any:
         tuple: A tuple containing a dictionary mapping PDP IDs to Institution IDs and a list of problematic PDP IDs.
     """
     if not backend_api_key:
+        logger.error("Missing BACKEND_API_KEY in environment variables.")
         raise ValueError("Missing BACKEND_API_KEY in environment variables.")
 
     token_response = requests.post(
@@ -155,7 +162,7 @@ def get_token(backend_api_key: str, webapp_url: str) -> Any:
         headers={"accept": "application/json", "X-API-KEY": backend_api_key},
     )
     if token_response.status_code != 200:
-        logging.error(f"Failed to get token: {token_response.text}")
+        logger.error(f"Failed to get token: {token_response.text}")
         return f"Failed to get token: {token_response.text}"
 
     access_token = token_response.json().get("access_token")
@@ -185,7 +192,7 @@ def fetch_institution_ids(
     # Obtain the access token
     access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
     if not access_token:
-        logging.error("Access token not found in the response.")
+        logger.error("Access token not found in the response.")
         problematic_ids.append("Access token not found in the response.")
         return {}, problematic_ids
 
@@ -206,10 +213,10 @@ def fetch_institution_ids(
             if inst_id:
                 inst_id_dict[pdp_id] = inst_id
             else:
-                logging.error(f"No institution ID found for PDP ID: {pdp_id}")
+                logger.error(f"No institution ID found for PDP ID: {pdp_id}")
                 problematic_ids.append(pdp_id)
         else:
-            logging.error(
+            logger.error(
                 f"Failed to fetch institution ID for PDP ID {pdp_id}: {inst_response.text}"
             )
             problematic_ids.append(pdp_id)
@@ -236,7 +243,7 @@ def fetch_upload_url(
     # Set the headers including the Authorization header
     access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
     if not access_token:
-        logging.error("Access token not found in the response.")
+        logger.error("Access token not found in the response.")
         return "Access token not found in the response."
 
     # Make the GET request to the API
@@ -269,6 +276,9 @@ def transfer_file(download_url: str, upload_signed_url: str) -> str:
     # Download the file content
     download_response = requests.get(download_url)
     if download_response.status_code != 200:
+        logger.error(
+            f"Failed to download file: {download_response.status_code} {download_response.text}"
+        )
         return f"Failed to download file: {download_response.status_code} {download_response.text}"
 
     # Get the file content from the download
@@ -284,8 +294,12 @@ def transfer_file(download_url: str, upload_signed_url: str) -> str:
 
     # Check the response
     if upload_response.status_code == 200:
+        logger.info("File transferred successfully.")
         return "File transferred successfully."
     else:
+        logger.error(
+            f"Failed to transfer file: {upload_response.status_code} {upload_response.text}"
+        )
         return f"Failed to transfer file: {upload_response.status_code} {upload_response.text}"
 
 
@@ -305,18 +319,18 @@ def generate_signed_url(
     try:
         # Obtain default credentials and project ID.
         credentials, project_id = google.auth.default()
-        logging.info("Obtained default credentials.")
+        logger.info("Obtained default credentials.")
     except Exception as e:
-        logging.error("Failed to get default credentials: %s", e)
+        logger.error("Failed to get default credentials: %s", e)
         raise Exception("Credential error") from e
 
     try:
         # Refresh credentials to ensure an access token is available.
         request_obj = google_requests.Request()
         credentials.refresh(request_obj)
-        logging.info("Credentials refreshed successfully.")
+        logger.info("Credentials refreshed successfully.")
     except Exception as e:
-        logging.error("Failed to refresh credentials: %s", e)
+        logger.error("Failed to refresh credentials: %s", e)
         raise Exception("Credential refresh error") from e
 
     try:
@@ -328,9 +342,9 @@ def generate_signed_url(
             raise ValueError(
                 f"Blob '{object_name}' not found in bucket '{bucket_name}'."
             )
-        logging.info("Accessed bucket and blob successfully.")
+        logger.info("Accessed bucket and blob successfully.")
     except Exception as e:
-        logging.error("Failed to access bucket or blob: %s", e)
+        logger.error("Failed to access bucket or blob: %s", e)
         raise Exception("Bucket/blob access error") from e
 
     # Set expiration for the signed URL.
@@ -340,7 +354,7 @@ def generate_signed_url(
     service_account_email = ""  # Fallback value.
     if hasattr(credentials, "service_account_email"):
         service_account_email = credentials.service_account_email
-    logging.info("Using service account email: %s", service_account_email)
+    logger.info("Using service account email: %s", service_account_email)
 
     try:
         # Generate the signed URL.
@@ -350,9 +364,9 @@ def generate_signed_url(
             access_token=credentials.token,
             method="GET",
         )
-        logging.info("Signed URL generated successfully.")
+        logger.info("Signed URL generated successfully.")
     except Exception as e:
-        logging.error("Failed to generate signed URL: %s", e)
+        logger.error("Failed to generate signed URL: %s", e)
         raise Exception("Signed URL generation error") from e
 
     return str(signed_url)
@@ -382,15 +396,15 @@ def split_csv_and_generate_signed_urls(
     source_blob = bucket.blob(source_blob_name)
 
     try:
-        logging.debug(f"Attempting to download the source blob: {source_blob_name}")
+        logger.debug(f"Attempting to download the source blob: {source_blob_name}")
         print(f"Attempting to download the source blob: {source_blob_name}")
         csv_string = source_blob.download_as_text()
         csv_data = io.StringIO(csv_string)
         df = pd.read_csv(csv_data)
-        logging.debug("CSV data successfully loaded into DataFrame.")
+        logger.debug("CSV data successfully loaded into DataFrame.")
         print("CSV data successfully loaded into DataFrame.")
     except Exception as e:
-        logging.error(f"Failed to process blob {source_blob_name}: {e}")
+        logger.error(f"Failed to process blob {source_blob_name}: {e}")
         return {}
 
     pattern = re.compile(r"(?=.*institution)(?=.*id)", re.IGNORECASE)
@@ -400,14 +414,14 @@ def split_csv_and_generate_signed_urls(
     for column in df.columns:
         if pattern.search(column):
             institution_column = column
-            logging.debug(f"Matching column found: {column}")
+            logger.debug(f"Matching column found: {column}")
             break
 
     if not institution_column:
         error_message = (
             "No column found matching the pattern for 'institution' and 'id'."
         )
-        logging.debug(error_message)
+        logger.debug(error_message)
         return {"error": {"message": "Failed to download or parse CSV"}}
 
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -428,7 +442,7 @@ def split_csv_and_generate_signed_urls(
 
         # Attempt to upload the CSV file
         try:
-            logging.debug(
+            logger.debug(
                 f"Uploading split CSV for institution ID {inst_id} to {new_blob_name}"
             )
             print(
@@ -436,7 +450,7 @@ def split_csv_and_generate_signed_urls(
             )
             new_blob.upload_from_string(output.getvalue(), content_type="text/csv")
         except Exception as e:
-            logging.error(f"Failed to upload CSV for institution ID {inst_id}: {e}")
+            logger.error(f"Failed to upload CSV for institution ID {inst_id}: {e}")
             continue
 
         # Attempt to generate a signed URL for the new blob
@@ -450,13 +464,90 @@ def split_csv_and_generate_signed_urls(
                 "signed_url": str(signed_url),
                 "file_name": str(file_name),
             }
-            logging.info(
+            logger.info(
                 f"Signed URL generated successfully for institution ID {inst_id}"
             )
             print(f"Signed URL generated successfully for institution ID {inst_id}")
         except Exception as e:
-            logging.error(
+            logger.error(
                 f"Failed to generate signed URL for institution ID {inst_id}: {e}"
             )
             continue
     return all_data
+
+
+def sftp_helper(storage_control: StorageControl, sftp_source_filenames: list) -> list:
+    """
+    For each source file in sftp_source_filenames, copies the file from the SFTP
+    server to GCS. The destination filename is automatically generated by prefixing
+    the base name of the source file with "processed_".
+
+    Args:
+        storage_control (StorageControl): An instance with a method `copy_from_sftp_to_gcs`.
+        sftp_source_filenames (list): A list of file paths on the SFTP server.
+    """
+    num_files = len(sftp_source_filenames)
+    logger.info(f"Starting sftp_helper for {num_files} file(s).")
+    all_blobs = []
+    for sftp_source_filename in sftp_source_filenames:
+        sftp_source_filename = sftp_source_filename["path"]
+        logger.debug(f"Processing source file: {sftp_source_filename}")
+        # Extract the base filename.
+        base_filename = os.path.basename(sftp_source_filename)
+        dest_filename = f"{base_filename}"
+        logger.debug(f"Destination filename will be: {dest_filename}")
+
+        try:
+            storage_control.copy_from_sftp_to_gcs(
+                sftp_vars["SFTP_HOST"],
+                22,
+                sftp_vars["SFTP_USER"],
+                sftp_vars["SFTP_PASSWORD"],
+                sftp_source_filename,
+                get_sftp_bucket_name(env_vars["ENV"]),
+                dest_filename,
+            )
+            all_blobs.append(dest_filename)
+            logger.info(
+                f"Successfully processed '{sftp_source_filename}' as '{dest_filename}'."
+            )
+        except Exception as e:
+            logger.error(
+                f"Error processing '{sftp_source_filename}': {e}", exc_info=True
+            )
+    return all_blobs
+
+
+def validate_sftp_file(
+    file_name: str, institution_id: int, webapp_url: str, backend_api_key: str
+) -> str:
+    """
+    Sends a POST request to validate an SFTP file.
+
+    Args:
+        institution_id (str): The ID of the institution for which the file validation is intended.
+        file_name (str): The name of the file to be validated.
+        access_token (str): The bearer token used for authorization.
+
+    Returns:
+        str: The server's response to the validation request.
+    """
+    access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
+    if not access_token:
+        logger.error("Access token not found in the response.")
+        return "Access token not found in the response."
+
+    url = f"{webapp_url}/api/v1/institutions/{institution_id}/input/validate-sftp/{file_name}"
+    headers = {"accept": "application/json", "Authorization": f"Bearer {access_token}"}
+
+    logging.debug(f"Sending validation request to {url}")
+
+    response = requests.post(url, headers=headers)
+
+    if response.status_code == 200:
+        logging.info("File validation successfully initiated.")
+        return "File validation successfully initiated."
+    else:
+        error_message = f"Failed to initiate file validation: {response.status_code} {response.text}"
+        logging.error(error_message)
+        return error_message
