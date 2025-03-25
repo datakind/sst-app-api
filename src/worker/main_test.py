@@ -62,13 +62,7 @@ def test_execute_pdp_pull(
     mock_auth_default.return_value = (dummy_credentials, "dummy-project")
 
     MOCK_STORAGE.copy_from_sftp_to_gcs.side_effect = (
-        lambda sftp_host,
-        sftp_port,
-        sftp_user,
-        sftp_password,
-        sftp_file,
-        bucket_name,
-        blob_name: None
+        lambda sftp_host, sftp_port, sftp_user, sftp_password, sftp_file, bucket_name, blob_name: None
     )
     MOCK_STORAGE.create_bucket_if_not_exists.return_value = None
     MOCK_STORAGE.list_sftp_files.return_value = [
