@@ -181,7 +181,6 @@ async def execute_pdp_pull(
 
         valid_inst_ids.append(temp_valid_inst_ids)
         invalid_ids.append(temp_invalid_ids)
-        print(signed_urls[ids]["signed_url"].strip('"'))
         if temp_valid_inst_ids:
             for ids in temp_valid_inst_ids:
                 upload_url = fetch_upload_url(
@@ -191,7 +190,7 @@ async def execute_pdp_pull(
                     backend_api_key=env_vars["BACKEND_API_KEY"],
                 )
                 print(upload_url)
-
+                print(signed_urls[ids]["signed_url"].strip('"'))
                 transfer_status = transfer_file(
                     download_url=signed_urls[ids]["signed_url"].strip('"'),
                     upload_signed_url=upload_url.strip('"'),
