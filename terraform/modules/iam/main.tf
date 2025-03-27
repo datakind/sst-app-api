@@ -50,6 +50,7 @@ resource "google_project_iam_member" "databricks_sa_member" {
 resource "google_service_account" "iap_impersonation_sa" {
   account_id   = "${var.environment}-iap-impersonation-sa"
   display_name = "IAP Impersonation Service Account"
+  description  = "Service account used to authenticate users for IAP"
 }
 
 resource "google_project_iam_member" "iap_impersonation_sa_member" {
