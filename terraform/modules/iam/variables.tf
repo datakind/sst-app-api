@@ -50,6 +50,6 @@ variable "iap_impersonation_sa_roles" {
   type        = list(string)
   description = "List of IAM roles to grant to the IAP Impersonation service account."
   default = [
-    "roles/iam.serviceAccountTokenCreator",
+    "roles/iap.httpsResourceAccessor",
   ]
 }
