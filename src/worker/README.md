@@ -8,6 +8,22 @@ Go to `<env>-sst.datakind.org/worker/api/v1/docs`: e.g. https://dev-sst.datakind
 
 Note that dev and staging links are all behind a GCP Identity-Aware Proxy.
 
+If you need to access endpoints from a non-browser environment (i.e. curl), you can generate authentication tokens
+to access endpoints behind IAP.
+
+```
+# https://console.cloud.google.com/iam-admin/serviceaccounts
+iap_sa_email=<IAP impersonation service account email>
+# https://console.cloud.google.com/apis/credentials
+client_id=<OAuth 2 Client ID for the service>
+iap_token=$(gcloud auth print-identity-token --impersonate-service-account=$iap_sa_email --audiences=$client_id --include-email)
+api_key=<Webapp API key>
+curl
+  -H "Proxy-Authorization: Bearer $iap_token" \
+  -H "Authorization: Bearer $api_key" \
+  'https://subdomain.datakind.org/api/v1/endpoint'
+```
+
 ## Authentication
 
 Authentication of this program is via Username/Password. There is a single username/password combination that will authenticate to this program and its set in the env var file as the variables `USERNAME` and `PASSWORD`. There's no user table or api key situation as this is a worker job with limited functionality. And it is supposed to have a limited set of users (a subset of Datakinders -- probably only one or two people).
