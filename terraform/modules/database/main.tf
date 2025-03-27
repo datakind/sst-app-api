@@ -30,9 +30,9 @@ data "google_secret_manager_secret_version" "db_password_secret_version" {
 }
 
 resource "google_sql_database_instance" "db_instance" {
-  name                = "${var.environment}-db-instance"
-  database_version    = var.database_version
-  region              = var.region
+  name             = "${var.environment}-db-instance"
+  database_version = var.database_version
+  region           = var.region
   settings {
     tier = "db-f1-micro"
     location_preference {
