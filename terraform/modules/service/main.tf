@@ -36,6 +36,9 @@ resource "google_cloud_run_v2_service" "cloudrun_service" {
   ingress      = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   template {
     service_account = var.cloudrun_service_account_email
+    scaling {
+      max_instance_count = 1
+    }
     containers {
       image = var.image
       env {
