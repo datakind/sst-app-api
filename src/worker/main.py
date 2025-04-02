@@ -56,6 +56,7 @@ class PdpPullResponse(BaseModel):
     class Config:
         json_encoders = {np.int64: lambda v: int(v)}
 
+
 class PdpListFiles(BaseModel):
     """Fields for the PDP pull response."""
 
@@ -165,6 +166,7 @@ async def process_file(
         "uploads": uploads,
     }
 
+
 @app.get("/sftp_files", response_model=PdpListFiles)
 def sftp_files(
     req: PdpPullRequest,
@@ -188,6 +190,7 @@ def sftp_files(
     return {
         "sftp_files": files,
     }
+
 
 @app.post("/execute-pdp-pull", response_model=PdpPullResponse)
 async def execute_pdp_pull(

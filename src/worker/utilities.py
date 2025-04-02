@@ -485,7 +485,7 @@ def split_csv_and_generate_signed_urls(
 
 
 def sftp_file_to_gcs_helper(
-    storage_control: StorageControl, sftp_source_filename: dict
+    storage_control: StorageControl, sftp_source_filename: str
 ) -> str:
     """
     For each source file in sftp_source_filenames, copies the file from the SFTP
