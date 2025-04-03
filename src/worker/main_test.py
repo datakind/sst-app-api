@@ -46,13 +46,13 @@ def test_retrieve_token(client: TestClient) -> Any:
     )
     assert response.status_code == 200
 
+
 def sftp_files(client: TestClient) -> Any:
     """Test GET /sftp-files endpoint"""
-    response = client.get("/sftp-files",  json={"placeholder": "val"})
+    response = client.get("/sftp-files")
     assert response.status_code == 200
-    assert response.json() == {
-        "sftp_files": {}
-    }
+    assert response.json() == {"sftp_files": {}}
+
 
 @patch("google.auth.default")
 def test_execute_pdp_pull(
@@ -76,7 +76,9 @@ def test_execute_pdp_pull(
     # Optionally, if there's a process_file or similar function, you can mock it too.
     # For this test, we're focusing on the overall endpoint behavior.
 
-    response = client.post("/execute-pdp-pull?sftp_source_filename=file1.csv", json={"placeholder": "val"})
+    response = client.post(
+        "/execute-pdp-pull?sftp_source_filename=file1.csv", json={"placeholder": "val"}
+    )
 
     # Verify the response status and content.
     assert response.status_code == 200
