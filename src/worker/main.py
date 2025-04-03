@@ -2,7 +2,7 @@
 
 import numpy as np
 import logging
-from typing import Any, Annotated, Dict
+from typing import Any, Annotated, Dict, Optional
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -103,13 +103,17 @@ async def login_for_access_token(
 
 
 async def process_file(
-    storage_control: StorageControl, blob: str, env_vars: Dict[str, Any]
+    storage_control: StorageControl,
+    blob: str,
+    env_vars: Dict[str, Any],
+    pdp_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Process a single file: generate URLs, transfer, and validate."""
     logger.debug(f">>>> Splitting {blob} to extract institution data")
     signed_urls = split_csv_and_generate_signed_urls(
         bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"]),
         source_blob_name=blob,
+        pdp_id=pdp_id,
     )
     logger.info(f">>>> Signed URLs, File names generated for {blob}")
 
@@ -197,6 +201,7 @@ async def execute_pdp_pull(
     sftp_source_filename: str,
     current_username: Annotated[str, Depends(get_current_username)],
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
+    pdp_id: Optional[str] = None,
 ) -> Any:
     """Performs the PDP pull of the file."""
 
@@ -205,7 +210,7 @@ async def execute_pdp_pull(
     )
 
     gcs_blob = sftp_file_to_gcs_helper(storage_control, sftp_source_filename)
-    result = await process_file(storage_control, gcs_blob, env_vars)
+    result = await process_file(storage_control, gcs_blob, env_vars, pdp_id=pdp_id)
 
     # Aggregate results to return
     return {
