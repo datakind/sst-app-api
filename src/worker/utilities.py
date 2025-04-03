@@ -8,7 +8,7 @@ import stat
 from datetime import datetime, timedelta
 import io
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import requests
 import pandas as pd
 import re
@@ -383,7 +383,7 @@ def generate_signed_url(
 
 
 def split_csv_and_generate_signed_urls(
-    bucket_name: str, source_blob_name: str
+    bucket_name: str, source_blob_name: str, pdp_id: Optional[str] = None
 ) -> Dict[str, Dict[str, str]]:
     """
     Fetches a CSV from Google Cloud Storage, splits it by a specified column, uploads the results,
@@ -440,7 +440,11 @@ def split_csv_and_generate_signed_urls(
     all_data = {}
 
     # Processing the DataFrame
-    unique_inst_ids = df[institution_column].unique()
+    # unique_inst_ids = df[institution_column].unique()
+    unique_inst_ids = (
+        list(df[institution_column].unique()) if pdp_id is None else [pdp_id]
+    )
+
     for inst_id in unique_inst_ids:
         group = df[df[institution_column] == inst_id]
         output = io.StringIO()
