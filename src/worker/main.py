@@ -169,7 +169,6 @@ async def process_file(
 
 @app.get("/sftp_files", response_model=PdpListFiles)
 def sftp_files(
-    req: PdpPullRequest,
     current_username: Annotated[str, Depends(get_current_username)],
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
 ) -> Any:
