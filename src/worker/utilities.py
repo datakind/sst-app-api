@@ -54,7 +54,7 @@ class StorageControl(BaseModel):
             if client is None:
                 raise RuntimeError("Failed to create SFTP client.")
             # Open the file in binary read mode.
-            with client.open(sftp_file, "rb") as f:
+            with client.open(f"./receive/{sftp_file}", "rb") as f:
                 blob.upload_from_file(f)
 
     def list_sftp_files(
@@ -485,7 +485,7 @@ def split_csv_and_generate_signed_urls(
 
 
 def sftp_file_to_gcs_helper(
-    storage_control: StorageControl, sftp_source_filename: dict
+    storage_control: StorageControl, sftp_source_filename: str
 ) -> str:
     """
     For each source file in sftp_source_filenames, copies the file from the SFTP
@@ -502,7 +502,7 @@ def sftp_file_to_gcs_helper(
     )
     # for sftp_source_filename in sftp_source_filenames:
     # Extract the base filename and prepare the destination filename
-    source_filename = sftp_source_filename["path"]
+    source_filename = sftp_source_filename
     # Extract the base filename.
     base_filename = os.path.basename(source_filename)
     dest_filename = f"{base_filename}"
@@ -521,7 +521,7 @@ def sftp_file_to_gcs_helper(
             22,
             sftp_vars["SFTP_USER"],
             sftp_vars["SFTP_PASSWORD"],
-            source_filename,
+            dest_filename,
             get_sftp_bucket_name(env_vars["ENV"]),
             dest_filename,
         )

@@ -49,13 +49,18 @@ class PdpPullRequest(BaseModel):
 class PdpPullResponse(BaseModel):
     """Fields for the PDP pull response."""
 
-    sftp_files: list[dict]
     pdp_inst_generated: list[Any]
     pdp_inst_not_found: list[Any]
     upload_status: dict
 
     class Config:
         json_encoders = {np.int64: lambda v: int(v)}
+
+
+class PdpListFiles(BaseModel):
+    """Fields for the PDP pull response."""
+
+    sftp_files: list[dict]
 
 
 @app.on_event("startup")
@@ -162,8 +167,8 @@ async def process_file(
     }
 
 
-@app.post("/execute-pdp-pull", response_model=PdpPullResponse)
-async def execute_pdp_pull(
+@app.get("/sftp_files", response_model=PdpListFiles)
+def sftp_files(
     req: PdpPullRequest,
     current_username: Annotated[str, Depends(get_current_username)],
     storage_control: Annotated[StorageControl, Depends(StorageControl)],
@@ -181,15 +186,30 @@ async def execute_pdp_pull(
         remote_path="./receive",
     )
 
-    results = []
-    for file in files:
-        gcs_blob = sftp_file_to_gcs_helper(storage_control, file)
-        result = await process_file(storage_control, gcs_blob, env_vars)
-        results.append(result)
-
     # Aggregate results to return
     return {
         "sftp_files": files,
+    }
+
+
+@app.post("/execute-pdp-pull", response_model=PdpPullResponse)
+async def execute_pdp_pull(
+    req: PdpPullRequest,
+    sftp_source_filename: str,
+    current_username: Annotated[str, Depends(get_current_username)],
+    storage_control: Annotated[StorageControl, Depends(StorageControl)],
+) -> Any:
+    """Performs the PDP pull of the file."""
+
+    storage_control.create_bucket_if_not_exists(
+        get_sftp_bucket_name(env_vars["BUCKET_ENV"])
+    )
+
+    gcs_blob = sftp_file_to_gcs_helper(storage_control, sftp_source_filename)
+    result = await process_file(storage_control, gcs_blob, env_vars)
+
+    # Aggregate results to return
+    return {
         "pdp_inst_generated": list(result["valid_inst_ids"]),
         "pdp_inst_not_found": list(result["invalid_ids"]),
         "upload_status": dict(result["uploads"]),
