@@ -46,6 +46,13 @@ def test_retrieve_token(client: TestClient) -> Any:
     )
     assert response.status_code == 200
 
+def sftp_files(client: TestClient) -> Any:
+    """Test GET /sftp-files endpoint"""
+    response = client.get("/sftp-files",  json={"placeholder": "val"})
+    assert response.status_code == 200
+    assert response.json() == {
+        "sftp_files": {}
+    }
 
 @patch("google.auth.default")
 def test_execute_pdp_pull(
@@ -65,19 +72,15 @@ def test_execute_pdp_pull(
         lambda filename: f"processed_{filename}"
     )
     MOCK_STORAGE.create_bucket_if_not_exists.return_value = None
-    MOCK_STORAGE.list_sftp_files.return_value = [
-        {"path": "file1.csv"},
-        {"path": "file2.csv"},
-    ]
+
     # Optionally, if there's a process_file or similar function, you can mock it too.
     # For this test, we're focusing on the overall endpoint behavior.
 
-    response = client.post("/execute-pdp-pull", json={"placeholder": "val"})
+    response = client.post("/execute-pdp-pull?sftp_source_filename=file1.csv", json={"placeholder": "val"})
 
     # Verify the response status and content.
     assert response.status_code == 200
     assert response.json() == {
-        "sftp_files": [{"path": "file1.csv"}, {"path": "file2.csv"}],
         "pdp_inst_generated": [],
         "pdp_inst_not_found": [],
         "upload_status": {},

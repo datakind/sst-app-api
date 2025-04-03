@@ -48,7 +48,6 @@ class PdpPullRequest(BaseModel):
 
 class PdpPullResponse(BaseModel):
     """Fields for the PDP pull response."""
-
     pdp_inst_generated: list[Any]
     pdp_inst_not_found: list[Any]
     upload_status: dict
