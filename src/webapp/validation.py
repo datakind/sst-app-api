@@ -318,11 +318,12 @@ def validate_file_reader(
         raise ValueError("CSV file schema not recognized")
 
     file_columns = get_col_names(reader)
+    print(f"Allowed types: {allowed_types}")
+    print(f"File columns: {file_columns}")
     res = detect_file_type(file_columns)
     if any(i in allowed_types for i in res):
         return res
     unmatched_columns = set(file_columns) - set(allowed_types)
-    print(f"Allowed types: {allowed_types}")
-    print(f"File columns: {file_columns}")
+
     print(f"Unmatched columns: {unmatched_columns}")
     raise ValueError("Some file schema/columns are not recognized")
