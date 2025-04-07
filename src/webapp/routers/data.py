@@ -872,6 +872,7 @@ def validation_helper(
     allowed_schemas = set()
     if inst_query_result[0][0].schemas:
         allowed_schemas = set(inst_query_result[0][0].schemas)
+        print(f"Allowed schemas: {allowed_schemas}")
     inferred_schemas = set()
     try:
         inferred_schemas = storage_control.validate_file(
