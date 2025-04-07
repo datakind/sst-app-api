@@ -18,6 +18,7 @@ from .utilities import (
     transfer_file,
     sftp_file_to_gcs_helper,
     validate_sftp_file,
+    rename_columns_to_match_schema,
 )
 from .config import sftp_vars, env_vars, startup_env_vars
 from .authn import Token, get_current_username, check_creds, create_access_token
@@ -146,6 +147,10 @@ async def process_file(
             transfer_status = transfer_file(
                 download_url=signed_urls[ids]["signed_url"].strip('"'),
                 upload_signed_url=upload_url.strip('"'),
+            )
+
+            rename_columns_to_match_schema(
+                blob_name=blob, bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"])
             )
 
             validation_status = validate_sftp_file(
