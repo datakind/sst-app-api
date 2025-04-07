@@ -600,7 +600,7 @@ def rename_columns_to_match_schema(
 
         # Dictionary to hold new column names based on fuzzy match
         new_column_names = {}
-
+        log_info = ""
         # Iterate over each column in the dataframe
         for column in df.columns:
             best_match = None
@@ -615,7 +615,7 @@ def rename_columns_to_match_schema(
                         highest_score = score
                         best_match = schema_column
 
-            logger.debug(
+            log_info = "\n".join(
                 f"Checking '{column}': best match is '{best_match}' with score {highest_score}"
             )
 
@@ -623,6 +623,8 @@ def rename_columns_to_match_schema(
             if highest_score >= threshold:
                 new_column_names[column] = best_match
                 logger.info(f"Renaming '{column}' to '{best_match}'")
+
+        logger.debug(log_info)
 
         # Rename the columns in the dataframe
         df.rename(columns=new_column_names, inplace=True)
