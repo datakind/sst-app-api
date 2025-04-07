@@ -102,13 +102,13 @@ module "services" {
   region        = var.region
   database_name = var.database_name
 
-  database_password_secret_id            = module.database.password_secret_id
-  database_instance_connection_name      = module.database.instance_connection_name
-  database_instance_private_ip           = module.database.instance_private_ip
-  network_id                             = module.network.network_id
-  subnetwork_id                          = module.network.subnetwork_id
-  cloudrun_service_account_email         = module.iam.cloudrun_service_account_email
-  cloudbuild_service_account_email       = module.iam.cloudbuild_service_account_email
+  database_password_secret_id       = module.database.password_secret_id
+  database_instance_connection_name = module.database.instance_connection_name
+  database_instance_private_ip      = module.database.instance_private_ip
+  network_id                        = module.network.network_id
+  subnetwork_id                     = module.network.subnetwork_id
+  cloudrun_service_account_email    = module.iam.cloudrun_service_account_email
+  cloudbuild_service_account_email  = module.iam.cloudbuild_service_account_email
 
   depends_on = [module.database, module.network, module.iam]
 }
@@ -217,7 +217,8 @@ data "google_iam_policy" "admin" {
   binding {
     role = "roles/iap.httpsResourceAccessor"
     members = [
-      "domain:datakind.org"
+      "domain:datakind.org",
+      "serviceAccount:${module.iam.iap_impersonation_sa_email}"
     ]
   }
 }

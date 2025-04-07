@@ -1,6 +1,6 @@
 resource "google_cloud_run_v2_job" "migrate" {
-  location            = var.region
-  name                = "${var.environment}-${var.name}"
+  location = var.region
+  name     = "${var.environment}-${var.name}"
 
   template {
     task_count = 1

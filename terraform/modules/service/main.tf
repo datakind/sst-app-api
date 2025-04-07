@@ -30,12 +30,15 @@ resource "google_secret_manager_secret_iam_member" "cloudbuild_sa_env_file_acces
 }
 
 resource "google_cloud_run_v2_service" "cloudrun_service" {
-  location            = var.region
-  name                = "${var.environment}-${var.name}"
-  launch_stage        = "GA"
-  ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  location     = var.region
+  name         = "${var.environment}-${var.name}"
+  launch_stage = "GA"
+  ingress      = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   template {
     service_account = var.cloudrun_service_account_email
+    scaling {
+      max_instance_count = 1
+    }
     containers {
       image = var.image
       env {

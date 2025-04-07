@@ -6,6 +6,22 @@ Go to `<env>-sst.datakind.org/api/v1/docs`: e.g. https://dev-sst.datakind.org/ap
 
 Note that dev and staging links are all behind a GCP Identity-Aware Proxy.
 
+If you need to access endpoints from a non-browser environment (i.e. curl), you can generate authentication tokens
+to access endpoints behind IAP.
+
+```
+# https://console.cloud.google.com/iam-admin/serviceaccounts
+iap_sa_email=<IAP impersonation service account email>
+# https://console.cloud.google.com/apis/credentials
+client_id=<OAuth 2 Client ID for the service>
+iap_token=$(gcloud auth print-identity-token --impersonate-service-account=$iap_sa_email --audiences=$client_id --include-email)
+api_key=<Webapp API key>
+curl
+  -H "Proxy-Authorization: Bearer $iap_token" \
+  -H "Authorization: Bearer $api_key" \
+  'https://subdomain.datakind.org/api/v1/endpoint'
+```
+
 ## Authentication
 
 Authentication of the API is primarily via JWTs in the Authorization header of the HTTP calls. These JWTs are short-term tokens that expire and are signed by the API. They are slightly more secure than using API keys directly to authenticate every call as API keys are long-term/non-expiring authentication tokens which are more powerful if stolen. So the mechanism used here is that API keys are exchanged for JWTs, which are then used to authenticate each call and can store additional information such as "enduser" identity.

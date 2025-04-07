@@ -45,3 +45,17 @@ resource "google_project_iam_member" "databricks_sa_member" {
   role     = each.key
   member   = "serviceAccount:${google_service_account.databricks_sa.email}"
 }
+
+
+resource "google_service_account" "iap_impersonation_sa" {
+  account_id   = "${var.environment}-iap-impersonation-sa"
+  display_name = "IAP Impersonation Service Account"
+  description  = "Service account used to authenticate users for IAP"
+}
+
+resource "google_project_iam_member" "iap_impersonation_sa_member" {
+  for_each = toset(var.iap_impersonation_sa_roles)
+  project  = var.project
+  role     = each.key
+  member   = "serviceAccount:${google_service_account.iap_impersonation_sa.email}"
+}
