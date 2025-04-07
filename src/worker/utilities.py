@@ -15,6 +15,10 @@ import re
 import google.auth
 import google.auth.transport.requests as google_requests
 from .config import sftp_vars, env_vars
+from src.webapp.validation import SCHEMA_TYPE_TO_COLS
+#from src.webapp.validation import get_col_names
+from src.webapp.utilities import SchemaType
+from fuzzywuzzy import fuzz
 
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
@@ -574,3 +578,50 @@ def validate_sftp_file(
         error_message = f"<<<< ???? Failed to initiate file validation: {response.status_code} {response.text}"
         logger.error(error_message)
         return error_message
+
+def rename_columns_to_match_schema(blob_name: str, bucket_name: str, schema_columns: set[SchemaType] = SCHEMA_TYPE_TO_COLS, threshold: int = 85) -> None:
+    # Dictionary to hold new column names based on fuzzy match
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    try:
+        # Read the blob into a DataFrame
+        blob_data = blob.download_as_text()
+        from io import StringIO
+        df = pd.read_csv(StringIO(blob_data))
+
+        # Dictionary to hold new column names based on fuzzy match
+        new_column_names = {}
+
+        # Iterate over each column in the dataframe
+        for column in df.columns:
+            best_match = None
+            highest_score = 0
+
+            # Compare the current column with each schema column
+            for schema, schema_cols in schema_columns.items():
+                logger.debug(f'Brute checking schema {schema}')
+                for schema_column in schema_cols:
+                    score = fuzz.ratio(column.lower(), schema_column.lower())
+                    if score > highest_score:
+                        highest_score = score
+                        best_match = schema_column
+
+            logger.debug(f"Checking '{column}': best match is '{best_match}' with score {highest_score}")
+
+            # If the highest score is above the threshold, prepare to rename the column
+            if highest_score >= threshold:
+                new_column_names[column] = best_match
+                logger.info(f"Renaming '{column}' to '{best_match}'")
+
+        # Rename the columns in the dataframe
+        df.rename(columns=new_column_names, inplace=True)
+
+        # Convert DataFrame to CSV and save back to GCS
+        df_csv = df.to_csv(index=False)
+        blob.upload_from_string(df_csv, content_type='text/csv')
+
+    except Exception as e:
+        logger.error(f"Error while processing GCS blob: {e}")
+        raise e
