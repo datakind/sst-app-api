@@ -615,8 +615,11 @@ def rename_columns_to_match_schema(
                         highest_score = score
                         best_match = schema_column
 
-            log_info = "\n".join([f"Checking '{column}': best match is '{best_match}' with score {highest_score}"])
-
+            log_info = "\n".join(
+                [
+                    f"Checking '{column}': best match is '{best_match}' with score {highest_score}"
+                ]
+            )
 
             # If the highest score is above the threshold, prepare to rename the column
             if highest_score >= threshold:
