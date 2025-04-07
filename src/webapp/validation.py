@@ -310,44 +310,17 @@ def get_col_names(f: Any) -> Any:
     return col_names
 
 
-"""
 def validate_file_reader(
     reader: Any, allowed_types: set[SchemaType]
 ) -> set[SchemaType]:
-    Validates given a reader. Returns only if a valid format was found, otherwise raises error
+    """Validates given a reader. Returns only if a valid format was found, otherwise raises error"""
     if not allowed_types:
         raise ValueError("CSV file schema not recognized")
-    res = detect_file_type(get_col_names(reader))
+
+    file_columns = get_col_names(reader)
+    res = detect_file_type(file_columns)
     if any(i in allowed_types for i in res):
         return res
+    unmatched_columns = set(file_columns) - set(allowed_types)
+    print(unmatched_columns)
     raise ValueError("Some file schema/columns are not recognized")
-"""
-
-
-def validate_file_reader(
-    reader: Any, allowed_types: set[SchemaType]
-) -> set[SchemaType]:
-    """Validates the given reader. Returns the matching schema types if a valid format is found,
-    otherwise raises an error with details on which columns are not recognized."""
-    if not allowed_types:
-        raise ValueError("CSV file schema not recognized")
-
-    # Get the list of columns from the file.
-    file_columns = get_col_names(reader)
-
-    # Detect the schema types that match the file columns.
-    res = detect_file_type(file_columns)
-
-    if any(schema in allowed_types for schema in res):
-        return res
-    else:
-        # Build a set of all allowed columns from the allowed_types
-        allowed_columns = set()
-        for schema in allowed_types:
-            # Assumes SCHEMA_TYPE_TO_COLS maps each schema type to a list of allowed columns.
-            allowed_columns.update(SCHEMA_TYPE_TO_COLS[schema])
-
-        # Compute which columns in the file are not in the allowed columns.
-        unmatched_columns = set(file_columns) - allowed_columns
-        print(f"Unmatched columns: {unmatched_columns}")
-        raise ValueError("Some file schema/columns are not recognized")
