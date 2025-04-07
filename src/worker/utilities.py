@@ -18,7 +18,6 @@ from .config import sftp_vars, env_vars
 from src.webapp.validation import SCHEMA_TYPE_TO_COLS
 
 # from src.webapp.validation import get_col_names
-from src.webapp.utilities import SchemaType
 from fuzzywuzzy import fuzz
 
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
@@ -584,7 +583,7 @@ def validate_sftp_file(
 def rename_columns_to_match_schema(
     blob_name: str,
     bucket_name: str,
-    schema_columns: set[SchemaType] = SCHEMA_TYPE_TO_COLS,
+    schema_columns: dict = SCHEMA_TYPE_TO_COLS,
     threshold: int = 85,
 ) -> None:
     # Dictionary to hold new column names based on fuzzy match
