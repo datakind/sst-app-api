@@ -75,7 +75,7 @@ def test_validate_file():
         validate_file(
             "src/webapp/test_files/test_upload.csv", [SchemaType.SST_PDP_FINANCE]
         )
-    assert str(err.value) == "CSV file schema not recognized"
+    assert str(err.value) == "Some file schema/columns are not recognized"
     with pytest.raises(ValueError) as err:
         validate_file(
             "src/webapp/test_files/malformed.csv", [SchemaType.SST_PDP_FINANCE]
