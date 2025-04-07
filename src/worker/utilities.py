@@ -21,7 +21,8 @@ from src.webapp.validation import (
     PDP_COHORT_OPTIONAL_COLS,
     PDP_COURSE_OPTIONAL_COLS,
 )
-from src.webapp.utilities import SchemaType
+
+# from src.webapp.utilities import SchemaType
 
 # from src.webapp.validation import get_col_names
 from fuzzywuzzy import fuzz
@@ -30,12 +31,12 @@ logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-SCHEMA_TYPES: Final = {
-    SchemaType.PDP_COHORT: PDP_COHORT_COLS,
-    SchemaType.PDP_COURSE: PDP_COURSE_COLS,
-    SchemaType.PDP_COHORT: PDP_COHORT_OPTIONAL_COLS,
-    SchemaType.PDP_COURSE: PDP_COURSE_OPTIONAL_COLS,
-}
+SCHEMA_TYPES: Final = (
+    PDP_COHORT_COLS
+    + PDP_COURSE_COLS
+    + PDP_COHORT_OPTIONAL_COLS
+    + PDP_COURSE_OPTIONAL_COLS
+)
 
 
 def get_sftp_bucket_name(env_var: str) -> str:
@@ -596,7 +597,7 @@ def validate_sftp_file(
 def rename_columns_to_match_schema(
     blob_name: str,
     bucket_name: str,
-    schema_columns: dict = SCHEMA_TYPES,
+    schema_columns: list = SCHEMA_TYPES,
     threshold: int = 85,
 ) -> None:
     # Dictionary to hold new column names based on fuzzy match
@@ -620,12 +621,11 @@ def rename_columns_to_match_schema(
             highest_score = 0
 
             # Compare the current column with each schema column
-            for schema, schema_cols in schema_columns.items():
-                for schema_column in schema_cols:
-                    score = fuzz.ratio(column.lower(), schema_column.lower())
-                    if score > highest_score:
-                        highest_score = score
-                        best_match = schema_column
+            for schema_cols in schema_columns:
+                score = fuzz.ratio(column.lower(), schema_cols.lower())
+                if score > highest_score:
+                    highest_score = score
+                    best_match = schema_cols
 
             log_info[column] = [
                 f"Checking '{column}': best match is '{best_match}' with score {highest_score}"
