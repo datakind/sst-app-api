@@ -608,7 +608,6 @@ def rename_columns_to_match_schema(
 
             # Compare the current column with each schema column
             for schema, schema_cols in schema_columns.items():
-                logger.debug(f"Brute checking schema {schema}")
                 for schema_column in schema_cols:
                     score = fuzz.ratio(column.lower(), schema_column.lower())
                     if score > highest_score:

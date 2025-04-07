@@ -5,7 +5,7 @@ pipelines, this is for general file validation.)
 import csv
 
 from collections import Counter
-from typing import Final
+from typing import Final, Any
 
 from .utilities import SchemaType
 
@@ -227,6 +227,14 @@ PDP_COHORT_OPTIONAL_COLS: Final = [
     "Employment Status",
     "Disability Status",
     "Foreign Language Completion",
+    "Years to Latest Associates at Cohort Inst",
+    "Years to Latest Certificate at Cohort Inst",
+    "Years to Latest Associates at other Inst",
+    "Years to Latest Certificate at other Inst",
+    "First Year to Associates at Cohort Inst",
+    "First Year to Certificate at Cohort Inst",
+    "First Year to Associates at other Inst",
+    "First Year to Certificate at other Inst",
 ]
 PDP_COURSE_OPTIONAL_COLS: Final = [
     "Credential Engine Identifier",
@@ -285,7 +293,7 @@ def validate_file(filename: str, allowed_types: set[SchemaType]) -> set[SchemaTy
         return validate_file_reader(f, allowed_types)
 
 
-def get_col_names(f) -> None:
+def get_col_names(f: Any) -> Any:
     """Get column names."""
     try:
         # Use the sniffer to detect the columns and dialect.
@@ -302,7 +310,9 @@ def get_col_names(f) -> None:
     return col_names
 
 
-def validate_file_reader(reader, allowed_types: set[SchemaType]) -> set[SchemaType]:
+def validate_file_reader(
+    reader: Any, allowed_types: set[SchemaType]
+) -> set[SchemaType]:
     """Validates given a reader. Returns only if a valid format was found, otherwise raises error"""
     if not allowed_types:
         raise ValueError("CSV file schema not recognized")
