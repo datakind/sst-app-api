@@ -322,5 +322,7 @@ def validate_file_reader(
     if any(i in allowed_types for i in res):
         return res
     unmatched_columns = set(file_columns) - set(allowed_types)
-    print(unmatched_columns)
+    print(f"Allowed types: {allowed_types}")
+    print(f"File columns: {file_columns}")
+    print(f"Unmatched columns: {unmatched_columns}")
     raise ValueError("Some file schema/columns are not recognized")
