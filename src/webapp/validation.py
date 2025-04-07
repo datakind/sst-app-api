@@ -319,4 +319,4 @@ def validate_file_reader(
     res = detect_file_type(get_col_names(reader))
     if any(i in allowed_types for i in res):
         return res
-    raise ValueError("CSV file schema not recognized")
+    raise ValueError("Some file schema/columns are not recognized")
