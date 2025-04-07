@@ -227,14 +227,14 @@ PDP_COHORT_OPTIONAL_COLS: Final = [
     "Employment Status",
     "Disability Status",
     "Foreign Language Completion",
-    'Years to Latest Associates at Cohort Inst',
-    'Years to Latest Certificate at Cohort Inst',
-    'Years to Latest Associates at other Inst',
-    'Years to Latest Certificate at other Inst',
-    'First Year to Associates at Cohort Inst',
-    'First Year to Certificate at Cohort Inst',
-    'First Year to Associates at other Inst',
-    'First Year to Certificate at other Inst'
+    "Years to Latest Associates at Cohort Inst",
+    "Years to Latest Certificate at Cohort Inst",
+    "Years to Latest Associates at other Inst",
+    "Years to Latest Certificate at other Inst",
+    "First Year to Associates at Cohort Inst",
+    "First Year to Certificate at Cohort Inst",
+    "First Year to Associates at other Inst",
+    "First Year to Certificate at other Inst",
 ]
 PDP_COURSE_OPTIONAL_COLS: Final = [
     "Credential Engine Identifier",
