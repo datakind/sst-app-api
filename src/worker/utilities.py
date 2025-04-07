@@ -8,14 +8,20 @@ import stat
 from datetime import datetime, timedelta
 import io
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Final
 import requests
 import pandas as pd
 import re
 import google.auth
 import google.auth.transport.requests as google_requests
 from .config import sftp_vars, env_vars
-from src.webapp.validation import SCHEMA_TYPE_TO_COLS
+from src.webapp.validation import (
+    PDP_COHORT_COLS,
+    PDP_COURSE_COLS,
+    PDP_COHORT_OPTIONAL_COLS,
+    PDP_COURSE_OPTIONAL_COLS,
+)
+from src.webapp.utilities import SchemaType
 
 # from src.webapp.validation import get_col_names
 from fuzzywuzzy import fuzz
@@ -23,6 +29,13 @@ from fuzzywuzzy import fuzz
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+SCHEMA_TYPES: Final = {
+    SchemaType.PDP_COHORT: PDP_COHORT_COLS,
+    SchemaType.PDP_COURSE: PDP_COURSE_COLS,
+    SchemaType.PDP_COHORT: PDP_COHORT_OPTIONAL_COLS,
+    SchemaType.PDP_COURSE: PDP_COURSE_OPTIONAL_COLS,
+}
 
 
 def get_sftp_bucket_name(env_var: str) -> str:
@@ -583,7 +596,7 @@ def validate_sftp_file(
 def rename_columns_to_match_schema(
     blob_name: str,
     bucket_name: str,
-    schema_columns: dict = SCHEMA_TYPE_TO_COLS,
+    schema_columns: dict = SCHEMA_TYPES,
     threshold: int = 85,
 ) -> None:
     # Dictionary to hold new column names based on fuzzy match
