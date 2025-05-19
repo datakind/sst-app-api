@@ -259,10 +259,12 @@ SCHEMA_TYPE_TO_OPTIONAL_COLS: Final = {
     SchemaType.SST_PDP_FINANCE: [],
 }
 
+
 def validate_file(filename: str, allowed_types: set[SchemaType]) -> set[SchemaType]:
     """Validates given a filename."""
     with open(filename) as f:
         return validate_file_reader(f, allowed_types)
+
 
 def validate_file_reader(
     reader: Any, allowed_types: set[SchemaType]
@@ -276,6 +278,7 @@ def validate_file_reader(
     if any(i in allowed_types for i in res):
         return res
     raise ValueError("Some file schema/columns are not recognized")
+
 
 def get_col_names(f: Any) -> Any:
     """Get column names."""
@@ -293,6 +296,7 @@ def get_col_names(f: Any) -> Any:
     col_names = dict_reader.fieldnames
     return col_names
 
+
 def detect_file_type(col_names: list[str]) -> set[SchemaType]:
     """Returns all schemas that match for a list of col names."""
     res = set()
@@ -304,6 +308,7 @@ def detect_file_type(col_names: list[str]) -> set[SchemaType]:
         # If it doesn't match any, it will match unknown.
         res.add(SchemaType.UNKNOWN)
     return res
+
 
 def valid_subset_lists(
     superset_list: list[str], subset_list: list[str], optional_list: list[str]
