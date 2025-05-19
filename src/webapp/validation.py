@@ -260,37 +260,24 @@ SCHEMA_TYPE_TO_OPTIONAL_COLS: Final = {
 }
 
 
-def valid_subset_lists(
-    superset_list: list[str], subset_list: list[str], optional_list: list[str]
-) -> bool:
-    """Checks if the subset_list is a subset of or equivalent to superset_list. And if so,
-    whether the missing values are all present in the optional list. This method disregards order
-    but cares about duplicates."""
-    # Checks if any value in subset list is NOT present in superset list.
-    if Counter(subset_list) - Counter(superset_list):
-        # This is not a valid state, users should not be passing in unrecognized columns.
-        return False
-    missing_vals = Counter(superset_list) - Counter(subset_list)
-    return not Counter(missing_vals) - Counter(optional_list)
-
-
-def detect_file_type(col_names: list[str]) -> set[SchemaType]:
-    """Returns all schemas that match for a list of col names."""
-    res = set()
-    for schema, schema_cols in SCHEMA_TYPE_TO_COLS.items():
-        optional_cols = SCHEMA_TYPE_TO_OPTIONAL_COLS[schema]
-        if valid_subset_lists(schema_cols, col_names, optional_cols):
-            res.add(schema)
-    if not res:
-        # If it doesn't match any, it will match unknown.
-        res.add(SchemaType.UNKNOWN)
-    return res
-
-
 def validate_file(filename: str, allowed_types: set[SchemaType]) -> set[SchemaType]:
     """Validates given a filename."""
     with open(filename) as f:
         return validate_file_reader(f, allowed_types)
+
+
+def validate_file_reader(
+    reader: Any, allowed_types: set[SchemaType]
+) -> set[SchemaType]:
+    """Validates given a reader. Returns only if a valid format was found, otherwise raises error"""
+    if not allowed_types:
+        raise ValueError("CSV file schema not recognized")
+
+    file_columns = get_col_names(reader)
+    res = detect_file_type(file_columns)
+    if any(i in allowed_types for i in res):
+        return res
+    raise ValueError("Some file schema/columns are not recognized")
 
 
 def get_col_names(f: Any) -> Any:
@@ -310,15 +297,28 @@ def get_col_names(f: Any) -> Any:
     return col_names
 
 
-def validate_file_reader(
-    reader: Any, allowed_types: set[SchemaType]
-) -> set[SchemaType]:
-    """Validates given a reader. Returns only if a valid format was found, otherwise raises error"""
-    if not allowed_types:
-        raise ValueError("CSV file schema not recognized")
+def detect_file_type(col_names: list[str]) -> set[SchemaType]:
+    """Returns all schemas that match for a list of col names."""
+    res = set()
+    for schema, schema_cols in SCHEMA_TYPE_TO_COLS.items():
+        optional_cols = SCHEMA_TYPE_TO_OPTIONAL_COLS[schema]
+        if valid_subset_lists(schema_cols, col_names, optional_cols):
+            res.add(schema)
+    if not res:
+        # If it doesn't match any, it will match unknown.
+        res.add(SchemaType.UNKNOWN)
+    return res
 
-    file_columns = get_col_names(reader)
-    res = detect_file_type(file_columns)
-    if any(i in allowed_types for i in res):
-        return res
-    raise ValueError("Some file schema/columns are not recognized")
+
+def valid_subset_lists(
+    superset_list: list[str], subset_list: list[str], optional_list: list[str]
+) -> bool:
+    """Checks if the subset_list is a subset of or equivalent to superset_list. And if so,
+    whether the missing values are all present in the optional list. This method disregards order
+    but cares about duplicates."""
+    # Checks if any value in subset list is NOT present in superset list.
+    if Counter(subset_list) - Counter(superset_list):
+        # This is not a valid state, users should not be passing in unrecognized columns.
+        return False
+    missing_vals = Counter(superset_list) - Counter(subset_list)
+    return not Counter(missing_vals) - Counter(optional_list)
