@@ -32,4 +32,7 @@ COPY --from=builder /app/src /app/src
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Run the application.
-CMD ["fastapi", "run", "app/src/webapp", "--port", "8080", "--host", "0.0.0.0"]
+ENV PYTHONPATH="/app/src"
+CMD ["sh", "-c", "uvicorn worker.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+
+
