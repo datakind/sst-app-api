@@ -53,11 +53,13 @@ def startup_env_vars():
             raise ValueError(
                 "ENV environment variable not one of: PROD, STAGING, DEV, LOCAL."
             )
-        if name == "ACCESS_TOKEN_EXPIRE_MINUTES":
-            try:
-                int(env_var)
-            except ValueError:
-                raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be an integer.")
+        if (
+            name == "ACCESS_TOKEN_EXPIRE_MINUTES"
+            or name == "ACCESS_TOKEN_EXPIRE_MINUTES"
+        ) and not env_var.isdigit():
+            raise ValueError(
+                "ACCESS_TOKEN_EXPIRE_MINUTES and ACCESS_TOKEN_EXPIRE_MINUTES environment variables must be an int."
+            )
         env_vars[name] = env_var
     if env_vars["ENV"] != "LOCAL":
         global gcs_vars
