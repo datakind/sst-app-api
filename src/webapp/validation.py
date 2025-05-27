@@ -5,7 +5,7 @@ pipelines, this is for general file validation.)
 import csv
 
 from collections import Counter
-from typing import Final, Any
+from typing import Final, Any, NamedTuple
 
 from .utilities import SchemaType
 
@@ -259,6 +259,10 @@ SCHEMA_TYPE_TO_OPTIONAL_COLS: Final = {
     SchemaType.SST_PDP_FINANCE: [],
 }
 
+class ColumnValidationResult(NamedTuple):
+    is_valid: bool
+    unexpected_columns: list[str]
+    missing_required_columns: list[str]
 
 def validate_file(filename: str, allowed_types: set[SchemaType]) -> set[SchemaType]:
     """Validates given a filename."""
@@ -299,26 +303,54 @@ def get_col_names(f: Any) -> Any:
 
 def detect_file_type(col_names: list[str]) -> set[SchemaType]:
     """Returns all schemas that match for a list of col names."""
-    res = set()
-    for schema, schema_cols in SCHEMA_TYPE_TO_COLS.items():
-        optional_cols = SCHEMA_TYPE_TO_OPTIONAL_COLS[schema]
-        if valid_subset_lists(schema_cols, col_names, optional_cols):
-            res.add(schema)
-    if not res:
-        # If it doesn't match any, it will match unknown.
-        res.add(SchemaType.UNKNOWN)
-    return res
+    matches = set()
+    errors = {}
 
+    for schema, expected_cols in SCHEMA_TYPE_TO_COLS.items():
+        optional_cols = SCHEMA_TYPE_TO_OPTIONAL_COLS[schema]
+        result = valid_subset_lists(expected_cols, col_names, optional_cols)
+
+        if result.is_valid:
+            matches.add(schema)
+        else:
+            errors[schema.name] = result
+        
+    if matches:
+        return matches
+    
+    error_msgs = []
+    for schema_name, res in errors.items():
+        msg = f"\nSchema: {schema_name}"
+        if res.unexpected_columns:
+            msg += f"\n Unexpected columns: {res.unexpected_columns}"
+        if res.missing_required_columns:
+            msg += f"\n Missing required columns: {res.missing_required_columns}"
+        error_msgs.append(msg)
+
+    raise ValueError(
+        "No valid schema matched. Details of mismatches:\n" + "\n".join(error_msgs)
+    )
 
 def valid_subset_lists(
-    superset_list: list[str], subset_list: list[str], optional_list: list[str]
-) -> bool:
+    expected: list[str], actual: list[str], optional_list: list[str]
+) -> ColumnValidationResult:
     """Checks if the subset_list is a subset of or equivalent to superset_list. And if so,
     whether the missing values are all present in the optional list. This method disregards order
     but cares about duplicates."""
     # Checks if any value in subset list is NOT present in superset list.
-    if Counter(subset_list) - Counter(superset_list):
-        # This is not a valid state, users should not be passing in unrecognized columns.
-        return False
-    missing_vals = Counter(superset_list) - Counter(subset_list)
-    return not Counter(missing_vals) - Counter(optional_list)
+    expected_counter = Counter(expected)
+    actual_counter = Counter(actual)
+
+    unexpected = list((actual_counter - expected_counter).elements())
+
+    # Columns expected but missing (excluding optional)
+    missing_total = list((expected_counter - actual_counter).elements())
+    missing_required = [col for col in missing_total if col not in optional_list]
+
+    is_valid = not unexpected and not missing_required
+
+    return ColumnValidationResult(
+        is_valid=is_valid,
+        unexpected_columns=unexpected,
+        missing_required_columns=missing_required
+    )
