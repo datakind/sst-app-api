@@ -83,11 +83,6 @@ def test_validate_file():
         [SchemaType.PDP_COHORT, SchemaType.SST_PDP_FINANCE],
     )
     with pytest.raises(ValueError) as err:
-        validate_file(
-            "src/webapp/test_files/test_upload.csv", [SchemaType.SST_PDP_FINANCE]
-        )
-    assert str(err.value) == "Some file schema/columns are not recognized"
-    with pytest.raises(ValueError) as err:
         validate_file("src/webapp/test_files/test_upload.csv", [SchemaType.SST_PDP_FINANCE])
     assert "No valid schema matched." in str(err.value)
     assert "Unexpected columns" in str(err.value)
