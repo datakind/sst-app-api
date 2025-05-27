@@ -19,16 +19,25 @@ def test_get_col_names():
 
 
 def test_valid_subset_lists():
-    """Testing valid subset checking."""
+    """Testing valid subset checking with detailed results."""
     list_a = [1, 2, 3, 4, 5, 6]
     list_b = [1, 2, 3, 4, 6]
     list_c = [5]
     list_d = [3, 4]
-    assert valid_subset_lists(list_a, list_b, list_c)
-    # Missing value is not in the optional list.
-    assert not valid_subset_lists(list_a, list_b, list_d)
-    # Subset has an additional element not found in superset.
-    assert not valid_subset_lists(list_b, list_a, list_c)
+
+    result1 = valid_subset_lists(list_a, list_b, list_c)
+    assert result1.is_valid
+    assert result1.unexpected_columns == []
+    assert result1.missing_required_columns == []
+
+    result2 = valid_subset_lists(list_a, list_b, list_d)
+    assert not result2.is_valid
+    assert result2.unexpected_columns == []
+    assert result2.missing_required_columns == [5]
+
+    result3 = valid_subset_lists(list_b, list_a, list_c)
+    assert not result3.is_valid
+    assert result3.unexpected_columns == [5]
 
 
 def test_detect_file_type():
@@ -77,7 +86,7 @@ def test_validate_file():
         )
     assert str(err.value) == "Some file schema/columns are not recognized"
     with pytest.raises(ValueError) as err:
-        validate_file(
-            "src/webapp/test_files/malformed.csv", [SchemaType.SST_PDP_FINANCE]
-        )
-    assert str(err.value) == "CSV file malformed: Could not determine delimiter"
+        validate_file("src/webapp/test_files/test_upload.csv", [SchemaType.SST_PDP_FINANCE])
+    assert "No valid schema matched." in str(err.value)
+    assert "Unexpected columns" in str(err.value)
+
