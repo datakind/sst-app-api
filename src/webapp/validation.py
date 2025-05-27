@@ -259,10 +259,12 @@ SCHEMA_TYPE_TO_OPTIONAL_COLS: Final = {
     SchemaType.SST_PDP_FINANCE: [],
 }
 
+
 class ColumnValidationResult(NamedTuple):
     is_valid: bool
     unexpected_columns: list[str]
     missing_required_columns: list[str]
+
 
 def validate_file(filename: str, allowed_types: set[SchemaType]) -> set[SchemaType]:
     """Validates given a filename."""
@@ -314,10 +316,10 @@ def detect_file_type(col_names: list[str]) -> set[SchemaType]:
             matches.add(schema)
         else:
             errors[schema.name] = result
-        
+
     if matches:
         return matches
-    
+
     error_msgs = []
     for schema_name, res in errors.items():
         msg = f"\nSchema: {schema_name}"
@@ -330,6 +332,7 @@ def detect_file_type(col_names: list[str]) -> set[SchemaType]:
     raise ValueError(
         "No valid schema matched. Details of mismatches:\n" + "\n".join(error_msgs)
     )
+
 
 def valid_subset_lists(
     expected: list[str], actual: list[str], optional_list: list[str]
@@ -352,5 +355,5 @@ def valid_subset_lists(
     return ColumnValidationResult(
         is_valid=is_valid,
         unexpected_columns=unexpected,
-        missing_required_columns=missing_required
+        missing_required_columns=missing_required,
     )
