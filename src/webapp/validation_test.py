@@ -54,7 +54,9 @@ def test_detect_file_type():
     with open("src/webapp/test_files/cohort_pdp.csv", encoding="utf-8") as f:
         assert detect_file_type(get_col_names(f)) == {SchemaType.PDP_COHORT}
     with open("src/webapp/test_files/test_upload.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.UNKNOWN}
+        with pytest.raises(ValueError) as err:
+            detect_file_type(get_col_names(f))
+        assert "No valid schema matched" in str(err.value)
     with open("src/webapp/test_files/malformed.csv", encoding="utf-8") as f:
         with pytest.raises(ValueError) as err:
             detect_file_type(get_col_names(f))
