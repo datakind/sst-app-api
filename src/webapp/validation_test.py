@@ -73,7 +73,7 @@ def test_validate_file():
     )
     assert validate_file(
         "src/webapp/test_files/cohort_pdp.csv",
-        [SchemaType.PDP_COHORT, SchemaType.SST_PDP_FINANCE],
+        [SchemaType.SST_PDP_COHORT, SchemaType.SST_PDP_FINANCE],
     )
     with pytest.raises(ValueError) as err:
         validate_file(
