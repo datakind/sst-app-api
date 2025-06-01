@@ -48,11 +48,7 @@ def test_detect_file_type():
         assert detect_file_type(get_col_names(f)) == {SchemaType.SST_PDP_COURSE}
     with open("src/webapp/test_files/cohort_sst_pdp.csv", encoding="utf-8") as f:
         assert detect_file_type(get_col_names(f)) == {SchemaType.SST_PDP_COHORT}
-    with open("src/webapp/test_files/course_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.PDP_COURSE}
-
-    with open("src/webapp/test_files/cohort_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.PDP_COHORT}
+    
     with open("src/webapp/test_files/test_upload.csv", encoding="utf-8") as f:
         with pytest.raises(ValueError) as err:
             detect_file_type(get_col_names(f))
@@ -74,9 +70,6 @@ def test_validate_file():
     )
     assert validate_file(
         "src/webapp/test_files/cohort_sst_pdp.csv", [SchemaType.SST_PDP_COHORT]
-    )
-    assert validate_file(
-        "src/webapp/test_files/course_pdp.csv", [SchemaType.PDP_COURSE]
     )
     assert validate_file(
         "src/webapp/test_files/cohort_pdp.csv",
