@@ -19,7 +19,11 @@ from .utilities import (
     sftp_file_to_gcs_helper,
     validate_sftp_file,
     rename_columns_to_match_schema,
+    databricks_connector
 )
+
+from .databricks import DatabricksSQLConnector
+
 from .config import sftp_vars, env_vars, startup_env_vars
 from .authn import Token, get_current_username, check_creds, create_access_token
 from datetime import timedelta
@@ -223,3 +227,29 @@ async def execute_pdp_pull(
         "pdp_inst_not_found": list(result["invalid_ids"]),
         "upload_status": dict(result["uploads"]),
     }
+
+# Get SHAP Values for Inference
+@app.get("/{inst_id}/top-features/{run_id}", response_model=str)
+def get_top_features(
+    inst_id: str,
+    run_id: str,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> Any:
+    """Returns a signed URL for uploading data to a specific institution."""
+    # raise error at this level instead bc otherwise it's getting wrapped as a 200
+
+    try:
+        connector = DatabricksSQLConnector(
+            databricks_host=env_vars["DATABRICKS_HOST"],
+            http_path=env_vars["DATABRICKS_SQL_HTTP_PATH"],
+            client_id=env_vars["DATABRICKS_CLIENT_ID"],
+            client_secret=env_vars["DATABRICKS_CLIENT_SECRET"]
+        )
+
+        conn = connector.get_sql_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM staging_sst_01.metropolitan_state_uni_of_denver_gold.sample_inference_66d9716883be4b01a4ea4de82f2d09d5_features_with_most_impact LIMIT 10")
+        print(cursor.fetchall())
+    except ValueError as ve:
+        # Return a 400 error with the specific message from ValueError
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
