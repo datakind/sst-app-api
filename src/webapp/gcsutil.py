@@ -8,10 +8,7 @@ from google.auth.transport import requests
 
 from .config import gcs_vars, databricks_vars
 from .validation import validate_file_reader
-from .utilities import (
-    SchemaType,
-)
-from typing import Any
+from typing import Any, List
 
 SIGNED_URL_EXPIRY_MIN = 30
 
@@ -266,7 +263,7 @@ class StorageControl(BaseModel):
 
     def validate_file(
         self, bucket_name: str, file_name: str, allowed_schemas: list[str]
-    ) -> set[SchemaType]:
+    ) -> List[str]:
         """Validate that a file is one of the allowed schemas."""
         client = storage.Client()
         bucket = client.bucket(bucket_name)
@@ -276,7 +273,7 @@ class StorageControl(BaseModel):
         try:
             with blob.open("r") as file:
                 schemas = validate_file_reader(file, allowed_schemas)
-                schems = schemas["schemas"]
+                schems = [str(s) for s in schemas.get("schemas", [])]
         except Exception as e:
             blob.delete()
             raise e
