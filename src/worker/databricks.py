@@ -1,4 +1,3 @@
-import os
 import requests
 from databricks import sql
 from google.auth.transport.requests import Request

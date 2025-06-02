@@ -5,7 +5,7 @@ pipelines, this is for general file validation.)
 import csv
 
 from collections import Counter
-from typing import Final, Any, NamedTuple, List
+from typing import Final, Any, NamedTuple
 
 from .utilities import SchemaType
 
