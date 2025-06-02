@@ -837,6 +837,7 @@ def download_url_inst_file(
         get_external_bucket_name(inst_id), file_name
     )
 
+
 def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]:
     name = os.path.basename(file_path).lower()
 
@@ -854,10 +855,15 @@ def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]
         inferred.add("SEMESTER")
 
     if not inferred:
-        logging.error(ValueError(f"Could not infer model(s) from file name: {name}, filenames sould be descriptive of the kind of data it contains e.g. course, cohort"))
+        logging.error(
+            ValueError(
+                f"Could not infer model(s) from file name: {name}, filenames sould be descriptive of the kind of data it contains e.g. course, cohort"
+            )
+        )
         inferred.add("UNKNOWN")
-    
+
     return sorted(inferred)
+
 
 def validation_helper(
     source_str: str,
@@ -881,10 +887,12 @@ def validation_helper(
         allowed_schemas = infer_models_from_filename(file_name, "pdp")
 
     inferred_schemas = set()
-    #TODO: 
+    # TODO:
     try:
         inferred_schemas = storage_control.validate_file(
-            get_external_bucket_name(inst_id), file_name, allowed_schemas,
+            get_external_bucket_name(inst_id),
+            file_name,
+            allowed_schemas,
         )
     except Exception as e:
         raise HTTPException(

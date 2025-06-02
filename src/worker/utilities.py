@@ -24,6 +24,7 @@ logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 def get_sftp_bucket_name(env_var: str) -> str:
     return env_var.lower() + "_sftp_ingestion"
 

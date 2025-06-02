@@ -608,7 +608,7 @@ def test_validate_success_batch(client: TestClient):
 
 def test_validate_failure_batch(client: TestClient):
     """Test PATCH /institutions/<uuid>/batch."""
-    MOCK_STORAGE.validate_file.return_value = ['COURSE']
+    MOCK_STORAGE.validate_file.return_value = ["COURSE"]
     # Authorized.
     # Use validate upload
     response_upload = client.post(
@@ -618,7 +618,7 @@ def test_validate_failure_batch(client: TestClient):
     )
     assert response_upload.status_code == 200
     assert response_upload.json()["name"] == "file_name_course.csv"
-    assert response_upload.json()["file_types"] == ['COURSE']
+    assert response_upload.json()["file_types"] == ["COURSE"]
     assert response_upload.json()["inst_id"] == uuid_to_str(USER_VALID_INST_UUID)
     assert response_upload.json()["source"] == "MANUAL_UPLOAD"
 

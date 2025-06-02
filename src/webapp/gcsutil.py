@@ -173,7 +173,7 @@ class StorageControl(BaseModel):
         new_bucket.set_iam_policy(policy)
 
     def list_blobs_in_folder(
-        self, bucket_name: str, prefix: str, delimiter: Any=None
+        self, bucket_name: str, prefix: str, delimiter: Any = None
     ) -> list[str]:
         """Lists all the blobs in the bucket that begin with the prefix.
 
