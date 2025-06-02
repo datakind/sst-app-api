@@ -923,9 +923,7 @@ def validation_helper(
     }
 
 
-@router.post(
-    "/{inst_id}/input/validate-sftp/{file_name:path}", response_model=ValidationResult
-)
+@router.post("/{inst_id}/input/validate-sftp/{file_name:path}")
 def validate_file_sftp(
     inst_id: str,
     file_name: str,
