@@ -177,7 +177,7 @@ async def process_file(
                 ),
                 "validation_status": validation_status,
             }
-            
+
     return {
         "valid_inst_ids": temp_valid_inst_ids,
         "invalid_ids": temp_invalid_ids,
