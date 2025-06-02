@@ -913,7 +913,7 @@ def validation_helper(
     return {
         "name": file_name,
         "inst_id": inst_id,
-        "file_types": inferred_schemas,
+        "file_types": list(inferred_schemas),
         "source": source_str,
     }
 

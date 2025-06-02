@@ -144,7 +144,7 @@ async def process_file(
                     f"<<<< ???? Skipping {inst_id} due to upload URL fetch error: {upload_url}"
                 )
                 uploads[str(ids)] = {
-                    "institution_id": temp_valid_inst_ids[ids],
+                    "institution_id": inst_id,
                     "file_name": signed_urls[ids]["file_name"],
                     "transfer_status": "upload_url_fetch_failed",
                     "validation_status": None,
@@ -168,7 +168,7 @@ async def process_file(
             )
 
             uploads[str(ids)] = {
-                "institution_id": temp_valid_inst_ids[ids],
+                "institution_id": inst_id,
                 "file_name": signed_urls[ids]["file_name"].strip().strip('"'),
                 "transfer_status": (
                     transfer_status.strip()
