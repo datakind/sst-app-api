@@ -8,9 +8,6 @@ from google.auth.transport import requests
 
 from .config import gcs_vars, databricks_vars
 from .validation import validate_file_reader
-from .utilities import (
-    SchemaType,
-)
 from typing import Any, List
 
 SIGNED_URL_EXPIRY_MIN = 30
