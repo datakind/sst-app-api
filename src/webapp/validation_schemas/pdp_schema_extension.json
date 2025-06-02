@@ -2646,40 +2646,12 @@
               ]
             },
             "academic_year": {
-              "dtype": "category",
-              "categories": [
-                "2018-19",
-                "2016-17",
-                "2019-20",
-                "2022-23",
-                "2020-21",
-                "2017-18",
-                "2021-22",
-                "2023-24",
-                "2024-25"
-              ],
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": false,
               "aliases": [],
-              "checks": [
-                {
-                  "type": "isin",
-                  "args": [
-                    [
-                      "2018-19",
-                      "2016-17",
-                      "2019-20",
-                      "2022-23",
-                      "2020-21",
-                      "2017-18",
-                      "2021-22",
-                      "2023-24",
-                      "2024-25"
-                    ]
-                  ]
-                }
-              ]
+              "checks": []
             },
             "co_requisite_course": {
               "dtype": "category",
@@ -2704,36 +2676,12 @@
               ]
             },
             "cohort": {
-              "dtype": "category",
-              "categories": [
-                "2018-19",
-                "2016-17",
-                "2019-20",
-                "2022-23",
-                "2020-21",
-                "2017-18",
-                "2021-22"
-              ],
+              "dtype": "string",
               "coerce": true,
               "nullable": false,
               "required": true,
               "aliases": [],
-              "checks": [
-                {
-                  "type": "isin",
-                  "args": [
-                    [
-                      "2018-19",
-                      "2016-17",
-                      "2019-20",
-                      "2022-23",
-                      "2020-21",
-                      "2017-18",
-                      "2021-22"
-                    ]
-                  ]
-                }
-              ]
+              "checks": []
             },
             "core_competency_completed": {
               "dtype": "float64",
