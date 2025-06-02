@@ -13,6 +13,7 @@ import logging
 import pandas as pd
 from pandera import Column, Check, DataFrameSchema
 from pandera.errors import SchemaErrors
+from fuzzywuzzy import fuzz
 
 
 def validate_file_reader(filename: str, allowed_schema: list[str]) -> dict[str, Any]:
@@ -56,6 +57,56 @@ def load_json(path: str) -> Any:
             return json.load(f)
     except Exception as e:
         raise FileNotFoundError(f"Failed to load JSON schema at {path}: {e}")
+
+
+def rename_columns_to_match_schema(
+    df: pd.DataFrame,
+    canon_to_aliases: Dict[str, List[str]],
+    threshold: int = 90,
+) -> pd.DataFrame:
+    """
+    Rename incoming columns using fuzzy match against schema-defined column names and aliases.
+
+    Args:
+        df: Incoming dataframe
+        canon_to_aliases: Mapping from canonical column names to list of aliases (including the canonical name itself)
+        threshold: Fuzzy match score threshold to rename
+
+    Returns:
+        A new DataFrame with renamed columns
+    """
+    from collections import defaultdict
+
+    new_column_names = {}
+    log_info = defaultdict(list)
+
+    schema_names = []
+    for canon, aliases in canon_to_aliases.items():
+        for name in aliases:
+            schema_names.append((name, canon))  # (alias_or_name, canonical_name)
+
+    for incoming_col in df.columns:
+        best_score = 0
+        best_match = None
+        best_canon = None
+
+        for schema_col, canon in schema_names:
+            score = fuzz.ratio(incoming_col.lower(), schema_col.lower())
+            if score > best_score:
+                best_score = score
+                best_match = schema_col
+                best_canon = canon
+
+        if best_score >= threshold and incoming_col != best_canon:
+            new_column_names[incoming_col] = best_canon
+            log_info[incoming_col].append(
+                f"Renamed '{incoming_col}' -> '{best_canon}' (matched on '{best_match}', score={best_score})"
+            )
+
+    for k, v in log_info.items():
+        logging.info(" | ".join(v))
+
+    return df.rename(columns=new_column_names)
 
 
 def merge_model_columns(
@@ -107,6 +158,13 @@ def validate_dataset(
 ) -> Dict[str, Any]:
     df = pd.read_csv(filename)
     df = df.rename(columns={c: normalize_col(c) for c in df.columns})
+
+    canon_to_aliases = {
+        canon: [normalize_col(alias) for alias in [canon] + spec.get("aliases", [])]
+        for canon, spec in merged_specs.items()
+    }
+    df = rename_columns_to_match_schema(df, canon_to_aliases)
+
     incoming = set(df.columns)
 
     # 1) load schemas
