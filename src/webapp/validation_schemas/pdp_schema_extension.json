@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "institutions": {
-    "kentucky_state_uni": {
+    "pdp": {
       "data_models": {
         "student": {
           "columns": {
