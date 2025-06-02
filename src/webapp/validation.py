@@ -43,7 +43,11 @@ class HardValidationError(Exception):
 
 
 def normalize_col(name: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9_]", "_", name.strip().lower())
+    name = name.strip().lower()  # Lowercase and trim whitespace
+    name = re.sub(r"[^a-z0-9_]", "_", name)  # Replace non-alphanum with underscore
+    name = re.sub(r"_+", "_", name)  # Collapse multiple underscores
+    name = name.strip("_")  # Remove leading/trailing underscores
+    return name
 
 
 def load_json(path: str) -> Any:
