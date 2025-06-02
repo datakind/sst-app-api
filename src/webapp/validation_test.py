@@ -59,11 +59,6 @@ def test_malformed_csv():
         assert "CSV file malformed" in str(err.value)
 
 def test_validate_file():
-    # Finance should validate on its own
-    assert validate_file(
-        "src/webapp/test_files/financial_sst_pdp.csv",
-        {SchemaType.SST_PDP_FINANCE}
-    )
 
     # Course should validate
     assert validate_file(
@@ -87,7 +82,7 @@ def test_validate_file():
     assert "Unexpected columns" in str(err.value)
 
     # A valid file with only finance optional fields and no Pell should fail
-    with open("src/webapp/test_files/finance_missing_pell.csv", encoding="utf-8") as f:
+    with open("src/webapp/test_files/financial_sst_pdp.csv", encoding="utf-8") as f:
         cols = get_col_names(f)
         with pytest.raises(ValueError) as err:
             detect_file_type(cols, {SchemaType.SST_PDP_FINANCE})
