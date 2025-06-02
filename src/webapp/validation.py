@@ -106,12 +106,10 @@ def validate_dataset(
     incoming = set(df.columns)
 
     # 1) load schemas
-    base_schema_path = "src/webapp/validation_schemas/base_schema.json"
+    base_schema_path = "validation_schemas/base_schema.json"
     base_schema = load_json(base_schema_path)
     ext_schema = None
-    extension_schema_path = (
-        f"src/webapp/validation_schemas/{institution_id}_schema_extension.json"
-    )
+    extension_schema_path = f"validation_schemas/{institution_id}_schema_extension.json"
     if extension_schema_path and os.path.exists(extension_schema_path):
         ext_schema = load_json(extension_schema_path)
 
