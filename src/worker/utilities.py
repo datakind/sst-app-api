@@ -572,8 +572,8 @@ def validate_sftp_file(
     response = requests.post(url, headers=headers)
 
     if response.status_code == 200:
-        logger.info(">>>> File validation successfully initiated.")
-        return "File validation successfully initiated."
+        logger.info(">>>> File validation successful.")
+        return "File validation successful."
     else:
         error_message = f"<<<< ???? Failed to initiate file validation: {response.status_code} {response.text}"
         logger.error(error_message)
