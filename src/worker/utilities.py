@@ -8,7 +8,7 @@ import stat
 from datetime import datetime, timedelta
 import io
 import logging
-from typing import List, Dict, Any, Optional, Final
+from typing import List, Dict, Any, Optional
 import requests
 import pandas as pd
 import re
@@ -19,7 +19,6 @@ from .config import sftp_vars, env_vars
 # from src.webapp.utilities import SchemaType
 
 # from src.webapp.validation import get_col_names
-from fuzzywuzzy import fuzz
 
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)

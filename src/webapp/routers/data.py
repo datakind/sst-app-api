@@ -10,6 +10,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 import os
+import logging
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -21,7 +22,6 @@ from ..utilities import (
     get_current_active_user,
     DataSource,
     get_external_bucket_name,
-    SchemaType,
     decode_url_piece,
 )
 
@@ -30,7 +30,6 @@ from ..database import (
     local_session,
     BatchTable,
     FileTable,
-    InstTable,
 )
 
 from ..gcsdbutils import update_db_from_bucket
@@ -124,7 +123,7 @@ class ValidationResult(BaseModel):
     # Must be unique within an institution to avoid confusion.
     name: str
     inst_id: str
-    file_types: set[SchemaType]
+    file_types: List[str]
     source: str
 
 
@@ -843,18 +842,20 @@ def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]
 
     inferred = set()
     if "course" in name:
-        inferred.add("course")
+        inferred.add("COURSE")
     if "student" in name:
-        inferred.add("student")
+        inferred.add("STUDENT")
         if institution_id == "pdp":
-            inferred.add("semester")
+            inferred.add("SEMESTER")
     if "semester" in name:
-        inferred.add("semester")
-    if "transfer" in name:
-        inferred.add("transfer")
+        inferred.add("SEMESTER")
+    if "cohort" in name:
+        inferred.add("STUDENT")
+        inferred.add("SEMESTER")
 
     if not inferred:
-        raise ValueError(f"Could not infer model(s) from file name: {name}")
+        logging.error(ValueError(f"Could not infer model(s) from file name: {name}, filenames sould be descriptive of the kind of data it contains e.g. course, cohort"))
+        return inferred.add("UNKNOWN")
     
     return sorted(inferred)
 
@@ -897,7 +898,7 @@ def validation_helper(
         uploader=str_to_uuid(current_user.user_id),
         source=source_str,
         sst_generated=False,
-        schemas=list(inferred_schemas['schemas']),
+        schemas=list(inferred_schemas),
         valid=True,
     )
     local_session.get().add(new_file_record)

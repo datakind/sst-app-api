@@ -4,16 +4,13 @@ pipelines, this is for general file validation.)
 from typing import Any
 
 from .utilities import SchemaType
-import sys
 import json
 import os
 import re
-import argparse
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict
 import logging
 
 import pandas as pd
-import pandera as pa
 from pandera import Column, Check, DataFrameSchema
 from pandera.errors import SchemaErrors
 
@@ -124,7 +121,7 @@ def validate_dataset(
 
     merged_specs: Dict[str, dict] = {}
     for m in model_list:
-        specs = merge_model_columns(base_schema, ext_schema, institution_id, m, logger)
+        specs = merge_model_columns(base_schema, ext_schema, institution_id, m.lower())
         merged_specs.update(specs)
 
     # 3) build canon → set(normalized names)

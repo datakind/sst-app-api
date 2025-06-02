@@ -274,7 +274,8 @@ class StorageControl(BaseModel):
         schems = set()
         try:
             with blob.open("r") as file:
-                schems = validate_file_reader(file, allowed_schemas)
+                schemas = validate_file_reader(file, allowed_schemas)
+                schems = schemas["schemas"]
         except Exception as e:
             blob.delete()
             raise e
