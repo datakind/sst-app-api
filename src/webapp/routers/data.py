@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
+import os
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -32,6 +33,7 @@ from ..database import (
     InstTable,
 )
 
+from ..validation import validate_file
 from ..gcsdbutils import update_db_from_bucket
 
 from ..gcsutil import StorageControl
@@ -837,6 +839,25 @@ def download_url_inst_file(
         get_external_bucket_name(inst_id), file_name
     )
 
+def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]:
+    name = os.path.basename(file_path).lower()
+
+    inferred = set()
+    if "course" in name:
+        inferred.add("course")
+    if "student" in name:
+        inferred.add("student")
+        if institution_id == "pdp":
+            inferred.add("semester")
+    if "semester" in name:
+        inferred.add("semester")
+    if "transfer" in name:
+        inferred.add("transfer")
+
+    if not inferred:
+        raise ValueError(f"Could not infer model(s) from file name: {name}")
+    
+    return sorted(inferred)
 
 def validation_helper(
     source_str: str,
@@ -854,29 +875,16 @@ def validation_helper(
             detail="File name can't contain '/'.",
         )
     local_session.set(sql_session)
-    inst_query_result = (
-        local_session.get()
-        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
-        .all()
-    )
-    if len(inst_query_result) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Institution not found.",
-        )
-    if len(inst_query_result) > 1:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Institution duplicates found.",
-        )
-    allowed_schemas = set()
-    if inst_query_result[0][0].schemas:
-        allowed_schemas = set(inst_query_result[0][0].schemas)
+
+    allowed_schemas = None
+    if not allowed_schemas:
+        allowed_schemas = infer_models_from_filename(file_name, "pdp")
 
     inferred_schemas = set()
+    #TODO: get_external_bucket_name(inst_id)
     try:
         inferred_schemas = storage_control.validate_file(
-            get_external_bucket_name(inst_id), file_name, allowed_schemas
+            file_name, allowed_schemas,
         )
     except Exception as e:
         raise HTTPException(
@@ -890,7 +898,7 @@ def validation_helper(
         uploader=str_to_uuid(current_user.user_id),
         source=source_str,
         sst_generated=False,
-        schemas=list(inferred_schemas),
+        schemas=list(inferred_schemas['schemas']),
         valid=True,
     )
     local_session.get().add(new_file_record)
