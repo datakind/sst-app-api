@@ -2,240 +2,216 @@
 pipelines, this is for general file validation.)
 """
 
-import csv
+from typing import Any
 
-from collections import Counter
-from typing import Final, Any, NamedTuple
+import json
+import os
+import re
+from typing import Union, List, Dict, Optional
+import logging
 
-from .utilities import SchemaType
-
-# The PDP aligned SST columns
-SST_PDP_COHORT_COLS: Final = [
-    "institution_id",
-    "cohort",
-    "student_guid",
-    "cohort_term",
-    "student_age",
-    "enrollment_type",
-    "enrollment_intensity_first_term",
-    "math_placement",
-    "english_placement",
-    "dual_and_summer_enrollment",
-    "race",
-    "ethnicity",
-    "gender",
-    "first_gen",
-    "pell_status_first_year",
-    "credential_type_sought_year_1",
-    "program_of_study_term_1",
-    "gpa_group_term_1",
-    "gpa_group_year_1",
-    "retention",
-    "persistence",
-    "years_to_bachelors_at_cohort_inst.",
-    "years_to_associates_or_certificate_at_cohort_inst.",
-    "years_to_bachelor_at_other_inst.",
-    "years_to_associates_or_certificate_at_other_inst.",
-    "years_of_last_enrollment_at_cohort_institution",
-    "years_of_last_enrollment_at_other_institution",
-    "reading_placement",
-    "special_program",
-    "naspa_first-generation",
-    "military_status",
-    "employment_status",
-    "disability_status",
-    "foreign_language_completion",
-    "first_year_to_bachelors_at_cohort_inst.",
-    "first_year_to_associates_or_certificate_at_cohort_inst.",
-    "first_year_to_bachelor_at_other_inst.",
-    "first_year_to_associates_or_certificate_at_other_inst.",
-    "program_of_study_year_1",
-    "most_recent_last_enrollment_at_other_institution_state",
-    "most_recent_last_enrollment_at_other_institution_carnegie",
-    "most_recent_last_enrollment_at_other_institution_locale",
-]
-
-SST_PDP_COURSE_COLS: Final = [
-    "student_guid",
-    "student_age",
-    "race",
-    "ethnicity",
-    "gender",
-    "institution_id",
-    "academic_year",
-    "academic_term",
-    "course_prefix",
-    "course_number",
-    "section_id",
-    "course_cip",
-    "course_type",
-    "math_or_english_gateway",
-    "co-requisite_course",
-    "course_begin_date",
-    "course_end_date",
-    "grade",
-    "number_of_credits_attempted",
-    "number_of_credits_earned",
-    "delivery_method",
-    "core_course",
-    "core_course_type",
-    "core_competency_completed",
-    "enrolled_at_other_institution(s)",
-    "credential_engine_identifier",
-    "course_instructor_rank",
-]
-
-# Required finance fields (e.g., Pell and related key fields)
-SST_PDP_FINANCE_COLS: Final = ["student_id", "pell_status_first_year"]
-
-# Optional Fields
-PDP_COHORT_OPTIONAL_COLS: Final = [
-    "reading_placement",
-    "special_program",
-    "naspa_first-generation",
-    "incarcerated_status",
-    "military_status",
-    "employment_status",
-    "disability_status",
-    "foreign_language_completion",
-    "years_to_latest_associates_at_cohort_inst",
-    "years_to_latest_certificate_at_cohort_inst",
-    "years_to_latest_associates_at_other_inst",
-    "years_to_latest_certificate_at_other_inst",
-    "first_year_to_associates_at_cohort_inst",
-    "first_year_to_certificate_at_cohort_inst",
-    "first_year_to_associates_at_other_inst",
-    "first_year_to_certificate_at_other_inst",
-]
-
-PDP_COURSE_OPTIONAL_COLS: Final = [
-    "credential_engine_identifier",
-    "course_instructor_employment_status",
-    "course_instructor_rank",
-]
+import pandas as pd
+from pandera import Column, Check, DataFrameSchema
+from pandera.errors import SchemaErrors
 
 
-# Optional finance fields (formerly all finance fields)
-PDP_FINANCE_OPTIONAL_COLS: Final = [
-    "dependency_status",
-    "housing_status",
-    "cost_of_attendance",
-    "efc",
-    "total_institutional_grants",
-    "total_state_grants",
-    "total_federal_grants",
-    "unmet_need",
-    "net_price",
-    "applied_aid",
-]
-
-SCHEMA_TYPE_TO_COLS: Final = {
-    SchemaType.SST_PDP_COHORT: SST_PDP_COHORT_COLS,
-    SchemaType.SST_PDP_COURSE: SST_PDP_COURSE_COLS,
-    SchemaType.SST_PDP_FINANCE: SST_PDP_FINANCE_COLS,
-}
-
-SCHEMA_TYPE_TO_OPTIONAL_COLS: Final = {
-    SchemaType.SST_PDP_COHORT: PDP_COHORT_OPTIONAL_COLS,
-    SchemaType.SST_PDP_COURSE: PDP_COURSE_OPTIONAL_COLS,
-    SchemaType.SST_PDP_FINANCE: PDP_FINANCE_OPTIONAL_COLS,
-}
-
-
-class ColumnValidationResult(NamedTuple):
-    is_valid: bool
-    unexpected_columns: list[str]
-    missing_required_columns: list[str]
-
-
-def validate_file(filename: str, allowed_types: set[SchemaType]) -> set[SchemaType]:
+def validate_file_reader(filename: str, allowed_schema: list[str]) -> dict[str, Any]:
     """Validates given a filename."""
-    with open(filename) as f:
-        return validate_file_reader(f, allowed_types)
+    return validate_dataset(filename, allowed_schema)
 
 
-def validate_file_reader(
-    reader: Any, allowed_types: set[SchemaType]
-) -> set[SchemaType]:
-    """Validates given a reader. Returns only if a valid format was found, otherwise raises error"""
-    if not allowed_types:
-        raise ValueError("CSV file schema not recognized")
+class HardValidationError(Exception):
+    def __init__(
+        self,
+        missing_required: Optional[List[str]] = None,
+        extra_columns: Optional[List[str]] = None,
+        schema_errors: Any = None,
+        failure_cases: Any = None,
+    ):
+        self.missing_required = missing_required or []
+        self.extra_columns = extra_columns or []
+        self.schema_errors = schema_errors
+        self.failure_cases = failure_cases
+        parts = []
+        if self.missing_required:
+            parts.append(f"Missing required columns: {self.missing_required}")
+        if self.extra_columns:
+            parts.append(f"Unexpected columns: {self.extra_columns}")
+        if self.schema_errors is not None:
+            parts.append(f"Schema errors: {self.schema_errors}")
+        super().__init__("; ".join(parts))
 
-    file_columns = get_col_names(reader)
 
-    required_schemas = allowed_types - {SchemaType.SST_PDP_FINANCE}
-    return detect_file_type(file_columns, required_schemas)
+def normalize_col(name: str) -> str:
+    return name.strip().lower().replace(" ", "_").replace("-", "_")
 
 
-def get_col_names(f: Any) -> list[str]:
-    """Get column names."""
+def load_json(path: str) -> Any:
     try:
-        # Use the sniffer to detect the columns and dialect.
-        csv_dialect = csv.Sniffer().sniff(f.readline())
-        f.seek(0)
-        if not csv.Sniffer().has_header(f.readline()):
-            raise ValueError("CSV file malformed: Headers not found")
-    except csv.Error as e:
-        raise ValueError(f"CSV file malformed: {e}") from e
-    # Read the column names and store in col_names.
-    f.seek(0)
-    dict_reader = csv.DictReader(f, dialect=csv_dialect)
-    col_names = dict_reader.fieldnames or []
-    col_names = [col.replace(" ", "_").lower() for col in col_names]
-
-    return col_names
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        raise FileNotFoundError(f"Failed to load JSON schema at {path}: {e}")
 
 
-def detect_file_type(
-    col_names: list[str], required_schemas: set[SchemaType]
-) -> set[SchemaType]:
-    """Returns all schemas that match for a list of col names. Raises error if required schemas aren't matched."""
-    matches = set()
-    errors = {}
+def merge_model_columns(
+    base_schema: dict,
+    extension_schema: Any,
+    institution: str,
+    model: str,
+) -> Dict[str, dict]:
+    base_models = base_schema.get("base", {}).get("data_models", {})
+    if model not in base_models:
+        if logging:
+            logging.error(f"Model '{model}' not found in base schema")
+        raise KeyError(f"Model '{model}' not in base schema")
+    merged = dict(base_models[model].get("columns", {}))
+    if extension_schema:
+        inst_block = extension_schema.get("institutions", {}).get(institution, {})
+        ext_models = inst_block.get("data_models", {})
+        if model in ext_models:
+            merged.update(ext_models[model].get("columns", {}))
+    return merged
 
-    for schema, expected_cols in SCHEMA_TYPE_TO_COLS.items():
-        optional_cols = SCHEMA_TYPE_TO_OPTIONAL_COLS[schema]
-        result = valid_subset_lists(expected_cols, col_names, optional_cols)
 
-        if result.is_valid:
-            matches.add(schema)
+def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
+    columns = {}
+    for canon, spec in specs.items():
+        names = [canon] + spec.get("aliases", [])
+        pattern = r"^(?:" + "|".join(map(re.escape, names)) + r")$"
+        checks = []
+        for chk in spec.get("checks", []):
+            factory = getattr(Check, chk["type"])
+            checks.append(factory(*chk.get("args", []), **chk.get("kwargs", {})))
+
+        columns[pattern] = Column(
+            name=pattern,
+            regex=True,
+            dtype=spec["dtype"],
+            nullable=spec["nullable"],
+            required=spec.get("required", False),
+            checks=checks or None,
+            coerce=spec.get("coerce", False),
+        )
+    return DataFrameSchema(columns, strict=False)
+
+
+def validate_dataset(
+    filename: str,
+    models: Union[str, List[str], None] = None,
+    institution_id: str = "pdp",
+) -> Dict[str, Any]:
+    df = pd.read_csv(filename)
+    df = df.rename(columns={c: normalize_col(c) for c in df.columns})
+    incoming = set(df.columns)
+
+    # 1) load schemas
+    base_schema_path = "src/webapp/validation_schemas/base_schema.json"
+    base_schema = load_json(base_schema_path)
+    ext_schema = None
+    extension_schema_path = (
+        f"src/webapp/validation_schemas/{institution_id}_schema_extension.json"
+    )
+    if extension_schema_path and os.path.exists(extension_schema_path):
+        ext_schema = load_json(extension_schema_path)
+
+    # 2) merge requested models
+    if models is None:
+        model_list: List[str] = []
+    elif isinstance(models, str):
+        model_list = [models]
+    else:
+        model_list = models
+
+    merged_specs: Dict[str, dict] = {}
+    for m in model_list:
+        specs = merge_model_columns(base_schema, ext_schema, institution_id, m.lower())
+        merged_specs.update(specs)
+
+    # 3) build canon → set(normalized names)
+    canon_to_norms: Dict[str, set] = {
+        canon: {normalize_col(alias) for alias in [canon] + spec.get("aliases", [])}
+        for canon, spec in merged_specs.items()
+    }
+
+    pattern_to_canon = {
+        r"^(?:"
+        + "|".join(map(re.escape, [canon] + spec.get("aliases", [])))
+        + r")$": canon
+        for canon, spec in merged_specs.items()
+    }
+
+    # 4) find extra / missing
+    all_norms = set().union(*canon_to_norms.values()) if canon_to_norms else set()
+    extra_columns = sorted(incoming - all_norms)
+
+    missing_required = [
+        canon
+        for canon, norms in canon_to_norms.items()
+        if merged_specs[canon].get("required", False) and norms.isdisjoint(incoming)
+    ]
+
+    missing_optional = [
+        canon
+        for canon, norms in canon_to_norms.items()
+        if not merged_specs[canon].get("required", False) and norms.isdisjoint(incoming)
+    ]
+
+    # Hard-fail on missing required or any extra columns
+    if missing_required or extra_columns:
+        if logging:
+            logging.error(
+                f"Missing required or extra columns detected, missing_required = {missing_required}, extra_columns = {extra_columns}"
+            )
+        raise HardValidationError(
+            missing_required=missing_required, extra_columns=extra_columns
+        )
+
+    # 5) build Pandera schema & validate (hard-fail on any error)
+    schema = build_schema(merged_specs)
+    try:
+        schema.validate(df, lazy=True)
+    except SchemaErrors as err:
+        # TODO: Log validation failure for DS to review
+        failed_normals = set(err.failure_cases["column"])
+        failed_canons = {pattern_to_canon.get(p, p) for p in failed_normals}
+
+        # split into required vs optional failures
+        req_failures = [
+            c for c in failed_canons if merged_specs.get(c, {}).get("required", False)
+        ]
+        opt_failures = [
+            c
+            for c in failed_canons
+            if not merged_specs.get(c, {}).get("required", False)
+        ]
+
+        if req_failures:
+            if logging:
+                logging.error(
+                    f"Schema validation failed on required columns, schema_errors = {err.schema_errors}, failure_cases = {err.failure_cases.to_dict(orient='records')}"
+                )
+            raise HardValidationError(
+                schema_errors=err.schema_errors,
+                failure_cases=err.failure_cases.to_dict(orient="records"),
+            )
         else:
-            errors[schema.name] = result
-
-    if matches & required_schemas:
-        return matches
-
-    error_msgs = []
-    for schema_name, res in errors.items():
-        msg = f"\nSchema: {schema_name}"
-        if res.unexpected_columns:
-            msg += f"\n Unexpected columns: {res.unexpected_columns}"
-        if res.missing_required_columns:
-            msg += f"\n Missing required columns: {res.missing_required_columns}"
-        error_msgs.append(msg)
-
-    raise ValueError(
-        "Required file schema(s) not recognized. Details of mismatches:\n"
-        + "\n".join(error_msgs)
-    )
-
-
-def valid_subset_lists(
-    expected: list[str], actual: list[str], optional_list: list[str]
-) -> ColumnValidationResult:
-    """Validates expected vs actual columns with optional overrides."""
-    expected_counter = Counter(expected)
-    actual_counter = Counter(actual)
-
-    unexpected = list((actual_counter - expected_counter).elements())
-
-    missing_total = list((expected_counter - actual_counter).elements())
-    missing_required = [col for col in missing_total if col not in optional_list]
-
-    is_valid = not unexpected and not missing_required
-
-    return ColumnValidationResult(
-        is_valid=is_valid,
-        unexpected_columns=unexpected,
-        missing_required_columns=missing_required,
-    )
+            if logging:
+                logging.info(f"missing_optional = {missing_optional}")
+            print("Optional column validation errors on: ", opt_failures)
+            return {
+                "validation_status": "passed_with_soft_errors",
+                "missing_optional": missing_optional,
+                "optional_validation_failures": opt_failures,
+                "failure_cases": err.failure_cases.to_dict(orient="records"),
+            }
+    if logging:
+        logging.info(f"missing_optional = {missing_optional}")
+    # 6) success (with possible soft misses)
+    return {
+        "validation_status": (
+            "passed_with_soft_errors" if missing_optional else "passed"
+        ),
+        "schemas": model_list,
+        "missing_optional": missing_optional,
+    }

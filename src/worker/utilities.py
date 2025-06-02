@@ -8,35 +8,21 @@ import stat
 from datetime import datetime, timedelta
 import io
 import logging
-from typing import List, Dict, Any, Optional, Final
+from typing import List, Dict, Any, Optional
 import requests
 import pandas as pd
 import re
 import google.auth
 import google.auth.transport.requests as google_requests
 from .config import sftp_vars, env_vars
-from src.webapp.validation import (
-    SST_PDP_COHORT_COLS,
-    SST_PDP_COURSE_COLS,
-    PDP_COHORT_OPTIONAL_COLS,
-    PDP_COURSE_OPTIONAL_COLS,
-)
 
 # from src.webapp.utilities import SchemaType
 
 # from src.webapp.validation import get_col_names
-from fuzzywuzzy import fuzz
 
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-SCHEMA_TYPES: Final = (
-    SST_PDP_COHORT_COLS
-    + SST_PDP_COURSE_COLS
-    + PDP_COHORT_OPTIONAL_COLS
-    + PDP_COURSE_OPTIONAL_COLS
-)
 
 
 def get_sftp_bucket_name(env_var: str) -> str:
@@ -592,59 +578,3 @@ def validate_sftp_file(
         error_message = f"<<<< ???? Failed to initiate file validation: {response.status_code} {response.text}"
         logger.error(error_message)
         return error_message
-
-
-def rename_columns_to_match_schema(
-    blob_name: str,
-    bucket_name: str,
-    schema_columns: list = SCHEMA_TYPES,
-    threshold: int = 85,
-) -> None:
-    # Dictionary to hold new column names based on fuzzy match
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
-
-    try:
-        # Read the blob into a DataFrame
-        blob_data = blob.download_as_text()
-        from io import StringIO
-
-        df = pd.read_csv(StringIO(blob_data))
-
-        # Dictionary to hold new column names based on fuzzy match
-        new_column_names = {}
-        log_info = {}
-        # Iterate over each column in the dataframe
-        for column in df.columns:
-            best_match = None
-            highest_score = 0
-
-            # Compare the current column with each schema column
-            for schema_cols in schema_columns:
-                score = fuzz.ratio(column.lower(), schema_cols.lower())
-                if score > highest_score:
-                    highest_score = score
-                    best_match = schema_cols
-
-            log_info[column] = [
-                f"Checking '{column}': best match is '{best_match}' with score {highest_score}"
-            ]
-
-            # If the highest score is above the threshold, prepare to rename the column
-            if highest_score >= threshold:
-                new_column_names[column] = best_match
-                log_info[column].append(f"Renaming '{column}' to '{best_match}'")
-
-        logger.debug(log_info)
-
-        # Rename the columns in the dataframe
-        df.rename(columns=new_column_names, inplace=True)
-
-        # Convert DataFrame to CSV and save back to GCS
-        df_csv = df.to_csv(index=False)
-        blob.upload_from_string(df_csv, content_type="text/csv")
-
-    except Exception as e:
-        logger.error(f"Error while processing GCS blob: {e}")
-        raise e

@@ -18,7 +18,6 @@ from .utilities import (
     transfer_file,
     sftp_file_to_gcs_helper,
     validate_sftp_file,
-    rename_columns_to_match_schema,
 )
 
 from .databricks import DatabricksSQLConnector
@@ -152,9 +151,7 @@ async def process_file(
                 upload_signed_url=upload_url.strip('"'),
             )
 
-            rename_columns_to_match_schema(
-                blob_name=blob, bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"])
-            )
+            # TODO: rename_columns_to_match_schema( blob_name=blob, bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"]))
 
             validation_status = validate_sftp_file(
                 file_name=blob,
