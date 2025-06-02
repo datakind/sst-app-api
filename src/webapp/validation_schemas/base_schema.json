@@ -26,7 +26,7 @@
           "student_type": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": []
@@ -34,7 +34,7 @@
           "first_generation_student": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["first_generation_college_student", "first_gen", "first_gen_flag", "firstgenflag"],
             "checks": [
@@ -196,7 +196,7 @@
           "first_associate_graduation_date": {
             "dtype": "datetime64[ns]",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": []
@@ -204,7 +204,7 @@
           "program_at_first_enrollment": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["program_of_study_term_1", "program_of_study_year_1"],
             "checks": []
@@ -212,7 +212,7 @@
           "major_at_first_enrollment": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": []
@@ -228,7 +228,7 @@
           "major_at_graduation": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": []
@@ -236,7 +236,7 @@
           "total_credits_attempted": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": []
@@ -244,7 +244,7 @@
           "total_credits_earned": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": []
@@ -253,7 +253,7 @@
           "awarded_pell_ever": {
             "dtype": "category",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["pell_status_first_year"],
             "checks": [
@@ -269,8 +269,8 @@
           "student_id": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["student_id", "guid", "student_guid", "study_id"],
             "checks": [
               {"type": "str_length", "args": [], "kwargs": {"min_value": 3}}
@@ -279,16 +279,16 @@
           "semester": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["cohort_term", "term_desc"],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
           },
           "enrollment_type": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["time_status"],
             "checks": [
               {"type": "str_length", "args": [], "kwargs": {"min_value": 1}},
@@ -298,7 +298,7 @@
           "student_type": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [
@@ -308,7 +308,7 @@
           "program_type_pursued": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["degree_type_pursued"],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
@@ -359,7 +359,7 @@
           "semester_gpa": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["sem_gpa"],
             "checks": [{"type": "in_range", "args": [0.0, 4.0]}]
@@ -367,7 +367,7 @@
           "number_of_courses_enrolled": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["courses_enrolled", "ug_enroll"],
             "checks": [{"type": "ge", "args": [0.0]}]
@@ -375,7 +375,7 @@
           "number_of_credits_attempted": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": true,
             "aliases": ["credits_attempted", "ug_att", "number_of_credits_attempted_year_1", "number_of_credits_attempted_year_2",
           "number_of_credits_attempted_year_3", "number_of_credits_attempted_year_4"],
@@ -384,7 +384,7 @@
           "number_of_credits_failed": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["credits_failed", "ug_fail"],
             "checks": []
@@ -408,7 +408,7 @@
           },
           "enrolled_at_another_int": {
             "dtype": "string",
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "isin", "args": [["true", "false", "unknown", "yes", "no"]]}]
@@ -422,31 +422,31 @@
           "student_id": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["student id", "guid", "study_id", "student_guid"],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 3}}]
           },
           "semester": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["term_desc", "cohort_term"],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
           },
           "course_prefix": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["course_subject"],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
           },
           "course_name": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
@@ -454,8 +454,8 @@
           "course_number": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["course_num", "course_no", "course_number"],
             "checks": [
             ]
@@ -463,7 +463,7 @@
           "course_classification": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [
@@ -473,7 +473,7 @@
           "course_type": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["levl_code"],
             "checks": [
@@ -483,7 +483,7 @@
           "core_course": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [
@@ -493,7 +493,7 @@
           "pass_fail_flag": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": ["pass_fail", "pass/fail_flag"],
             "checks": [
@@ -503,8 +503,8 @@
           "grade": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["course_grade", "grade_code"],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
           },
@@ -521,23 +521,23 @@
           "course_credits": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["att_hrs", "number_of_credits_attempted"],
             "checks": [{"type": "ge", "args": [0.0]}]
           },
           "number_of_credits_earned": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["earn_hrs"],
             "checks": [{"type": "ge", "args": [0.0]}]
           },
           "course_instructor_appointment_type": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
@@ -554,14 +554,14 @@
           },
           "course_begin_date": {
             "dtype": "datetime64[ns]",
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
           },
           "course_end_date": {
             "dtype": "datetime64[ns]",
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
@@ -574,14 +574,14 @@
         "columns": {
           "student_id": {
             "dtype": "string",
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": ["student id", "guid"],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 5}}]
           },
           "college_id_for_previous_inst": {
             "dtype": "string",
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
@@ -596,15 +596,15 @@
           "number_of_credits_attempted_to_transfer": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
-            "required": true,
+            "nullable": true,
+            "required": false,
             "aliases": [],
             "checks": [{"type": "ge", "args": [0.0]}]
           },
           "number_of_credits_successfully_transfered": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "ge", "args": [0.0]}]
@@ -612,7 +612,7 @@
           "transfer_cumulative_gpa": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "ge", "args": [0.0]}]
@@ -620,14 +620,14 @@
           "course_pass_rate": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "ge", "args": [0.0]}]
           },
           "associate_degree_completion": {
             "dtype": "string",
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "gt", "args": [0]}]
