@@ -191,7 +191,9 @@ def validate_dataset(
     }
     df.columns = [normalize_col(c) for c in df.columns]
     df = rename_columns_to_match_schema(df, canon_to_aliases)
-    df.columns = [normalize_col(c) for c in df.columns]  # Final normalization after renaming
+    df.columns = [
+        normalize_col(c) for c in df.columns
+    ]  # Final normalization after renaming
 
     incoming = set(df.columns)
 
