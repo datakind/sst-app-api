@@ -15,12 +15,6 @@ import re
 import google.auth
 import google.auth.transport.requests as google_requests
 from .config import sftp_vars, env_vars
-from src.webapp.validation import (
-    SST_PDP_COHORT_COLS,
-    SST_PDP_COURSE_COLS,
-    PDP_COHORT_OPTIONAL_COLS,
-    PDP_COURSE_OPTIONAL_COLS,
-)
 
 # from src.webapp.utilities import SchemaType
 
@@ -30,14 +24,6 @@ from fuzzywuzzy import fuzz
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-SCHEMA_TYPES: Final = (
-    SST_PDP_COHORT_COLS
-    + SST_PDP_COURSE_COLS
-    + PDP_COHORT_OPTIONAL_COLS
-    + PDP_COURSE_OPTIONAL_COLS
-)
-
 
 def get_sftp_bucket_name(env_var: str) -> str:
     return env_var.lower() + "_sftp_ingestion"
