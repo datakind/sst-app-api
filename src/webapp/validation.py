@@ -192,7 +192,7 @@ def validate_dataset(
         
         if req_failures:
             if logging:
-                logging.error(f"Schema validation failed on required columns, schema_errors = {err.schema_errors}, failure_cases = {err.failure_cases.to_dict(orient="records")}")
+                logging.error(f"Schema validation failed on required columns, schema_errors = {err.schema_errors}, failure_cases = {err.failure_cases.to_dict(orient='records')}")
             raise HardValidationError(
                 schema_errors=err.schema_errors,
                 failure_cases=err.failure_cases.to_dict(orient="records"),
