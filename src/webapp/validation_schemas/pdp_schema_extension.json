@@ -3047,6 +3047,15 @@
                 }
               ]
             },
+            "term_program_of_study": {
+              "dtype": "category",
+              "categories": [],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
             "section_id": {
               "dtype": "string",
               "coerce": true,

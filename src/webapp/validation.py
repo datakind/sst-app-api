@@ -43,7 +43,7 @@ class HardValidationError(Exception):
 
 
 def normalize_col(name: str) -> str:
-    return name.strip().lower().replace(" ", "_").replace("-", "_")
+    return re.sub(r"[^a-zA-Z0-9_]", "_", name.strip().lower())
 
 
 def load_json(path: str) -> Any:

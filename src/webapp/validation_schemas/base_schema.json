@@ -424,7 +424,7 @@
             "coerce": true,
             "nullable": false,
             "required": true,
-            "aliases": ["student id", "guid", "study_id"],
+            "aliases": ["student id", "guid", "study_id", "student_guid"],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 3}}]
           },
           "semester": {
