@@ -21,11 +21,11 @@ class DatabricksSQLConnector:
 
     def _get_google_id_token(
         self, audience: str = "https://accounts.google.com"
-    ) -> str:
+    ) -> Any:
         """Fetch a GCP identity token for the service account."""
         return id_token.fetch_id_token(Request(), audience)
 
-    def _exchange_token_for_databricks(self, subject_token: str) -> str:
+    def _exchange_token_for_databricks(self, subject_token: str) -> Any:
         """Exchange GCP identity token for Databricks access token."""
         response = requests.post(
             self.token_exchange_url,

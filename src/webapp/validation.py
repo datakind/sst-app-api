@@ -180,8 +180,9 @@ def get_col_names(f: Any) -> list[str]:
     # Read the column names and store in col_names.
     f.seek(0)
     dict_reader = csv.DictReader(f, dialect=csv_dialect)
-    col_names = dict_reader.fieldnames
+    col_names = dict_reader.fieldnames or []
     col_names = [col.replace(" ", "_").lower() for col in col_names]
+
     return col_names
 
 
