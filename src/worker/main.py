@@ -19,7 +19,6 @@ from .utilities import (
     sftp_file_to_gcs_helper,
     validate_sftp_file,
     rename_columns_to_match_schema,
-    databricks_connector
 )
 
 from .databricks import DatabricksSQLConnector
