@@ -3,7 +3,7 @@ import requests
 from databricks import sql
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
-
+from typing import Any
 
 class DatabricksSQLConnector:
     """
@@ -37,7 +37,7 @@ class DatabricksSQLConnector:
             raise RuntimeError(f"Databricks token exchange failed: {response.text}")
         return response.json()["access_token"]
 
-    def get_sql_connection(self) -> sql.Connection:
+    def get_sql_connection(self) -> Any:
         """Authenticate and return a Databricks SQL connection."""
         id_token_str = self._get_google_id_token()
         access_token = self._exchange_token_for_databricks(id_token_str)
