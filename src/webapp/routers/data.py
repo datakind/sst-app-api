@@ -33,7 +33,6 @@ from ..database import (
     InstTable,
 )
 
-from ..validation import validate_file
 from ..gcsdbutils import update_db_from_bucket
 
 from ..gcsutil import StorageControl
@@ -881,10 +880,10 @@ def validation_helper(
         allowed_schemas = infer_models_from_filename(file_name, "pdp")
 
     inferred_schemas = set()
-    #TODO: get_external_bucket_name(inst_id)
+    #TODO: 
     try:
         inferred_schemas = storage_control.validate_file(
-            file_name, allowed_schemas,
+            get_external_bucket_name(inst_id), file_name, allowed_schemas,
         )
     except Exception as e:
         raise HTTPException(

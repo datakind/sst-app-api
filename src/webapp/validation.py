@@ -17,9 +17,9 @@ import pandera as pa
 from pandera import Column, Check, DataFrameSchema
 from pandera.errors import SchemaErrors
 
-def validate_file(filename: str, schema_type: list[str]) -> set[SchemaType]:
+def validate_file_reader(filename: str, allowed_schema: list[str]) -> set[SchemaType]:
     """Validates given a filename."""
-    return validate_dataset(filename)
+    return validate_dataset(filename, allowed_schema)
 
 class HardValidationError(Exception):
     def __init__(
@@ -99,12 +99,12 @@ def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
     return DataFrameSchema(columns, strict=False)
 
 def validate_dataset(
-    data: str,
+    filename: str,
     models: Union[str, List[str], None] = None,
     institution_id: str = "pdp",
 ) -> Dict[str, Any]:
     
-    df = pd.read_csv(data)
+    df = pd.read_csv(filename)
     df = df.rename(columns={c: normalize_col(c) for c in df.columns})
     incoming = set(df.columns)
     
