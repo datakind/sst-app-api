@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, date
 
-from typing import Annotated, Any, Dict
+from typing import Annotated, Any, Dict, List
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy import and_, or_
