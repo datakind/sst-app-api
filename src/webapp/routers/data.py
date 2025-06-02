@@ -91,7 +91,7 @@ class DataInfo(BaseModel):
     name: str
     data_id: str
     # The batch(es) that this data is present in.
-    batch_ids: set[str] = {}
+    batch_ids: set[str] = set()
     inst_id: str
     # Size to the nearest MB.
     # size_mb: int
@@ -855,7 +855,7 @@ def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]
 
     if not inferred:
         logging.error(ValueError(f"Could not infer model(s) from file name: {name}, filenames sould be descriptive of the kind of data it contains e.g. course, cohort"))
-        return inferred.add("UNKNOWN")
+        inferred.add("UNKNOWN")
     
     return sorted(inferred)
 

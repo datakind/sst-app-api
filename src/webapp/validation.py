@@ -3,26 +3,25 @@ pipelines, this is for general file validation.)
 """
 from typing import Any
 
-from .utilities import SchemaType
 import json
 import os
 import re
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 import logging
 
 import pandas as pd
 from pandera import Column, Check, DataFrameSchema
 from pandera.errors import SchemaErrors
 
-def validate_file_reader(filename: str, allowed_schema: list[str]) -> set[SchemaType]:
+def validate_file_reader(filename: str, allowed_schema: list[str]) -> dict[str, Any]:
     """Validates given a filename."""
     return validate_dataset(filename, allowed_schema)
 
 class HardValidationError(Exception):
     def __init__(
         self,
-        missing_required: List[str] = None,
-        extra_columns: List[str] = None,
+        missing_required: Optional[List[str]] = None,
+        extra_columns: Optional[List[str]] = None,
         schema_errors: Any = None,
         failure_cases: Any = None,
     ):
@@ -47,7 +46,7 @@ def normalize_col(name: str) -> str:
             .replace("-", "_")
     )
 
-def load_json(path: str) -> dict:
+def load_json(path: str) -> Any:
     try:
         with open(path, 'r') as f:
             return json.load(f)
@@ -56,7 +55,7 @@ def load_json(path: str) -> dict:
 
 def merge_model_columns(
     base_schema: dict,
-    extension_schema: dict,
+    extension_schema: Any,
     institution: str,
     model: str,
 ) -> Dict[str, dict]:
@@ -114,7 +113,9 @@ def validate_dataset(
         ext_schema = load_json(extension_schema_path)
 
     # 2) merge requested models
-    if isinstance(models, str):
+    if models is None:
+        model_list: List[str] = []
+    elif isinstance(models, str):
         model_list = [models]
     else:
         model_list = models
