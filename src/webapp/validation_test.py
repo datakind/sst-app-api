@@ -43,41 +43,58 @@ def test_valid_subset_lists():
 def test_detect_file_type():
     """Testing schema detection."""
     with open("src/webapp/test_files/financial_sst_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.SST_PDP_FINANCE}
+        cols = get_col_names(f)
+        assert detect_file_type(cols, {SchemaType.SST_PDP_FINANCE}) == {SchemaType.SST_PDP_FINANCE}
+
     with open("src/webapp/test_files/course_sst_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.SST_PDP_COURSE}
+        cols = get_col_names(f)
+        assert detect_file_type(cols, {SchemaType.SST_PDP_COURSE}) == {SchemaType.SST_PDP_COURSE}
+
     with open("src/webapp/test_files/cohort_sst_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.SST_PDP_COHORT}
-    
+        cols = get_col_names(f)
+        assert detect_file_type(cols, {SchemaType.SST_PDP_COHORT}) == {SchemaType.SST_PDP_COHORT}
+
     with open("src/webapp/test_files/test_upload.csv", encoding="utf-8") as f:
+        cols = get_col_names(f)
         with pytest.raises(ValueError) as err:
-            detect_file_type(get_col_names(f))
-        assert "No valid schema matched" in str(err.value)
+            detect_file_type(cols, {SchemaType.SST_PDP_COURSE, SchemaType.SST_PDP_COHORT})
+        assert "Required file schema(s) not recognized" in str(err.value)
+
     with open("src/webapp/test_files/malformed.csv", encoding="utf-8") as f:
         with pytest.raises(ValueError) as err:
-            detect_file_type(get_col_names(f))
+            get_col_names(f)
         assert str(err.value) == "CSV file malformed: Could not determine delimiter"
 
 
 def test_validate_file():
     """Testing file validation."""
+    # Finance is optional, but here it’s valid on its own because we include it explicitly
     assert validate_file(
         "src/webapp/test_files/financial_sst_pdp.csv",
-        [SchemaType.SST_PDP_FINANCE, SchemaType.UNKNOWN],
+        {SchemaType.SST_PDP_FINANCE},
     )
+
     assert validate_file(
-        "src/webapp/test_files/course_sst_pdp.csv", [SchemaType.SST_PDP_COURSE]
+        "src/webapp/test_files/course_sst_pdp.csv",
+        {SchemaType.SST_PDP_COURSE}
     )
+
     assert validate_file(
-        "src/webapp/test_files/cohort_sst_pdp.csv", [SchemaType.SST_PDP_COHORT]
+        "src/webapp/test_files/cohort_sst_pdp.csv",
+        {SchemaType.SST_PDP_COHORT}
     )
+
+    # Contains extra columns, but should still validate against required schemas
     assert validate_file(
         "src/webapp/test_files/cohort_pdp.csv",
-        [SchemaType.SST_PDP_COHORT, SchemaType.SST_PDP_FINANCE],
+        {SchemaType.SST_PDP_COHORT, SchemaType.SST_PDP_FINANCE},
     )
+
+    # Finance-only should fail, since cohort and course schemas are required
     with pytest.raises(ValueError) as err:
         validate_file(
-            "src/webapp/test_files/test_upload.csv", [SchemaType.SST_PDP_FINANCE, SchemaType.SST_PDP_COURSE, SchemaType.SST_PDP_COHORT]
+            "src/webapp/test_files/test_upload.csv",
+            {SchemaType.SST_PDP_COHORT, SchemaType.SST_PDP_COURSE, SchemaType.SST_PDP_FINANCE},
         )
-    assert "No valid schema matched." in str(err.value)
+    assert "Required file schema(s) not recognized" in str(err.value)
     assert "Unexpected columns" in str(err.value)

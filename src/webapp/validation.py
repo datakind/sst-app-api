@@ -161,10 +161,9 @@ def validate_file_reader(
         raise ValueError("CSV file schema not recognized")
 
     file_columns = get_col_names(reader)
-    res = detect_file_type(file_columns)
-    if any(i in allowed_types for i in res):
-        return res
-    raise ValueError("Some file schema/columns are not recognized")
+
+    required_schemas = allowed_types - {SchemaType.SST_PDP_FINANCE}
+    return detect_file_type(file_columns, required_schemas)
 
 
 def get_col_names(f: Any) -> list[str]:
@@ -185,8 +184,8 @@ def get_col_names(f: Any) -> list[str]:
     return col_names
 
 
-def detect_file_type(col_names: list[str]) -> set[SchemaType]:
-    """Returns all schemas that match for a list of col names."""
+def detect_file_type(col_names: list[str], required_schemas: set[SchemaType]) -> set[SchemaType]:
+    """Returns all schemas that match for a list of col names. Raises error if required schemas aren't matched."""
     matches = set()
     errors = {}
 
@@ -199,7 +198,7 @@ def detect_file_type(col_names: list[str]) -> set[SchemaType]:
         else:
             errors[schema.name] = result
 
-    if matches:
+    if matches & required_schemas:
         return matches
 
     error_msgs = []
@@ -212,7 +211,7 @@ def detect_file_type(col_names: list[str]) -> set[SchemaType]:
         error_msgs.append(msg)
 
     raise ValueError(
-        "No valid schema matched. Details of mismatches:\n" + "\n".join(error_msgs)
+        "Required file schema(s) not recognized. Details of mismatches:\n" + "\n".join(error_msgs)
     )
 
 
