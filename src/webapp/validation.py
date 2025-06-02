@@ -85,21 +85,11 @@ SST_PDP_COURSE_COLS: Final = [
     'course_instructor_rank'
     ]
 
+# Required finance fields (e.g., Pell and related key fields)
 SST_PDP_FINANCE_COLS: Final = [
     'student_id',
-    'institution_id',
-    'academic_year',
-    'dependency_status',
-    'housing_status',
-    'cost_of_attendance',
-    'efc',
-    'total_institutional_grants',
-    'total_state_grants',
-    'total_federal_grants',
-    'unmet_need',
-    'net_price',
-    'applied_aid'
-    ]
+    'pell_status_first_year'
+]
 
 # Optional Fields
 PDP_COHORT_OPTIONAL_COLS: Final = [
@@ -127,6 +117,21 @@ PDP_COURSE_OPTIONAL_COLS: Final = [
     'course_instructor_rank'
     ]
 
+
+# Optional finance fields (formerly all finance fields)
+PDP_FINANCE_OPTIONAL_COLS: Final = [
+    'dependency_status',
+    'housing_status',
+    'cost_of_attendance',
+    'efc',
+    'total_institutional_grants',
+    'total_state_grants',
+    'total_federal_grants',
+    'unmet_need',
+    'net_price',
+    'applied_aid'
+]
+
 SCHEMA_TYPE_TO_COLS: Final = {
     SchemaType.SST_PDP_COHORT: SST_PDP_COHORT_COLS,
     SchemaType.SST_PDP_COURSE: SST_PDP_COURSE_COLS,
@@ -136,8 +141,7 @@ SCHEMA_TYPE_TO_COLS: Final = {
 SCHEMA_TYPE_TO_OPTIONAL_COLS: Final = {
     SchemaType.SST_PDP_COHORT: PDP_COHORT_OPTIONAL_COLS,
     SchemaType.SST_PDP_COURSE: PDP_COURSE_OPTIONAL_COLS,
-    # The financial file does not have optional fields.
-    SchemaType.SST_PDP_FINANCE: [],
+    SchemaType.SST_PDP_FINANCE: PDP_FINANCE_OPTIONAL_COLS,
 }
 
 
@@ -214,20 +218,15 @@ def detect_file_type(col_names: list[str], required_schemas: set[SchemaType]) ->
         "Required file schema(s) not recognized. Details of mismatches:\n" + "\n".join(error_msgs)
     )
 
-
 def valid_subset_lists(
     expected: list[str], actual: list[str], optional_list: list[str]
 ) -> ColumnValidationResult:
-    """Checks if the subset_list is a subset of or equivalent to superset_list. And if so,
-    whether the missing values are all present in the optional list. This method disregards order
-    but cares about duplicates."""
-    # Checks if any value in subset list is NOT present in superset list.
+    """Validates expected vs actual columns with optional overrides."""
     expected_counter = Counter(expected)
     actual_counter = Counter(actual)
 
     unexpected = list((actual_counter - expected_counter).elements())
 
-    # Columns expected but missing (excluding optional)
     missing_total = list((expected_counter - actual_counter).elements())
     missing_required = [col for col in missing_total if col not in optional_list]
 
