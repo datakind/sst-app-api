@@ -2628,8 +2628,8 @@
                 "WINTER"
               ],
               "coerce": true,
-              "nullable": false,
-              "required": true,
+              "nullable": true,
+              "required": false,
               "aliases": [],
               "checks": [
                 {
@@ -2659,8 +2659,8 @@
                 "2024-25"
               ],
               "coerce": true,
-              "nullable": false,
-              "required": true,
+              "nullable": true,
+              "required": false,
               "aliases": [],
               "checks": [
                 {
@@ -2785,7 +2785,7 @@
               ]
             },
             "course_cip": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -2818,16 +2818,9 @@
               "dtype": "float64",
               "coerce": true,
               "nullable": true,
-              "required": true,
+              "required": false,
               "aliases": [],
-              "checks": [
-                {
-                  "type": "ge",
-                  "args": [
-                    0.0
-                  ]
-                }
-              ]
+              "checks": []
             },
             "credential_engine_identifier": {
               "dtype": "float64",
@@ -2882,36 +2875,12 @@
               ]
             },
             "enrollment_record_at_other_institution_s_locale_s": {
-              "dtype": "category",
-              "categories": [
-                "Urban",
-                "Town/Rural",
-                "Suburb",
-                "Town/Rural|Town/Rural",
-                "Town/Rural|Suburb",
-                "Urban|Urban",
-                "Suburb|Town/Rural"
-              ],
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
               "aliases": [],
-              "checks": [
-                {
-                  "type": "isin",
-                  "args": [
-                    [
-                      "Urban",
-                      "Town/Rural",
-                      "Suburb",
-                      "Town/Rural|Town/Rural",
-                      "Town/Rural|Suburb",
-                      "Urban|Urban",
-                      "Suburb|Town/Rural"
-                    ]
-                  ]
-                }
-              ]
+              "checks": []
             },
             "enrollment_record_at_other_institution_s_state_s": {
               "dtype": "string",
@@ -3051,7 +3020,7 @@
               "dtype": "category",
               "categories": [],
               "coerce": true,
-              "nullable": false,
+              "nullable": true,
               "required": true,
               "aliases": [],
               "checks": []
