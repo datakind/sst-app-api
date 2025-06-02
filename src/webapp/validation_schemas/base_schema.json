@@ -476,9 +476,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["levl_code"],
-            "checks": [
-              {"type": "isin", "args": [["undergraduates", "graduates", "development", "GED", "UG", "DS", "Undergraduate", "Graduate"]]}
-              ]
+            "checks": []
           },
           "core_course": {
             "dtype": "string",
@@ -553,14 +551,14 @@
               ]
           },
           "course_begin_date": {
-            "dtype": "datetime64[ns]",
+            "dtype": "string",
             "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
           },
           "course_end_date": {
-            "dtype": "datetime64[ns]",
+            "dtype": "string",
             "nullable": true,
             "required": false,
             "aliases": [],
