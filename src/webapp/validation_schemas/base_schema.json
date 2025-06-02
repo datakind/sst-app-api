@@ -552,6 +552,7 @@
           },
           "course_begin_date": {
             "dtype": "string",
+            "coerce": true,
             "nullable": true,
             "required": false,
             "aliases": [],
@@ -559,6 +560,7 @@
           },
           "course_end_date": {
             "dtype": "string",
+            "coerce": true,
             "nullable": true,
             "required": false,
             "aliases": [],
