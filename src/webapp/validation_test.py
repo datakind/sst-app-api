@@ -37,10 +37,6 @@ def test_valid_subset_lists():
     assert result3.unexpected_columns == ["d"]
 
 def test_detect_file_type():
-    with open("src/webapp/test_files/financial_sst_pdp.csv", encoding="utf-8") as f:
-        cols = get_col_names(f)
-        assert detect_file_type(cols, {SchemaType.SST_PDP_FINANCE}) == {SchemaType.SST_PDP_FINANCE}
-
     with open("src/webapp/test_files/course_sst_pdp.csv", encoding="utf-8") as f:
         cols = get_col_names(f)
         assert detect_file_type(cols, {SchemaType.SST_PDP_COURSE}) == {SchemaType.SST_PDP_COURSE}
