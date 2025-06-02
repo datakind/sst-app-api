@@ -36,21 +36,29 @@ def test_valid_subset_lists():
     assert not result3.is_valid
     assert result3.unexpected_columns == ["d"]
 
+
 def test_detect_file_type():
     with open("src/webapp/test_files/course_sst_pdp.csv", encoding="utf-8") as f:
         cols = get_col_names(f)
-        assert detect_file_type(cols, {SchemaType.SST_PDP_COURSE}) == {SchemaType.SST_PDP_COURSE}
+        assert detect_file_type(cols, {SchemaType.SST_PDP_COURSE}) == {
+            SchemaType.SST_PDP_COURSE
+        }
 
     with open("src/webapp/test_files/cohort_sst_pdp.csv", encoding="utf-8") as f:
         cols = get_col_names(f)
-        assert detect_file_type(cols, {SchemaType.SST_PDP_COHORT}) == {SchemaType.SST_PDP_COHORT}
+        assert detect_file_type(cols, {SchemaType.SST_PDP_COHORT}) == {
+            SchemaType.SST_PDP_COHORT
+        }
 
     with open("src/webapp/test_files/test_upload.csv", encoding="utf-8") as f:
         cols = get_col_names(f)
         with pytest.raises(ValueError) as err:
-            detect_file_type(cols, {SchemaType.SST_PDP_COHORT, SchemaType.SST_PDP_COURSE})
+            detect_file_type(
+                cols, {SchemaType.SST_PDP_COHORT, SchemaType.SST_PDP_COURSE}
+            )
         assert "Required file schema(s) not recognized" in str(err.value)
         assert "Unexpected columns" in str(err.value)
+
 
 def test_malformed_csv():
     with open("src/webapp/test_files/malformed.csv", encoding="utf-8") as f:
@@ -58,25 +66,27 @@ def test_malformed_csv():
             get_col_names(f)
         assert "CSV file malformed" in str(err.value)
 
-def test_validate_file():
 
+def test_validate_file():
     # Course should validate
     assert validate_file(
-        "src/webapp/test_files/course_sst_pdp.csv",
-        {SchemaType.SST_PDP_COURSE}
+        "src/webapp/test_files/course_sst_pdp.csv", {SchemaType.SST_PDP_COURSE}
     )
 
     # Cohort should validate
     assert validate_file(
-        "src/webapp/test_files/cohort_sst_pdp.csv",
-        {SchemaType.SST_PDP_COHORT}
+        "src/webapp/test_files/cohort_sst_pdp.csv", {SchemaType.SST_PDP_COHORT}
     )
 
     # File with only junk columns should fail
     with pytest.raises(ValueError) as err:
         validate_file(
             "src/webapp/test_files/test_upload.csv",
-            {SchemaType.SST_PDP_COHORT, SchemaType.SST_PDP_COURSE, SchemaType.SST_PDP_FINANCE}
+            {
+                SchemaType.SST_PDP_COHORT,
+                SchemaType.SST_PDP_COURSE,
+                SchemaType.SST_PDP_FINANCE,
+            },
         )
     assert "Required file schema(s) not recognized" in str(err.value)
     assert "Unexpected columns" in str(err.value)

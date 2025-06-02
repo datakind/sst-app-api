@@ -227,6 +227,7 @@ async def execute_pdp_pull(
         "upload_status": dict(result["uploads"]),
     }
 
+
 # Get SHAP Values for Inference
 @app.get("/{inst_id}/top-features/{run_id}", response_model=str)
 def get_top_features(
@@ -242,12 +243,14 @@ def get_top_features(
             databricks_host=env_vars["DATABRICKS_HOST"],
             http_path=env_vars["DATABRICKS_SQL_HTTP_PATH"],
             client_id=env_vars["DATABRICKS_CLIENT_ID"],
-            client_secret=env_vars["DATABRICKS_CLIENT_SECRET"]
+            client_secret=env_vars["DATABRICKS_CLIENT_SECRET"],
         )
 
         conn = connector.get_sql_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM staging_sst_01.metropolitan_state_uni_of_denver_gold.sample_inference_66d9716883be4b01a4ea4de82f2d09d5_features_with_most_impact LIMIT 10")
+        cursor.execute(
+            "SELECT * FROM staging_sst_01.metropolitan_state_uni_of_denver_gold.sample_inference_66d9716883be4b01a4ea4de82f2d09d5_features_with_most_impact LIMIT 10"
+        )
         print(cursor.fetchall())
     except ValueError as ve:
         # Return a 400 error with the specific message from ValueError

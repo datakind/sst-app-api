@@ -11,125 +11,122 @@ from .utilities import SchemaType
 
 # The PDP aligned SST columns
 SST_PDP_COHORT_COLS: Final = [
-    'institution_id',
-    'cohort',
-    'student_guid',
-    'cohort_term',
-    'student_age',
-    'enrollment_type',
-    'enrollment_intensity_first_term',
-    'math_placement',
-    'english_placement',
-    'dual_and_summer_enrollment',
-    'race',
-    'ethnicity',
-    'gender',
-    'first_gen',
-    'pell_status_first_year',
-    'credential_type_sought_year_1',
-    'program_of_study_term_1',
-    'gpa_group_term_1',
-    'gpa_group_year_1',
-    'retention',
-    'persistence',
-    'years_to_bachelors_at_cohort_inst.',
-    'years_to_associates_or_certificate_at_cohort_inst.',
-    'years_to_bachelor_at_other_inst.',
-    'years_to_associates_or_certificate_at_other_inst.',
-    'years_of_last_enrollment_at_cohort_institution',
-    'years_of_last_enrollment_at_other_institution',
-    'reading_placement',
-    'special_program',
-    'naspa_first-generation',
-    'military_status',
-    'employment_status',
-    'disability_status',
-    'foreign_language_completion',
-    'first_year_to_bachelors_at_cohort_inst.',
-    'first_year_to_associates_or_certificate_at_cohort_inst.',
-    'first_year_to_bachelor_at_other_inst.',
-    'first_year_to_associates_or_certificate_at_other_inst.',
-    'program_of_study_year_1',
-    'most_recent_last_enrollment_at_other_institution_state',
-    'most_recent_last_enrollment_at_other_institution_carnegie',
-    'most_recent_last_enrollment_at_other_institution_locale'
-    ]
+    "institution_id",
+    "cohort",
+    "student_guid",
+    "cohort_term",
+    "student_age",
+    "enrollment_type",
+    "enrollment_intensity_first_term",
+    "math_placement",
+    "english_placement",
+    "dual_and_summer_enrollment",
+    "race",
+    "ethnicity",
+    "gender",
+    "first_gen",
+    "pell_status_first_year",
+    "credential_type_sought_year_1",
+    "program_of_study_term_1",
+    "gpa_group_term_1",
+    "gpa_group_year_1",
+    "retention",
+    "persistence",
+    "years_to_bachelors_at_cohort_inst.",
+    "years_to_associates_or_certificate_at_cohort_inst.",
+    "years_to_bachelor_at_other_inst.",
+    "years_to_associates_or_certificate_at_other_inst.",
+    "years_of_last_enrollment_at_cohort_institution",
+    "years_of_last_enrollment_at_other_institution",
+    "reading_placement",
+    "special_program",
+    "naspa_first-generation",
+    "military_status",
+    "employment_status",
+    "disability_status",
+    "foreign_language_completion",
+    "first_year_to_bachelors_at_cohort_inst.",
+    "first_year_to_associates_or_certificate_at_cohort_inst.",
+    "first_year_to_bachelor_at_other_inst.",
+    "first_year_to_associates_or_certificate_at_other_inst.",
+    "program_of_study_year_1",
+    "most_recent_last_enrollment_at_other_institution_state",
+    "most_recent_last_enrollment_at_other_institution_carnegie",
+    "most_recent_last_enrollment_at_other_institution_locale",
+]
 
 SST_PDP_COURSE_COLS: Final = [
-    'student_guid',
-    'student_age',
-    'race',
-    'ethnicity',
-    'gender',
-    'institution_id',
-    'academic_year',
-    'academic_term',
-    'course_prefix',
-    'course_number',
-    'section_id',
-    'course_cip',
-    'course_type',
-    'math_or_english_gateway',
-    'co-requisite_course',
-    'course_begin_date',
-    'course_end_date',
-    'grade',
-    'number_of_credits_attempted',
-    'number_of_credits_earned',
-    'delivery_method',
-    'core_course',
-    'core_course_type',
-    'core_competency_completed',
-    'enrolled_at_other_institution(s)',
-    'credential_engine_identifier',
-    'course_instructor_rank'
-    ]
+    "student_guid",
+    "student_age",
+    "race",
+    "ethnicity",
+    "gender",
+    "institution_id",
+    "academic_year",
+    "academic_term",
+    "course_prefix",
+    "course_number",
+    "section_id",
+    "course_cip",
+    "course_type",
+    "math_or_english_gateway",
+    "co-requisite_course",
+    "course_begin_date",
+    "course_end_date",
+    "grade",
+    "number_of_credits_attempted",
+    "number_of_credits_earned",
+    "delivery_method",
+    "core_course",
+    "core_course_type",
+    "core_competency_completed",
+    "enrolled_at_other_institution(s)",
+    "credential_engine_identifier",
+    "course_instructor_rank",
+]
 
 # Required finance fields (e.g., Pell and related key fields)
-SST_PDP_FINANCE_COLS: Final = [
-    'student_id',
-    'pell_status_first_year'
-]
+SST_PDP_FINANCE_COLS: Final = ["student_id", "pell_status_first_year"]
 
 # Optional Fields
 PDP_COHORT_OPTIONAL_COLS: Final = [
-    'reading_placement',
-    'special_program',
-    'naspa_first-generation',
-    'incarcerated_status',
-    'military_status',
-    'employment_status',
-    'disability_status',
-    'foreign_language_completion',
-    'years_to_latest_associates_at_cohort_inst',
-    'years_to_latest_certificate_at_cohort_inst',
-    'years_to_latest_associates_at_other_inst',
-    'years_to_latest_certificate_at_other_inst',
-    'first_year_to_associates_at_cohort_inst',
-    'first_year_to_certificate_at_cohort_inst',
-    'first_year_to_associates_at_other_inst',
-    'first_year_to_certificate_at_other_inst'
-    ]
+    "reading_placement",
+    "special_program",
+    "naspa_first-generation",
+    "incarcerated_status",
+    "military_status",
+    "employment_status",
+    "disability_status",
+    "foreign_language_completion",
+    "years_to_latest_associates_at_cohort_inst",
+    "years_to_latest_certificate_at_cohort_inst",
+    "years_to_latest_associates_at_other_inst",
+    "years_to_latest_certificate_at_other_inst",
+    "first_year_to_associates_at_cohort_inst",
+    "first_year_to_certificate_at_cohort_inst",
+    "first_year_to_associates_at_other_inst",
+    "first_year_to_certificate_at_other_inst",
+]
 
 PDP_COURSE_OPTIONAL_COLS: Final = [
-    'credential_engine_identifier',
-    'course_instructor_employment_status',
-    'course_instructor_rank'
-    ]
+    "credential_engine_identifier",
+    "course_instructor_employment_status",
+    "course_instructor_rank",
+]
 
 
 # Optional finance fields (formerly all finance fields)
 PDP_FINANCE_OPTIONAL_COLS: Final = [
-    'dependency_status',
-    'housing_status',
-    'cost_of_attendance',
-    'efc',
-    'total_institutional_grants',
-    'total_state_grants',
-    'total_federal_grants',
-    'unmet_need',
-    'net_price',
-    'applied_aid'
+    "dependency_status",
+    "housing_status",
+    "cost_of_attendance",
+    "efc",
+    "total_institutional_grants",
+    "total_state_grants",
+    "total_federal_grants",
+    "unmet_need",
+    "net_price",
+    "applied_aid",
 ]
 
 SCHEMA_TYPE_TO_COLS: Final = {
@@ -188,7 +185,9 @@ def get_col_names(f: Any) -> list[str]:
     return col_names
 
 
-def detect_file_type(col_names: list[str], required_schemas: set[SchemaType]) -> set[SchemaType]:
+def detect_file_type(
+    col_names: list[str], required_schemas: set[SchemaType]
+) -> set[SchemaType]:
     """Returns all schemas that match for a list of col names. Raises error if required schemas aren't matched."""
     matches = set()
     errors = {}
@@ -215,8 +214,10 @@ def detect_file_type(col_names: list[str], required_schemas: set[SchemaType]) ->
         error_msgs.append(msg)
 
     raise ValueError(
-        "Required file schema(s) not recognized. Details of mismatches:\n" + "\n".join(error_msgs)
+        "Required file schema(s) not recognized. Details of mismatches:\n"
+        + "\n".join(error_msgs)
     )
+
 
 def valid_subset_lists(
     expected: list[str], actual: list[str], optional_list: list[str]
