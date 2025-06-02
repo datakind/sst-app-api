@@ -354,7 +354,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["cum_gpa"],
-            "checks": [{"type": "in_range", "args": [0.0, 4.0]}]
+            "checks": []
           },
           "semester_gpa": {
             "dtype": "float64",
@@ -362,7 +362,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["sem_gpa"],
-            "checks": [{"type": "in_range", "args": [0.0, 4.0]}]
+            "checks": []
           },
           "number_of_courses_enrolled": {
             "dtype": "float64",
@@ -370,7 +370,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["courses_enrolled", "ug_enroll"],
-            "checks": [{"type": "ge", "args": [0.0]}]
+            "checks": []
           },
           "number_of_credits_attempted": {
             "dtype": "float64",
@@ -379,7 +379,7 @@
             "required": true,
             "aliases": ["credits_attempted", "ug_att", "number_of_credits_attempted_year_1", "number_of_credits_attempted_year_2",
           "number_of_credits_attempted_year_3", "number_of_credits_attempted_year_4"],
-            "checks": [{"type": "ge", "args": [0.0]}]
+            "checks": []
           },
           "number_of_credits_failed": {
             "dtype": "float64",
@@ -522,7 +522,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["att_hrs", "number_of_credits_attempted"],
-            "checks": [{"type": "ge", "args": [0.0]}]
+            "checks": []
           },
           "number_of_credits_earned": {
             "dtype": "float64",
@@ -530,7 +530,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["earn_hrs"],
-            "checks": [{"type": "ge", "args": [0.0]}]
+            "checks": []
           },
           "course_instructor_appointment_type": {
             "dtype": "string",
