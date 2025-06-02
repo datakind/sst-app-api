@@ -900,16 +900,21 @@ def validation_helper(
             detail="File type is not valid and/or not accepted by this institution: "
             + str(e),
         ) from e
-    new_file_record = FileTable(
-        name=file_name,
-        inst_id=str_to_uuid(inst_id),
-        uploader=str_to_uuid(current_user.user_id),
-        source=source_str,
-        sst_generated=False,
-        schemas=list(inferred_schemas),
-        valid=True,
-    )
-    local_session.get().add(new_file_record)
+    
+    try:
+        new_file_record = FileTable(
+            name=file_name,
+            inst_id=str_to_uuid(inst_id),
+            uploader=str_to_uuid(current_user.user_id),
+            source=source_str,
+            sst_generated=False,
+            schemas=list(inferred_schemas),
+            valid=True,
+        )
+        local_session.get().add(new_file_record)
+    except Exception as e:
+        logging.error(f"Error message: {str(e)}")
+        
     return {
         "name": file_name,
         "inst_id": inst_id,
