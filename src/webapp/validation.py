@@ -189,7 +189,6 @@ def validate_dataset(
         canon: [normalize_col(alias) for alias in [canon] + spec.get("aliases", [])]
         for canon, spec in merged_specs.items()
     }
-    df.columns = [normalize_col(c) for c in df.columns]
     df = rename_columns_to_match_schema(df, canon_to_aliases)
     df.columns = [
         normalize_col(c) for c in df.columns
