@@ -143,6 +143,13 @@ async def process_file(
                 logger.error(
                     f"<<<< ???? Skipping {inst_id} due to upload URL fetch error: {upload_url}"
                 )
+                uploads[str(ids)] = {
+                    "institution_id": temp_valid_inst_ids[ids],
+                    "file_name": signed_urls[ids]["file_name"],
+                    "transfer_status": "upload_url_fetch_failed",
+                    "validation_status": None,
+                    "error": upload_url,
+                }
                 continue
 
             logger.info(f">>>> Upload URL successfully retrieved {upload_url}")
@@ -161,6 +168,7 @@ async def process_file(
             )
 
             uploads[str(ids)] = {
+                "institution_id": temp_valid_inst_ids[ids],
                 "file_name": signed_urls[ids]["file_name"].strip().strip('"'),
                 "transfer_status": (
                     transfer_status.strip()
@@ -169,7 +177,7 @@ async def process_file(
                 ),
                 "validation_status": validation_status,
             }
-            print(f"######### {transfer_status}")
+            
     return {
         "valid_inst_ids": temp_valid_inst_ids,
         "invalid_ids": temp_invalid_ids,
