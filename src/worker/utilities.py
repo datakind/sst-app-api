@@ -16,8 +16,8 @@ import google.auth
 import google.auth.transport.requests as google_requests
 from .config import sftp_vars, env_vars
 from src.webapp.validation import (
-    PDP_COHORT_COLS,
-    PDP_COURSE_COLS,
+    SST_PDP_COHORT_COLS,
+    SST_PDP_COURSE_COLS,
     PDP_COHORT_OPTIONAL_COLS,
     PDP_COURSE_OPTIONAL_COLS,
 )
@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 SCHEMA_TYPES: Final = (
-    PDP_COHORT_COLS
-    + PDP_COURSE_COLS
+    SST_PDP_COHORT_COLS
+    + SST_PDP_COURSE_COLS
     + PDP_COHORT_OPTIONAL_COLS
     + PDP_COURSE_OPTIONAL_COLS
 )
