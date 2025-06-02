@@ -158,13 +158,6 @@ def validate_dataset(
 ) -> Dict[str, Any]:
     df = pd.read_csv(filename)
     df = df.rename(columns={c: normalize_col(c) for c in df.columns})
-
-    canon_to_aliases = {
-        canon: [normalize_col(alias) for alias in [canon] + spec.get("aliases", [])]
-        for canon, spec in merged_specs.items()
-    }
-    df = rename_columns_to_match_schema(df, canon_to_aliases)
-
     incoming = set(df.columns)
 
     # 1) load schemas
@@ -191,6 +184,14 @@ def validate_dataset(
     for m in model_list:
         specs = merge_model_columns(base_schema, ext_schema, institution_id, m.lower())
         merged_specs.update(specs)
+
+    canon_to_aliases = {
+        canon: [normalize_col(alias) for alias in [canon] + spec.get("aliases", [])]
+        for canon, spec in merged_specs.items()
+    }
+    df = rename_columns_to_match_schema(df, canon_to_aliases)
+
+    incoming = set(df.columns)
 
     # 3) build canon → set(normalized names)
     canon_to_norms: Dict[str, set] = {
