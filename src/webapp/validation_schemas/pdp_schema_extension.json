@@ -302,25 +302,7 @@
                 }
               ]
             },
-            "first_year_to_associates_or_certificate_at_cohort_inst.": {
-              "dtype": "category",
-              "categories": [
-                0,
-                2,
-                1,
-                6,
-                4,
-                5,
-                3,
-                7
-              ],
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": []
-            },
-            "first_year_to_associates_or_certificate_at_other_inst.": {
+            "first_year_to_associates_or_certificate_at_other_inst": {
               "dtype": "category",
               "categories": [
                 0,
@@ -339,7 +321,7 @@
               "aliases": [],
               "checks": []
             },
-            "first_year_to_bachelor_at_other_inst.": {
+            "first_year_to_bachelor_at_other_inst": {
               "dtype": "category",
               "categories": [
                 0,
@@ -358,7 +340,7 @@
               "aliases": [],
               "checks": []
             },
-            "first_year_to_bachelors_at_cohort_inst.": {
+            "first_year_to_bachelors_at_cohort_inst": {
               "dtype": "category",
               "categories": [
                 0,
@@ -443,14 +425,6 @@
             },
             "gpa_group_term_1": {
               "dtype": "string",
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": []
-            },
-            "gpa_group_year_1": {
-              "dtype": "float64",
               "coerce": true,
               "nullable": false,
               "required": true,
@@ -690,63 +664,7 @@
               "aliases": [],
               "checks": []
             },
-            "years_to_associates_or_certificate_at_cohort_inst.": {
-              "dtype": "category",
-              "categories": [
-                0,
-                2,
-                1,
-                6,
-                4,
-                5,
-                3,
-                7
-              ],
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": []
-            },
-            "years_to_associates_or_certificate_at_other_inst.": {
-              "dtype": "category",
-              "categories": [
-                0,
-                2,
-                5,
-                3,
-                6,
-                1,
-                8,
-                4,
-                7
-              ],
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": []
-            },
-            "years_to_bachelor_at_other_inst.": {
-              "dtype": "category",
-              "categories": [
-                0,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                1,
-                2
-              ],
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": []
-            },
-            "years_to_bachelors_at_cohort_inst.": {
+            "years_to_bachelors_at_cohort_inst": {
               "dtype": "category",
               "categories": [
                 0,
@@ -844,7 +762,7 @@
               "checks": []
             },
             "completeddevenglishy1": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -852,7 +770,7 @@
               "checks": []
             },
             "completeddevmathy1": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -1005,7 +923,7 @@
               "aliases": [],
               "checks": []
             },
-            "first_year_to_associates_or_certificate_at_cohort_inst.": {
+            "first_year_to_associates_or_certificate_at_cohort_inst": {
               "dtype": "category",
               "categories": [
                 0,
@@ -1022,80 +940,6 @@
               "required": true,
               "aliases": [],
               "checks": []
-            },
-            "first_year_to_associates_or_certificate_at_other_inst.": {
-              "dtype": "category",
-              "categories": [
-                0,
-                2,
-                5,
-                3,
-                6,
-                1,
-                8,
-                4,
-                7
-              ],
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": []
-            },
-            "first_year_to_bachelor_at_other_inst.": {
-              "dtype": "category",
-              "categories": [
-                0,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                1,
-                2
-              ],
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": []
-            },
-            "first_year_to_bachelors_at_cohort_inst.": {
-              "dtype": "category",
-              "categories": [
-                0,
-                3,
-                4,
-                5,
-                2,
-                6,
-                7,
-                1,
-                8
-              ],
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": [
-                {
-                  "type": "isin",
-                  "args": [
-                    [
-                      0,
-                      3,
-                      4,
-                      5,
-                      2,
-                      6,
-                      7,
-                      1,
-                      8
-                    ]
-                  ]
-                }
-              ]
             },
             "foreign_language_completion": {
               "dtype": "float64",
@@ -1225,7 +1069,7 @@
               ]
             },
             "gpa_group_year_1": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": false,
               "required": true,
@@ -1646,7 +1490,7 @@
                 }
               ]
             },
-            "years_to_associates_or_certificate_at_cohort_inst.": {
+            "years_to_associates_or_certificate_at_cohort_inst": {
               "dtype": "category",
               "categories": [
                 0,
@@ -1680,7 +1524,7 @@
                 }
               ]
             },
-            "years_to_associates_or_certificate_at_other_inst.": {
+            "years_to_associates_or_certificate_at_other_inst": {
               "dtype": "category",
               "categories": [
                 0,
@@ -1716,7 +1560,7 @@
                 }
               ]
             },
-            "years_to_bachelor_at_other_inst.": {
+            "years_to_bachelor_at_other_inst": {
               "dtype": "category",
               "categories": [
                 0,
@@ -1747,42 +1591,6 @@
                       8,
                       1,
                       2
-                    ]
-                  ]
-                }
-              ]
-            },
-            "years_to_bachelors_at_cohort_inst.": {
-              "dtype": "category",
-              "categories": [
-                0,
-                3,
-                4,
-                5,
-                2,
-                6,
-                7,
-                1,
-                8
-              ],
-              "coerce": true,
-              "nullable": false,
-              "required": true,
-              "aliases": [],
-              "checks": [
-                {
-                  "type": "isin",
-                  "args": [
-                    [
-                      0,
-                      3,
-                      4,
-                      5,
-                      2,
-                      6,
-                      7,
-                      1,
-                      8
                     ]
                   ]
                 }
