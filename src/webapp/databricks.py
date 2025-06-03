@@ -196,10 +196,10 @@ class DatabricksControl(BaseModel):
 
     def fetch_table_data(
         self,
-        catalog_name: str,
-        schema_name: str,
-        table_name: str,
-        warehouse_id: str,
+        catalog_name: Any,
+        schema_name: Any,
+        table_name: Any,
+        warehouse_id: Any,
         limit: int = 1000,
     ) -> List[dict[str, Any]]:
         """
