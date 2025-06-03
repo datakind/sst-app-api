@@ -226,40 +226,32 @@ class DatabricksControl(BaseModel):
             on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CONTINUE,
         )
 
-        if resp.status and resp.status.state == "SUCCEEDED":
-            result = resp.result
-            manifest = resp.manifest
-            if result and manifest and manifest.schema and result.data_array:
-                column_names = [col.name for col in manifest.schema]
-                rows = result.data_array
-            else:
-                raise ValueError("Missing result data or schema.")
+        status = getattr(resp, "status", None)
+        if status and status.state == "SUCCEEDED" and getattr(resp, "result", None):
+            # resp.results is a list of row‐arrays, resp.schema is a list of column metadata
+            column_names = [col.name for col in resp.result.schema]
+            rows = resp.result.data_array
         else:
+            #  A. If the SQL didn’t finish in 10 seconds, resp.statement_id will be set.
             stmt_id = getattr(resp, "statement_id", None)
             if not stmt_id:
-                raise ValueError("Missing statement_id in initial response.")
+                raise ValueError(
+                    f"fetch_table_data(): unexpected response state: {resp}"
+                )
 
-            while True:
+            #  B. Poll until the statement succeeds (or fails/cancels)
+            status = resp.status.state if getattr(resp, "status", None) else None
+            while status not in ("SUCCEEDED", "FAILED", "CANCELED"):
                 time.sleep(1)
                 resp2 = w.statement_execution.get_statement(statement_id=stmt_id)
-                if resp2.status and resp2.status.state in ("SUCCEEDED", "FAILED", "CANCELED"):
-                    break
+                status = resp2.status.state if getattr(resp2, "status", None) else None
+                resp = resp2
+            if status != "SUCCEEDED":
+                raise ValueError(f"fetch_table_data(): query ended with state {status}")
 
-            if not resp2.status or resp2.status.state != "SUCCEEDED":
-                raise ValueError(f"Query ended with state {resp2.status.state if resp2.status else 'UNKNOWN'}")
+            #  C. At this point, resp holds the final manifest and first chunk
+            column_names = [col.name for col in resp.result.schema]
+            rows = resp.result.data_array
 
-            result = resp2.result
-            manifest = resp2.manifest
-            if result and manifest and manifest.schema and manifest.schema.columns and result.data_array:
-                column_names = [col.name for col in manifest.schema.columns]
-                rows = result.data_array
-            else:
-                raise ValueError("Missing result data or schema.")
-
-        if not rows:
-            return []
-
-        if not all(isinstance(row, list) for row in rows):
-            raise TypeError("Result rows are not iterable lists")
-
+        # Transform each row (a list of values) into a dict
         return [dict(zip(column_names, row)) for row in rows]
