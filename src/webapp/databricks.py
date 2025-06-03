@@ -229,7 +229,7 @@ class DatabricksControl(BaseModel):
         status = getattr(resp, "status", None)
         if status and status.state == "SUCCEEDED" and getattr(resp, "result", None):
             # resp.results is a list of row‐arrays, resp.schema is a list of column metadata
-            column_names = [col.name for col in resp.result.schema]
+            column_names = [col.name for col in resp.manifest.schema]
             rows = resp.result.data_array
         else:
             #  A. If the SQL didn’t finish in 10 seconds, resp.statement_id will be set.
@@ -250,7 +250,7 @@ class DatabricksControl(BaseModel):
                 raise ValueError(f"fetch_table_data(): query ended with state {status}")
 
             #  C. At this point, resp holds the final manifest and first chunk
-            column_names = [col.name for col in resp.result.schema]
+            column_names = [col.name for col in resp.manifest.schema]
             rows = resp.result.data_array
 
         # Transform each row (a list of values) into a dict
