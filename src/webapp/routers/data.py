@@ -914,7 +914,7 @@ def validation_helper(
         local_session.get().add(new_file_record)
     except Exception as e:
         logging.error(f"Error message: {str(e)}")
-
+    print(f"Inferred Schemas {list(inferred_schemas)}")
     return {
         "name": file_name,
         "inst_id": inst_id,
@@ -923,7 +923,7 @@ def validation_helper(
     }
 
 
-@router.post("/{inst_id}/input/validate-sftp/{file_name:path}")
+@router.post("/{inst_id}/input/validate-sftp/{file_name:path}", response_model=ValidationResult)
 def validate_file_sftp(
     inst_id: str,
     file_name: str,

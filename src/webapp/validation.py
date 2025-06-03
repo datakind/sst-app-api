@@ -174,11 +174,12 @@ def validate_dataset(
 
     # 2) merge requested models
     if models is None:
-        model_list: List[str] = []
+        model_list = []
     elif isinstance(models, str):
         model_list = [models]
     else:
-        model_list = models
+        model_list = list(models)  # <- ensures it's not a set
+
 
     merged_specs: Dict[str, dict] = {}
     for m in model_list:
