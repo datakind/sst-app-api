@@ -899,7 +899,9 @@ def validation_helper(
             file_name,
             allowed_schemas,
         )
-        logging.debug(f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}")
+        logging.debug(
+            f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
+        )
     except Exception as e:
         logging.debug(f"!!!!!!!!!!Inferred Schemas FAILED {e}")
         raise HTTPException(

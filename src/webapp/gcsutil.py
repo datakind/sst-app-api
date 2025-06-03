@@ -280,7 +280,9 @@ class StorageControl(BaseModel):
             with blob.open("r") as file:
                 schemas = validate_file_reader(file, allowed_schemas)
                 schems = [str(s) for s in schemas.get("schemas", [])]
-                logging.debug(f"If you see this file validation was successful {schems}")
+                logging.debug(
+                    f"If you see this file validation was successful {schems}"
+                )
         except Exception as e:
             blob.delete()
             raise e

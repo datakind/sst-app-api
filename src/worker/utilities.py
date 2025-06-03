@@ -570,7 +570,7 @@ def validate_sftp_file(
     logger.debug(f">>>> Sending validation request to {url}")
 
     response = requests.post(url, headers=headers)
-    
+
     if response.status_code == 200:
         logger.info(">>>> File validation successful.")
         return "File validation successful."
