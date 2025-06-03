@@ -547,7 +547,7 @@ def sftp_file_to_gcs_helper(
 
 def validate_sftp_file(
     file_name: str, institution_id: int, webapp_url: str, backend_api_key: str
-) -> str:
+) -> Any:
     """
     Sends a POST request to validate an SFTP file.
 
