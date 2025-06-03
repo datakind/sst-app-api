@@ -9,6 +9,12 @@ from google.auth.transport import requests
 from .config import gcs_vars, databricks_vars
 from .validation import validate_file_reader
 from typing import Any, List
+import logging
+
+# Set the logging
+logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 SIGNED_URL_EXPIRY_MIN = 30
 
@@ -269,11 +275,14 @@ class StorageControl(BaseModel):
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(f"unvalidated/{file_name}")
         new_blob_name = f"validated/{file_name}"
-        schems = set()
+        schems: List[str] = []
         try:
             with blob.open("r") as file:
                 schemas = validate_file_reader(file, allowed_schemas)
                 schems = [str(s) for s in schemas.get("schemas", [])]
+                logging.debug(
+                    f"If you see this file validation was successful {schems}"
+                )
         except Exception as e:
             blob.delete()
             raise e
@@ -282,6 +291,7 @@ class StorageControl(BaseModel):
             raise ValueError(new_blob_name + ": File already exists.")
         bucket.copy_blob(blob, bucket, new_blob_name)
         blob.delete()
+        logging.debug("If you see this file validation was complete")
         return schems
 
     def get_file_contents(self, bucket_name: str, file_name: str):
