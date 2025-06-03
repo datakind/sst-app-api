@@ -36,6 +36,11 @@ from ..gcsdbutils import update_db_from_bucket
 
 from ..gcsutil import StorageControl
 
+# Set the logging
+logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 router = APIRouter(
     prefix="/institutions",
     tags=["data"],
@@ -894,7 +899,9 @@ def validation_helper(
             file_name,
             allowed_schemas,
         )
+        logging.debug(f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}")
     except Exception as e:
+        logging.debug(f"!!!!!!!!!!Inferred Schemas FAILED {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File type is not valid and/or not accepted by this institution: "
@@ -912,9 +919,11 @@ def validation_helper(
             valid=True,
         )
         local_session.get().add(new_file_record)
+
+        logging.debug(f"!!!!!!!!!!File Record was successful")
     except Exception as e:
         logging.error(f"Error message: {str(e)}")
-    print(f"Inferred Schemas {list(inferred_schemas)}")
+    logging.debug(f"!!!!!!!!!!All runs successful")
     return {
         "name": file_name,
         "inst_id": inst_id,
