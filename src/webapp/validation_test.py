@@ -44,8 +44,8 @@ def test_validate_file_reader_passes(tmp_csv_file):
         patch("src.webapp.validation.load_json") as mock_load,
         patch("os.path.exists", return_value=True),
     ):
-        mock_load.side_effect = (
-            lambda path: MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
+        mock_load.side_effect = lambda path: (
+            MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
         )
         result = validate_file_reader(tmp_csv_file, ["test_model"])
         assert result["validation_status"] == "passed"
@@ -61,8 +61,8 @@ def test_validate_file_reader_fails_missing_required(tmp_path):
         patch("src.webapp.validation.load_json") as mock_load,
         patch("os.path.exists", return_value=True),
     ):
-        mock_load.side_effect = (
-            lambda path: MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
+        mock_load.side_effect = lambda path: (
+            MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
         )
         with pytest.raises(HardValidationError) as exc_info:
             validate_file_reader(str(file_path), ["test_model"])
