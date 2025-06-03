@@ -583,3 +583,43 @@ def validate_sftp_file(
     except Exception as e:
         logger.exception("<<<< ???? Exception during file validation request.")
         return {"error": f"Exception during validation: {e}"}
+
+
+def confusion_matrix_table(
+    institution_id: int, webapp_url: str, backend_api_key: str, run_id: str
+) -> Any:
+    """
+    Sends a POST request to validate an SFTP file.
+
+    Args:
+        institution_id (str): The ID of the institution for which the file validation is intended.
+        file_name (str): The name of the file to be validated.
+        access_token (str): The bearer token used for authorization.
+
+    Returns:
+        str: The server's response to the validation request.
+    """
+    access_token = get_token(backend_api_key=backend_api_key, webapp_url=webapp_url)
+    if not access_token:
+        logger.error("<<<< ???? Access token not found in the response.")
+        return "Access token not found in the response."
+
+    url = f"{webapp_url}/api/v1/institutions//{institution_id}/training/confusion_matrix/{run_id}"
+    headers = {"accept": "application/json", "Authorization": f"Bearer {access_token}"}
+
+    logger.debug(f">>>> Retrieving confusion matric table from {url}")
+
+    try:
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            logger.info(">>>> File validation successful.")
+            return response.json()
+
+        error_msg = f"Failed to validate file: {response.status_code} {response.text}"
+        logger.error(f"<<<< ???? {error_msg}")
+        return {"error": error_msg}
+
+    except Exception as e:
+        logger.exception("<<<< ???? Exception during file validation request.")
+        return {"error": f"Exception during validation: {e}"}

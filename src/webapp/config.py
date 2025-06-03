@@ -13,6 +13,8 @@ env_vars = {
     "API_KEY_ISSUERS": [],
     "INITIAL_API_KEY": "",
     "INITIAL_API_KEY_ID": "",
+    "CATALOG_NAME": "",
+    "SQL_WAREHOUSE_ID": "",
 }
 
 # The INSTANCE_HOST is the private IP of CLoudSQL instance e.g. '127.0.0.1' ('172.17.0.1' if deployed to GAE Flex)
