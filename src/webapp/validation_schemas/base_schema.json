@@ -100,9 +100,7 @@
             "nullable": true,
             "required": false,
             "aliases": [],
-            "checks": [
-              {"type": "isin", "args": [["employed", "unemployed", "unemployed"]]}
-            ]
+            "checks": []
           },
           "disability_status": {
             "dtype": "string",
@@ -257,7 +255,7 @@
             "required": false,
             "aliases": ["pell_status_first_year"],
             "checks": [
-              {"type": "isin", "args": [["true", "false", "yes", "no", "Y", "N"]]}
+              {"type": "isin", "args": [["true", "false", "yes", "no", "Y", "N", "UK"]]}
             ]
           }
         }
@@ -291,8 +289,7 @@
             "required": false,
             "aliases": ["time_status"],
             "checks": [
-              {"type": "str_length", "args": [], "kwargs": {"min_value": 1}},
-              {"type": "isin", "args": [["FT", "PT", "Others", "full_time", "part_time", "unknown"]]}
+              {"type": "str_length", "args": [], "kwargs": {"min_value": 1}}
               ]
           },
           "student_type": {
@@ -392,7 +389,7 @@
           "number_of_credits_earned": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": true,
             "aliases": ["credits_earned", "ug_earn", "number_of_credits_earned_year_1", "number_of_credits_earned_year_2",
           "number_of_credits_earned_year_3", "number_of_credits_earned_year_4"],
