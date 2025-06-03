@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 import os
 import logging
+from sqlalchemy.exc import IntegrityError
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -910,27 +911,52 @@ def validation_helper(
             + str(e),
         ) from e
 
-    try:
-        new_file_record = FileTable(
+    existing_file = (
+        local_session.get()
+        .query(FileTable)
+        .filter_by(
             name=file_name,
             inst_id=str_to_uuid(inst_id),
-            uploader=str_to_uuid(current_user.user_id),
-            source=source_str,
-            sst_generated=False,
-            schemas=list(inferred_schemas),
-            valid=True,
         )
-        local_session.get().add(new_file_record)
+        .first()
+    )
 
-        logging.debug("!!!!!!!!!!File Record was successful")
-    except Exception as e:
-        logging.error(f"Error message: {str(e)}")
-    logging.debug("!!!!!!!!!!All runs successful")
+    if existing_file:
+        logging.info(f"File '{file_name}' already exists for institution {inst_id}.")
+        db_status = f"File '{file_name}' already exists for institution {inst_id}."
+    else:
+        try:
+            new_file_record = FileTable(
+                name=file_name,
+                inst_id=str_to_uuid(inst_id),
+                uploader=str_to_uuid(current_user.user_id),
+                source=source_str,
+                sst_generated=False,
+                schemas=list(inferred_schemas),
+                valid=True,
+            )
+            local_session.get().add(new_file_record)
+            local_session.get().flush()
+            logging.info(f"File record inserted for '{file_name}'")
+            db_status = f"File record inserted for '{file_name}'"
+        except IntegrityError as e:
+            local_session.get().rollback()
+            logging.warning(f"IntegrityError: {e}")
+            db_status = "Already exists"
+        except Exception as e:
+            local_session.get().rollback()
+            logging.error(f"Unexpected DB error: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unexpected database error while inserting file record: {e}",
+            )
+
     return {
         "name": file_name,
         "inst_id": inst_id,
         "file_types": list(inferred_schemas),
         "source": source_str,
+        "status": db_status,
     }
 
 
