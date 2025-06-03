@@ -4,7 +4,7 @@ import os
 from pydantic import BaseModel
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import catalog
-
+from databricks.sdk.service.sql import Format, ExecuteStatementRequestOnWaitTimeout
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any
@@ -221,19 +221,16 @@ class DatabricksControl(BaseModel):
         resp = w.statement_execution.execute_statement(
             warehouse_id=warehouse_id,
             statement=sql,
-            format="JSON_ARRAY",
+            format=Format.JSON_ARRAY
             wait_timeout="10s",
-            on_wait_timeout="CONTINUE",
+            on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CONTINUE,
         )
 
-        if (
-            getattr(resp, "status", None)
-            and resp.status.state == "SUCCEEDED"
-            and getattr(resp, "results", None)
-        ):
+        status = getattr(resp, "status", None)
+        if status and status.state == "SUCCEEDED" and getattr(resp, "result", None):
             # resp.results is a list of row‐arrays, resp.schema is a list of column metadata
-            column_names = [col.name for col in resp.schema]
-            rows = resp.results
+            column_names = [col.name for col in resp.result.schema]
+            rows = resp.result.data_array
         else:
             #  A. If the SQL didn’t finish in 10 seconds, resp.statement_id will be set.
             stmt_id = getattr(resp, "statement_id", None)
@@ -247,14 +244,14 @@ class DatabricksControl(BaseModel):
             while status not in ("SUCCEEDED", "FAILED", "CANCELED"):
                 time.sleep(1)
                 resp2 = w.statement_execution.get_statement(statement_id=stmt_id)
-                status = resp2.status.state
+                status = resp2.status.state if getattr(resp2, "status", None) else None
                 resp = resp2
             if status != "SUCCEEDED":
                 raise ValueError(f"fetch_table_data(): query ended with state {status}")
 
             #  C. At this point, resp holds the final manifest and first chunk
-            column_names = [col.name for col in resp.schema]
-            rows = resp.results
+            column_names = [col.name for col in resp.result.schema]
+            rows = resp.result.data_array
 
         # Transform each row (a list of values) into a dict
         return [dict(zip(column_names, row)) for row in rows]
