@@ -586,7 +586,7 @@ def validate_sftp_file(
 
 
 def confusion_matrix_table(
-    institution_id: int, webapp_url: str, backend_api_key: str, run_id: str
+    institution_id: str, webapp_url: str, backend_api_key: str, run_id: str
 ) -> Any:
     """
     Sends a POST request to validate an SFTP file.

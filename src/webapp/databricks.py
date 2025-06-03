@@ -222,7 +222,7 @@ class DatabricksControl(BaseModel):
             warehouse_id=warehouse_id,
             statement=sql,
             format="JSON_ARRAY",
-            wait_timeout=10,
+            wait_timeout="10s",
             on_wait_timeout="CONTINUE",
         )
 
