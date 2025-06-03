@@ -923,7 +923,7 @@ def validation_helper(
 
     if existing_file:
         logging.info(f"File '{file_name}' already exists for institution {inst_id}.")
-        status = f"File '{file_name}' already exists for institution {inst_id}."
+        db_status = f"File '{file_name}' already exists for institution {inst_id}."
     else:
         try:
             new_file_record = FileTable(
@@ -938,11 +938,11 @@ def validation_helper(
             local_session.get().add(new_file_record)
             local_session.get().flush()
             logging.info(f"File record inserted for '{file_name}'")
-            status = f"File record inserted for '{file_name}'"
+            db_status = f"File record inserted for '{file_name}'"
         except IntegrityError as e:
             local_session.get().rollback()
             logging.warning(f"IntegrityError: {e}")
-            status = "Already exists"
+            db_status = "Already exists"
         except Exception as e:
             local_session.get().rollback()
             logging.error(f"Unexpected DB error: {e}")
@@ -956,7 +956,7 @@ def validation_helper(
         "inst_id": inst_id,
         "file_types": list(inferred_schemas),
         "source": source_str,
-        "status": status,
+        "status": db_status,
     }
 
 
