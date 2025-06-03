@@ -1510,6 +1510,70 @@
               "aliases": [],
               "checks": []
             },
+            "first_year_to_associates_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_associates_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_certificate_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_certificate_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_associates_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_associates_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_certificate_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_certificate_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
             "years_of_last_enrollment_at_cohort_institution": {
               "dtype": "category",
               "categories": [
