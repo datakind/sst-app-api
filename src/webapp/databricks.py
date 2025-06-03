@@ -228,17 +228,17 @@ class DatabricksControl(BaseModel):
 
         if resp.status and resp.status.state == "SUCCEEDED":
             result = resp.result
-            if result and result.schema and result.data_array:
-                column_names = [col.name for col in result.schema]
+            manifest = resp.manifest
+            if result and manifest and manifest.schema and result.data_array:
+                column_names = [col.name for col in manifest.schema]
                 rows = result.data_array
             else:
-                raise ValueError("Result is missing schema or data_array.")
+                raise ValueError("Missing result data or schema.")
         else:
             stmt_id = getattr(resp, "statement_id", None)
             if not stmt_id:
                 raise ValueError("Missing statement_id in initial response.")
 
-            # Poll until completion
             while True:
                 time.sleep(1)
                 resp2 = w.statement_execution.get_statement(statement_id=stmt_id)
@@ -249,13 +249,13 @@ class DatabricksControl(BaseModel):
                 raise ValueError(f"Query ended with state {resp2.status.state if resp2.status else 'UNKNOWN'}")
 
             result = resp2.result
-            if result and result.schema and result.data_array:
-                column_names = [col.name for col in result.schema]
+            manifest = resp2.manifest
+            if result and manifest and manifest.schema and manifest.schema.columns and result.data_array:
+                column_names = [col.name for col in manifest.schema.columns]
                 rows = result.data_array
             else:
-                raise ValueError("Result is missing schema or data_array.")
+                raise ValueError("Missing result data or schema.")
 
-        # Final data transformation
         if not rows:
             return []
 
