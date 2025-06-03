@@ -275,7 +275,7 @@ class StorageControl(BaseModel):
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(f"unvalidated/{file_name}")
         new_blob_name = f"validated/{file_name}"
-        schems = set()
+        schems: List[str] = []
         try:
             with blob.open("r") as file:
                 schemas = validate_file_reader(file, allowed_schemas)
@@ -291,7 +291,7 @@ class StorageControl(BaseModel):
             raise ValueError(new_blob_name + ": File already exists.")
         bucket.copy_blob(blob, bucket, new_blob_name)
         blob.delete()
-        logging.debug(f"If you see this file validation was complete")
+        logging.debug("If you see this file validation was complete")
         return schems
 
     def get_file_contents(self, bucket_name: str, file_name: str):

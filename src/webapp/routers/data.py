@@ -922,10 +922,10 @@ def validation_helper(
         )
         local_session.get().add(new_file_record)
 
-        logging.debug(f"!!!!!!!!!!File Record was successful")
+        logging.debug("!!!!!!!!!!File Record was successful")
     except Exception as e:
         logging.error(f"Error message: {str(e)}")
-    logging.debug(f"!!!!!!!!!!All runs successful")
+    logging.debug("!!!!!!!!!!All runs successful")
     return {
         "name": file_name,
         "inst_id": inst_id,
