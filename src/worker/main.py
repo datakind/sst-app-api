@@ -18,8 +18,10 @@ from .utilities import (
     transfer_file,
     sftp_file_to_gcs_helper,
     validate_sftp_file,
-    rename_columns_to_match_schema,
 )
+
+from .databricks import DatabricksSQLConnector
+
 from .config import sftp_vars, env_vars, startup_env_vars
 from .authn import Token, get_current_username, check_creds, create_access_token
 from datetime import timedelta
@@ -141,6 +143,13 @@ async def process_file(
                 logger.error(
                     f"<<<< ???? Skipping {inst_id} due to upload URL fetch error: {upload_url}"
                 )
+                uploads[str(ids)] = {
+                    "institution_id": inst_id,
+                    "file_name": signed_urls[ids]["file_name"],
+                    "transfer_status": "upload_url_fetch_failed",
+                    "validation_status": None,
+                    "error": upload_url,
+                }
                 continue
 
             logger.info(f">>>> Upload URL successfully retrieved {upload_url}")
@@ -149,9 +158,7 @@ async def process_file(
                 upload_signed_url=upload_url.strip('"'),
             )
 
-            rename_columns_to_match_schema(
-                blob_name=blob, bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"])
-            )
+            # TODO: rename_columns_to_match_schema( blob_name=blob, bucket_name=get_sftp_bucket_name(env_vars["BUCKET_ENV"]))
 
             validation_status = validate_sftp_file(
                 file_name=blob,
@@ -169,6 +176,7 @@ async def process_file(
                 ),
                 "validation_status": validation_status,
             }
+
     return {
         "valid_inst_ids": temp_valid_inst_ids,
         "invalid_ids": temp_invalid_ids,
@@ -223,3 +231,32 @@ async def execute_pdp_pull(
         "pdp_inst_not_found": list(result["invalid_ids"]),
         "upload_status": dict(result["uploads"]),
     }
+
+
+# Get SHAP Values for Inference
+@app.get("/{inst_id}/top-features/{run_id}", response_model=str)
+def get_top_features(
+    inst_id: str,
+    run_id: str,
+    current_username: Annotated[str, Depends(get_current_username)],
+) -> Any:
+    """Returns a signed URL for uploading data to a specific institution."""
+    # raise error at this level instead bc otherwise it's getting wrapped as a 200
+
+    try:
+        connector = DatabricksSQLConnector(
+            databricks_host=env_vars["DATABRICKS_HOST"],
+            http_path=env_vars["DATABRICKS_SQL_HTTP_PATH"],
+            client_id=env_vars["DATABRICKS_CLIENT_ID"],
+            client_secret=env_vars["DATABRICKS_CLIENT_SECRET"],
+        )
+
+        conn = connector.get_sql_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM staging_sst_01.metropolitan_state_uni_of_denver_gold.sample_inference_66d9716883be4b01a4ea4de82f2d09d5_features_with_most_impact LIMIT 10"
+        )
+        print(cursor.fetchall())
+    except ValueError as ve:
+        # Return a 400 error with the specific message from ValueError
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))

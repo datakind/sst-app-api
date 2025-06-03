@@ -1,83 +1,69 @@
-"""Test file for file_validation.py."""
-
 import pytest
+import pandas as pd
+from pathlib import Path
+from unittest.mock import patch
+from src.webapp.validation import validate_file_reader, HardValidationError
 
-from .validation import (
-    valid_subset_lists,
-    detect_file_type,
-    get_col_names,
-    validate_file,
-    SchemaType,
-)
+# Minimal schema for testing
+MOCK_BASE_SCHEMA = {
+    "base": {
+        "data_models": {
+            "test_model": {
+                "columns": {
+                    "foo_col": {
+                        "dtype": "int",
+                        "nullable": False,
+                        "required": True,
+                        "aliases": ["foo"],
+                    },
+                    "bar_col": {
+                        "dtype": "str",
+                        "nullable": True,
+                        "required": False,
+                        "aliases": ["bar"],
+                    },
+                }
+            }
+        }
+    }
+}
 
-
-def test_get_col_names():
-    """Testing getting the column names."""
-    with open("src/webapp/test_files/test_upload.csv", encoding="utf-8") as f:
-        cols = get_col_names(f)
-        assert cols == ["foo_col", "bar_col", "baz_col"]
-
-
-def test_valid_subset_lists():
-    """Testing valid subset checking."""
-    list_a = [1, 2, 3, 4, 5, 6]
-    list_b = [1, 2, 3, 4, 6]
-    list_c = [5]
-    list_d = [3, 4]
-    assert valid_subset_lists(list_a, list_b, list_c)
-    # Missing value is not in the optional list.
-    assert not valid_subset_lists(list_a, list_b, list_d)
-    # Subset has an additional element not found in superset.
-    assert not valid_subset_lists(list_b, list_a, list_c)
-
-
-def test_detect_file_type():
-    """Testing schema detection."""
-    with open("src/webapp/test_files/financial_sst_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.SST_PDP_FINANCE}
-    with open("src/webapp/test_files/course_sst_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.SST_PDP_COURSE}
-    with open("src/webapp/test_files/cohort_sst_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.SST_PDP_COHORT}
-    with open("src/webapp/test_files/course_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.PDP_COURSE}
-
-    with open("src/webapp/test_files/cohort_pdp.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.PDP_COHORT}
-    with open("src/webapp/test_files/test_upload.csv", encoding="utf-8") as f:
-        assert detect_file_type(get_col_names(f)) == {SchemaType.UNKNOWN}
-    with open("src/webapp/test_files/malformed.csv", encoding="utf-8") as f:
-        with pytest.raises(ValueError) as err:
-            detect_file_type(get_col_names(f))
-        assert str(err.value) == "CSV file malformed: Could not determine delimiter"
+MOCK_EXT_SCHEMA = {"institutions": {"pdp": {"data_models": {}}}}
 
 
-def test_validate_file():
-    """Testing file validation."""
-    assert validate_file(
-        "src/webapp/test_files/financial_sst_pdp.csv",
-        [SchemaType.SST_PDP_FINANCE, SchemaType.UNKNOWN],
-    )
-    assert validate_file(
-        "src/webapp/test_files/course_sst_pdp.csv", [SchemaType.SST_PDP_COURSE]
-    )
-    assert validate_file(
-        "src/webapp/test_files/cohort_sst_pdp.csv", [SchemaType.SST_PDP_COHORT]
-    )
-    assert validate_file(
-        "src/webapp/test_files/course_pdp.csv", [SchemaType.PDP_COURSE]
-    )
-    assert validate_file(
-        "src/webapp/test_files/cohort_pdp.csv",
-        [SchemaType.PDP_COHORT, SchemaType.SST_PDP_FINANCE],
-    )
-    with pytest.raises(ValueError) as err:
-        validate_file(
-            "src/webapp/test_files/test_upload.csv", [SchemaType.SST_PDP_FINANCE]
+@pytest.fixture
+def tmp_csv_file(tmp_path: Path):
+    df = pd.DataFrame({"foo_col": [1, 2], "bar_col": ["a", "b"]})
+    file_path = tmp_path / "test.csv"
+    df.to_csv(file_path, index=False)
+    return str(file_path)
+
+
+def test_validate_file_reader_passes(tmp_csv_file):
+    with (
+        patch("src.webapp.validation.load_json") as mock_load,
+        patch("os.path.exists", return_value=True),
+    ):
+        mock_load.side_effect = lambda path: (
+            MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
         )
-    assert str(err.value) == "Some file schema/columns are not recognized"
-    with pytest.raises(ValueError) as err:
-        validate_file(
-            "src/webapp/test_files/malformed.csv", [SchemaType.SST_PDP_FINANCE]
+        result = validate_file_reader(tmp_csv_file, ["test_model"])
+        assert result["validation_status"] == "passed"
+        assert result["schemas"] == ["test_model"]
+
+
+def test_validate_file_reader_fails_missing_required(tmp_path):
+    df = pd.DataFrame({"bar_col": ["x", "y"]})  # Missing "foo_col"
+    file_path = tmp_path / "invalid.csv"
+    df.to_csv(file_path, index=False)
+
+    with (
+        patch("src.webapp.validation.load_json") as mock_load,
+        patch("os.path.exists", return_value=True),
+    ):
+        mock_load.side_effect = lambda path: (
+            MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
         )
-    assert str(err.value) == "CSV file malformed: Could not determine delimiter"
+        with pytest.raises(HardValidationError) as exc_info:
+            validate_file_reader(str(file_path), ["test_model"])
+        assert "Missing required columns" in str(exc_info.value)

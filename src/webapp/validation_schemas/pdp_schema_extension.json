@@ -1,0 +1,1947 @@
+{
+  "version": "1.0.0",
+  "institutions": {
+    "pdp": {
+      "data_models": {
+        "student": {
+          "columns": {
+            "attempteddevenglishy1": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "Y",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attempteddevmathy1": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "N",
+                "Y"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attemptedgatewayenglishyear1": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "Y",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attemptedgatewaymathyear1": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "Y",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attendance_status_term_1": {
+              "dtype": "category",
+              "categories": [
+                "First-Time Part-Time",
+                "Transfer-In Part-Time",
+                "Transfer-In Full-Time",
+                "First-Time Full-Time"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "cohort": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completeddevenglishy1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completeddevmathy1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completedgatewayenglishyear1": {
+              "dtype": "category",
+              "categories": [
+                "C",
+                "D"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completedgatewaymathyear1": {
+              "dtype": "category",
+              "categories": [
+                "C",
+                "D"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "credential_type_sought_year_1": {
+              "dtype": "category",
+              "categories": [
+                "Non Credential Program (Preparatory Coursework / Teach Certification)",
+                "Bachelor's Degree",
+                "Associate's Degree",
+                "Less than 1-year certificate, less than Associates degree"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "dual_and_summer_enrollment": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "DE"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "english_placement": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "C",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "enrollment_intensity_first_term": {
+              "dtype": "category",
+              "categories": [
+                "Part-Time",
+                "Full-Time"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_associates_or_certificate_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Associate's Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Four-Year",
+                "Baccalaureate Colleges",
+                "Doctoral Universities"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Associate's Colleges",
+                      "Master's Colleges & Universities",
+                      "Special Focus Four-Year",
+                      "Baccalaureate Colleges",
+                      "Doctoral Universities"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "first_associates_or_certificate_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Urban",
+                      "Town/Rural",
+                      "Suburb"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "first_associates_or_certificate_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "first_bachelors_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Doctoral Universities",
+                "Baccalaureate Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Four-Year"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Doctoral Universities",
+                      "Baccalaureate Colleges",
+                      "Master's Colleges & Universities",
+                      "Special Focus Four-Year"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "first_bachelors_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Urban",
+                      "Town/Rural",
+                      "Suburb"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "first_bachelors_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "first_year_to_associates_or_certificate_at_other_inst": {
+              "dtype": "category",
+              "categories": [
+                0,
+                2,
+                5,
+                3,
+                6,
+                1,
+                8,
+                4,
+                7
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_bachelor_at_other_inst": {
+              "dtype": "category",
+              "categories": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                1,
+                2
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_bachelors_at_cohort_inst": {
+              "dtype": "category",
+              "categories": [
+                0,
+                3,
+                4,
+                5,
+                2,
+                6,
+                7,
+                1,
+                8
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "foreign_language_completion": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gateway_english_status": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "R"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gateway_math_status": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "R"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gatewayenglishgradey1": {
+              "dtype": "category",
+              "categories": [
+                "P",
+                "W",
+                "F",
+                "I",
+                "M",
+                "O"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gatewaymathgradey1": {
+              "dtype": "category",
+              "categories": [
+                "P",
+                "F",
+                "W",
+                "M",
+                "I",
+                "O"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gpa_group_term_1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "institution_id": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "math_placement": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "C",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_associates_or_certificate_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Associate's Colleges",
+                "Baccalaureate Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Four-Year",
+                "Doctoral Universities"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_associates_or_certificate_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_associates_or_certificate_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_bachelors_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Doctoral Universities",
+                "Baccalaureate Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Four-Year"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_bachelors_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_bachelors_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_last_enrollment_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Special Focus Four-Year",
+                "Associate's Colleges",
+                "Doctoral Universities",
+                "Baccalaureate Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Two-Year"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_last_enrollment_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_last_enrollment_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "naspa_first_generation": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "persistence": {
+              "dtype": "category",
+              "categories": [
+                0,
+                1
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      0,
+                      1
+                    ]
+                  ]
+                }
+              ]
+            },
+            "reading_placement": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "retention": {
+              "dtype": "category",
+              "categories": [
+                0,
+                1
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "special_program": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "time_to_credential": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "years_of_last_enrollment_at_cohort_institution": {
+              "dtype": "category",
+              "categories": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                0
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "years_of_last_enrollment_at_other_institution": {
+              "dtype": "category",
+              "categories": [
+                0,
+                1,
+                6,
+                2,
+                5,
+                4,
+                3,
+                8,
+                7
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_bachelors_at_cohort_inst": {
+              "dtype": "category",
+              "categories": [
+                0,
+                3,
+                4,
+                5,
+                2,
+                6,
+                7,
+                1,
+                8
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            }
+          }
+        },
+        "semester": {
+          "columns": {
+            "attempteddevenglishy1": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "Y",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attempteddevmathy1": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "N",
+                "Y"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attemptedgatewayenglishyear1": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "Y",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attemptedgatewaymathyear1": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "Y",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attendance_status_term_1": {
+              "dtype": "category",
+              "categories": [
+                "First-Time Part-Time",
+                "Transfer-In Part-Time",
+                "Transfer-In Full-Time",
+                "First-Time Full-Time"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "cohort": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completeddevenglishy1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completeddevmathy1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completedgatewayenglishyear1": {
+              "dtype": "category",
+              "categories": [
+                "C",
+                "D"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completedgatewaymathyear1": {
+              "dtype": "category",
+              "categories": [
+                "C",
+                "D"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "credential_type_sought_year_1": {
+              "dtype": "category",
+              "categories": [
+                "Non Credential Program (Preparatory Coursework / Teach Certification)",
+                "Bachelor's Degree",
+                "Associate's Degree",
+                "Less than 1-year certificate, less than Associates degree"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "dual_and_summer_enrollment": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "DE"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "english_placement": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "C",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "enrollment_intensity_first_term": {
+              "dtype": "category",
+              "categories": [
+                "Part-Time",
+                "Full-Time"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_associates_or_certificate_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Associate's Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Four-Year",
+                "Baccalaureate Colleges",
+                "Doctoral Universities"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_associates_or_certificate_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_associates_or_certificate_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_bachelors_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Doctoral Universities",
+                "Baccalaureate Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Four-Year"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_bachelors_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_bachelors_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_associates_or_certificate_at_cohort_inst": {
+              "dtype": "category",
+              "categories": [
+                0,
+                2,
+                1,
+                6,
+                4,
+                5,
+                3,
+                7
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "foreign_language_completion": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gateway_english_status": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "R"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "UK",
+                      "R"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "gateway_math_status": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "R"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "UK",
+                      "R"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "gatewayenglishgradey1": {
+              "dtype": "category",
+              "categories": [
+                "P",
+                "W",
+                "F",
+                "I",
+                "M",
+                "O"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "P",
+                      "W",
+                      "F",
+                      "I",
+                      "M",
+                      "O"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "gatewaymathgradey1": {
+              "dtype": "category",
+              "categories": [
+                "P",
+                "F",
+                "W",
+                "M",
+                "I",
+                "O"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "P",
+                      "F",
+                      "W",
+                      "M",
+                      "I",
+                      "O"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "gpa_group_term_1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "gpa_group_year_1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "institution_id": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "math_placement": {
+              "dtype": "category",
+              "categories": [
+                "UK",
+                "C",
+                "N"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_associates_or_certificate_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Associate's Colleges",
+                "Baccalaureate Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Four-Year",
+                "Doctoral Universities"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Associate's Colleges",
+                      "Baccalaureate Colleges",
+                      "Master's Colleges & Universities",
+                      "Special Focus Four-Year",
+                      "Doctoral Universities"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "most_recent_associates_or_certificate_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Urban",
+                      "Town/Rural",
+                      "Suburb"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "most_recent_associates_or_certificate_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "most_recent_bachelors_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Doctoral Universities",
+                "Baccalaureate Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Four-Year"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Doctoral Universities",
+                      "Baccalaureate Colleges",
+                      "Master's Colleges & Universities",
+                      "Special Focus Four-Year"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "most_recent_bachelors_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Urban",
+                      "Town/Rural",
+                      "Suburb"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "most_recent_bachelors_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "most_recent_last_enrollment_at_other_institution_carnegie": {
+              "dtype": "category",
+              "categories": [
+                "Special Focus Four-Year",
+                "Associate's Colleges",
+                "Doctoral Universities",
+                "Baccalaureate Colleges",
+                "Master's Colleges & Universities",
+                "Special Focus Two-Year"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Special Focus Four-Year",
+                      "Associate's Colleges",
+                      "Doctoral Universities",
+                      "Baccalaureate Colleges",
+                      "Master's Colleges & Universities",
+                      "Special Focus Two-Year"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "most_recent_last_enrollment_at_other_institution_locale": {
+              "dtype": "category",
+              "categories": [
+                "Urban",
+                "Town/Rural",
+                "Suburb"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Urban",
+                      "Town/Rural",
+                      "Suburb"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "most_recent_last_enrollment_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "naspa_first_generation": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "persistence": {
+              "dtype": "category",
+              "categories": [
+                0,
+                1
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "reading_placement": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "retention": {
+              "dtype": "category",
+              "categories": [
+                0,
+                1
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "special_program": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "time_to_credential": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_associates_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_associates_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_certificate_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_certificate_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_associates_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_associates_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_certificate_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_certificate_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_of_last_enrollment_at_cohort_institution": {
+              "dtype": "category",
+              "categories": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                0
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8,
+                      0
+                    ]
+                  ]
+                }
+              ]
+            },
+            "years_of_last_enrollment_at_other_institution": {
+              "dtype": "category",
+              "categories": [
+                0,
+                1,
+                6,
+                2,
+                5,
+                4,
+                3,
+                8,
+                7
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      0,
+                      1,
+                      6,
+                      2,
+                      5,
+                      4,
+                      3,
+                      8,
+                      7
+                    ]
+                  ]
+                }
+              ]
+            },
+            "years_to_associates_or_certificate_at_cohort_inst": {
+              "dtype": "category",
+              "categories": [
+                0,
+                2,
+                1,
+                6,
+                4,
+                5,
+                3,
+                7
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      0,
+                      2,
+                      1,
+                      6,
+                      4,
+                      5,
+                      3,
+                      7
+                    ]
+                  ]
+                }
+              ]
+            },
+            "years_to_associates_or_certificate_at_other_inst": {
+              "dtype": "category",
+              "categories": [
+                0,
+                2,
+                5,
+                3,
+                6,
+                1,
+                8,
+                4,
+                7
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      0,
+                      2,
+                      5,
+                      3,
+                      6,
+                      1,
+                      8,
+                      4,
+                      7
+                    ]
+                  ]
+                }
+              ]
+            },
+            "years_to_bachelor_at_other_inst": {
+              "dtype": "category",
+              "categories": [
+                0,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                1,
+                2
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      0,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8,
+                      1,
+                      2
+                    ]
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "course": {
+          "columns": {
+            "academic_term": {
+              "dtype": "category",
+              "categories": [
+                "FALL",
+                "SPRING",
+                "SUMMER",
+                "WINTER"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "FALL",
+                      "SPRING",
+                      "SUMMER",
+                      "WINTER"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "academic_year": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "co_requisite_course": {
+              "dtype": "category",
+              "categories": [
+                "N",
+                "Y"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "cohort": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "core_competency_completed": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "core_course_type": {
+              "dtype": "category",
+              "categories": [
+                "SL",
+                "WC",
+                "SB",
+                "NS",
+                "QR",
+                "OC",
+                "GE",
+                "AH"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "course_cip": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "course_instructor_employment_status": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "course_instructor_rank": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "credential_engine_identifier": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "ge",
+                  "args": [
+                    0.0
+                  ]
+                }
+              ]
+            },
+            "enrolled_at_other_institution_s": {
+              "dtype": "category",
+              "categories": [
+                "N",
+                "Y"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "N",
+                      "Y"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "enrollment_record_at_other_institution_s_carnegie_s": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "enrollment_record_at_other_institution_s_locale_s": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "enrollment_record_at_other_institution_s_state_s": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "ethnicity": {
+              "dtype": "category",
+              "categories": [
+                "N",
+                "H"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "N",
+                      "H"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "gender": {
+              "dtype": "category",
+              "categories": [
+                "F",
+                "M",
+                "UK"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "F",
+                      "M",
+                      "UK"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "institution_id": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "math_or_english_gateway": {
+              "dtype": "category",
+              "categories": [
+                "M",
+                "E"
+              ],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "M",
+                      "E"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "race": {
+              "dtype": "category",
+              "categories": [
+                "Black or African American",
+                "White",
+                "Hispanic",
+                "American Indian or Alaska Native",
+                "Unknown",
+                "Nonresident alien",
+                "Two or More Races",
+                "Asian",
+                "Native Hawaiian or Other Pacific Islander"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "Black or African American",
+                      "White",
+                      "Hispanic",
+                      "American Indian or Alaska Native",
+                      "Unknown",
+                      "Nonresident alien",
+                      "Two or More Races",
+                      "Asian",
+                      "Native Hawaiian or Other Pacific Islander"
+                    ]
+                  ]
+                }
+              ]
+            },
+            "term_program_of_study": {
+              "dtype": "category",
+              "categories": [],
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "section_id": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "str_length",
+                  "kwargs": {
+                    "min_value": 1
+                  }
+                }
+              ]
+            },
+            "student_age": {
+              "dtype": "category",
+              "categories": [
+                "20 and younger",
+                ">20 - 24",
+                "Older than 24"
+              ],
+              "coerce": true,
+              "nullable": false,
+              "required": true,
+              "aliases": [],
+              "checks": [
+                {
+                  "type": "isin",
+                  "args": [
+                    [
+                      "20 and younger",
+                      ">20 - 24",
+                      "Older than 24"
+                    ]
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

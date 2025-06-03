@@ -3,12 +3,15 @@
 import uuid
 from datetime import datetime, date
 
-from typing import Annotated, Any, Dict
+from typing import Annotated, Any, Dict, List
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
+import os
+import logging
+from sqlalchemy.exc import IntegrityError
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -20,7 +23,6 @@ from ..utilities import (
     get_current_active_user,
     DataSource,
     get_external_bucket_name,
-    SchemaType,
     decode_url_piece,
 )
 
@@ -29,12 +31,16 @@ from ..database import (
     local_session,
     BatchTable,
     FileTable,
-    InstTable,
 )
 
 from ..gcsdbutils import update_db_from_bucket
 
 from ..gcsutil import StorageControl
+
+# Set the logging
+logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 router = APIRouter(
     prefix="/institutions",
@@ -91,7 +97,7 @@ class DataInfo(BaseModel):
     name: str
     data_id: str
     # The batch(es) that this data is present in.
-    batch_ids: set[str] = {}
+    batch_ids: set[str] = set()
     inst_id: str
     # Size to the nearest MB.
     # size_mb: int
@@ -123,7 +129,7 @@ class ValidationResult(BaseModel):
     # Must be unique within an institution to avoid confusion.
     name: str
     inst_id: str
-    file_types: set[SchemaType]
+    file_types: List[str]
     source: str
 
 
@@ -838,6 +844,33 @@ def download_url_inst_file(
     )
 
 
+def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]:
+    name = os.path.basename(file_path).lower()
+
+    inferred = set()
+    if "course" in name:
+        inferred.add("COURSE")
+    if "student" in name:
+        inferred.add("STUDENT")
+        if institution_id == "pdp":
+            inferred.add("SEMESTER")
+    if "semester" in name:
+        inferred.add("SEMESTER")
+    if "cohort" in name:
+        inferred.add("STUDENT")
+        inferred.add("SEMESTER")
+
+    if not inferred:
+        logging.error(
+            ValueError(
+                f"Could not infer model(s) from file name: {name}, filenames sould be descriptive of the kind of data it contains e.g. course, cohort"
+            )
+        )
+        inferred.add("UNKNOWN")
+
+    return sorted(inferred)
+
+
 def validation_helper(
     source_str: str,
     inst_id: str,
@@ -854,51 +887,76 @@ def validation_helper(
             detail="File name can't contain '/'.",
         )
     local_session.set(sql_session)
-    inst_query_result = (
-        local_session.get()
-        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
-        .all()
-    )
-    if len(inst_query_result) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Institution not found.",
-        )
-    if len(inst_query_result) > 1:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Institution duplicates found.",
-        )
-    allowed_schemas = set()
-    if inst_query_result[0][0].schemas:
-        allowed_schemas = set(inst_query_result[0][0].schemas)
 
-    inferred_schemas = set()
+    allowed_schemas = None
+    if not allowed_schemas:
+        allowed_schemas = infer_models_from_filename(file_name, "pdp")
+
+    inferred_schemas: list[str] = []
+
     try:
         inferred_schemas = storage_control.validate_file(
-            get_external_bucket_name(inst_id), file_name, allowed_schemas
+            get_external_bucket_name(inst_id),
+            file_name,
+            allowed_schemas,
+        )
+        logging.debug(
+            f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
         )
     except Exception as e:
+        logging.debug(f"!!!!!!!!!!Inferred Schemas FAILED {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File type is not valid and/or not accepted by this institution: "
             + str(e),
         ) from e
-    new_file_record = FileTable(
-        name=file_name,
-        inst_id=str_to_uuid(inst_id),
-        uploader=str_to_uuid(current_user.user_id),
-        source=source_str,
-        sst_generated=False,
-        schemas=list(inferred_schemas),
-        valid=True,
+
+    existing_file = (
+        local_session.get()
+        .query(FileTable)
+        .filter_by(
+            name=file_name,
+            inst_id=str_to_uuid(inst_id),
+        )
+        .first()
     )
-    local_session.get().add(new_file_record)
+
+    if existing_file:
+        logging.info(f"File '{file_name}' already exists for institution {inst_id}.")
+        db_status = f"File '{file_name}' already exists for institution {inst_id}."
+    else:
+        try:
+            new_file_record = FileTable(
+                name=file_name,
+                inst_id=str_to_uuid(inst_id),
+                uploader=str_to_uuid(current_user.user_id),
+                source=source_str,
+                sst_generated=False,
+                schemas=list(inferred_schemas),
+                valid=True,
+            )
+            local_session.get().add(new_file_record)
+            local_session.get().flush()
+            logging.info(f"File record inserted for '{file_name}'")
+            db_status = f"File record inserted for '{file_name}'"
+        except IntegrityError as e:
+            local_session.get().rollback()
+            logging.warning(f"IntegrityError: {e}")
+            db_status = "Already exists"
+        except Exception as e:
+            local_session.get().rollback()
+            logging.error(f"Unexpected DB error: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unexpected database error while inserting file record: {e}",
+            )
+
     return {
         "name": file_name,
         "inst_id": inst_id,
-        "file_types": inferred_schemas,
+        "file_types": list(inferred_schemas),
         "source": source_str,
+        "status": db_status,
     }
 
 

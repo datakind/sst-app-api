@@ -27,7 +27,9 @@ dependencies = [
     "pandas",
     "six",
     "types-six",
-    "fuzzywuzzy"
+    "fuzzywuzzy",
+    "databricks-sql-connector",
+    "pandera~=0.13"
 ]
 
 [project.urls]

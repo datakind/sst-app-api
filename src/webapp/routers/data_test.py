@@ -557,7 +557,7 @@ def test_update_batch(client: TestClient):
 
 def test_validate_success_batch(client: TestClient):
     """Test PATCH /institutions/<uuid>/batch."""
-    MOCK_STORAGE.validate_file.return_value = {SchemaType.UNKNOWN}
+    MOCK_STORAGE.validate_file.return_value = ["UNKNOWN"]
 
     # Use validate for manual upload
     response_upload = client.post(
@@ -608,17 +608,17 @@ def test_validate_success_batch(client: TestClient):
 
 def test_validate_failure_batch(client: TestClient):
     """Test PATCH /institutions/<uuid>/batch."""
-    MOCK_STORAGE.validate_file.return_value = {SchemaType.PDP_COHORT}
+    MOCK_STORAGE.validate_file.return_value = ["COURSE"]
     # Authorized.
     # Use validate upload
     response_upload = client.post(
         "/institutions/"
         + uuid_to_str(USER_VALID_INST_UUID)
-        + "/input/validate-upload/file_name.csv",
+        + "/input/validate-upload/file_name_course.csv",
     )
     assert response_upload.status_code == 200
-    assert response_upload.json()["name"] == "file_name.csv"
-    assert response_upload.json()["file_types"] == ["PDP_COHORT"]
+    assert response_upload.json()["name"] == "file_name_course.csv"
+    assert response_upload.json()["file_types"] == ["COURSE"]
     assert response_upload.json()["inst_id"] == uuid_to_str(USER_VALID_INST_UUID)
     assert response_upload.json()["source"] == "MANUAL_UPLOAD"
 
@@ -626,10 +626,10 @@ def test_validate_failure_batch(client: TestClient):
     response_sftp = client.post(
         "/institutions/"
         + uuid_to_str(USER_VALID_INST_UUID)
-        + "/input/validate-upload/file_name.csv",
+        + "/input/validate-upload/file_name_course.csv",
     )
     assert response_sftp.status_code == 200
-    assert response_sftp.json()["name"] == "file_name.csv"
-    assert response_sftp.json()["file_types"] == ["PDP_COHORT"]
+    assert response_sftp.json()["name"] == "file_name_course.csv"
+    assert response_sftp.json()["file_types"] == ["COURSE"]
     assert response_sftp.json()["inst_id"] == uuid_to_str(USER_VALID_INST_UUID)
     assert response_sftp.json()["source"] == "MANUAL_UPLOAD"

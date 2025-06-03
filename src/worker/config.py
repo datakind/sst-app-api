@@ -15,6 +15,10 @@ env_vars = {
     "BACKEND_API_KEY": "",
     "WEBAPP_URL": "",
     "BUCKET_ENV": "",
+    "DATABRICKS_HOST": "",
+    "DATABRICKS_SQL_HTTP_PATH": "",
+    "DATABRICKS_CLIENT_ID": "",
+    "DATABRICKS_CLIENT_SECRET": "",
 }
 
 gcs_vars = {
