@@ -885,9 +885,9 @@ def validation_helper(
     allowed_schemas = None
     if not allowed_schemas:
         allowed_schemas = infer_models_from_filename(file_name, "pdp")
+    
+    inferred_schemas: list[str] = []
 
-    inferred_schemas = set()
-    # TODO:
     try:
         inferred_schemas = storage_control.validate_file(
             get_external_bucket_name(inst_id),

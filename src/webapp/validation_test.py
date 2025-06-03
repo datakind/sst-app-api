@@ -14,27 +14,21 @@ MOCK_BASE_SCHEMA = {
                         "dtype": "int",
                         "nullable": False,
                         "required": True,
-                        "aliases": ["foo"]
+                        "aliases": ["foo"],
                     },
                     "bar_col": {
                         "dtype": "str",
                         "nullable": True,
                         "required": False,
-                        "aliases": ["bar"]
-                    }
+                        "aliases": ["bar"],
+                    },
                 }
             }
         }
     }
 }
 
-MOCK_EXT_SCHEMA = {
-    "institutions": {
-        "pdp": {
-            "data_models": {}
-        }
-    }
-}
+MOCK_EXT_SCHEMA = {"institutions": {"pdp": {"data_models": {}}}}
 
 
 @pytest.fixture
@@ -46,8 +40,13 @@ def tmp_csv_file(tmp_path: Path):
 
 
 def test_validate_file_reader_passes(tmp_csv_file):
-    with patch("src.webapp.validation.load_json") as mock_load, patch("os.path.exists", return_value=True):
-        mock_load.side_effect = lambda path: MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
+    with (
+        patch("src.webapp.validation.load_json") as mock_load,
+        patch("os.path.exists", return_value=True),
+    ):
+        mock_load.side_effect = (
+            lambda path: MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
+        )
         result = validate_file_reader(tmp_csv_file, ["test_model"])
         assert result["validation_status"] == "passed"
         assert result["schemas"] == ["test_model"]
@@ -58,8 +57,13 @@ def test_validate_file_reader_fails_missing_required(tmp_path):
     file_path = tmp_path / "invalid.csv"
     df.to_csv(file_path, index=False)
 
-    with patch("src.webapp.validation.load_json") as mock_load, patch("os.path.exists", return_value=True):
-        mock_load.side_effect = lambda path: MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
+    with (
+        patch("src.webapp.validation.load_json") as mock_load,
+        patch("os.path.exists", return_value=True),
+    ):
+        mock_load.side_effect = (
+            lambda path: MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
+        )
         with pytest.raises(HardValidationError) as exc_info:
             validate_file_reader(str(file_path), ["test_model"])
         assert "Missing required columns" in str(exc_info.value)
