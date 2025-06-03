@@ -885,7 +885,7 @@ def validation_helper(
     allowed_schemas = None
     if not allowed_schemas:
         allowed_schemas = infer_models_from_filename(file_name, "pdp")
-    
+
     inferred_schemas: list[str] = []
 
     try:
@@ -923,7 +923,9 @@ def validation_helper(
     }
 
 
-@router.post("/{inst_id}/input/validate-sftp/{file_name:path}", response_model=ValidationResult)
+@router.post(
+    "/{inst_id}/input/validate-sftp/{file_name:path}", response_model=ValidationResult
+)
 def validate_file_sftp(
     inst_id: str,
     file_name: str,

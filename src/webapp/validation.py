@@ -180,7 +180,6 @@ def validate_dataset(
     else:
         model_list = list(models)  # <- ensures it's not a set
 
-
     merged_specs: Dict[str, dict] = {}
     for m in model_list:
         specs = merge_model_columns(base_schema, ext_schema, institution_id, m.lower())
