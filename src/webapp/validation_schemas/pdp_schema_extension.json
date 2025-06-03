@@ -80,7 +80,7 @@
               "checks": []
             },
             "completeddevenglishy1": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -88,7 +88,7 @@
               "checks": []
             },
             "completeddevmathy1": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -360,7 +360,7 @@
               "checks": []
             },
             "foreign_language_completion": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
