@@ -547,7 +547,7 @@ def sftp_file_to_gcs_helper(
 
 def validate_sftp_file(
     file_name: str, institution_id: int, webapp_url: str, backend_api_key: str
-) -> str:
+) -> Any:
     """
     Sends a POST request to validate an SFTP file.
 
@@ -569,12 +569,17 @@ def validate_sftp_file(
 
     logger.debug(f">>>> Sending validation request to {url}")
 
-    response = requests.post(url, headers=headers)
+    try:
+        response = requests.post(url, headers=headers)
 
-    if response.status_code == 200:
-        logger.info(">>>> File validation successful.")
-        return "File validation successful."
-    else:
-        error_message = f"<<<< ???? Failed to initiate file validation: {response.status_code} {response.text}"
-        logger.error(error_message)
-        return error_message
+        if response.status_code == 200:
+            logger.info(">>>> File validation successful.")
+            return response.json()
+
+        error_msg = f"Failed to validate file: {response.status_code} {response.text}"
+        logger.error(f"<<<< ???? {error_msg}")
+        return {"error": error_msg}
+
+    except Exception as e:
+        logger.exception("<<<< ???? Exception during file validation request.")
+        return {"error": f"Exception during validation: {e}"}

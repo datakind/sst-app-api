@@ -168,7 +168,6 @@ async def process_file(
             )
 
             uploads[str(ids)] = {
-                "institution_id": inst_id,
                 "file_name": signed_urls[ids]["file_name"].strip().strip('"'),
                 "transfer_status": (
                     transfer_status.strip()
