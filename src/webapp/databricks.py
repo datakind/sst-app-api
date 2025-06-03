@@ -4,7 +4,7 @@ import os
 from pydantic import BaseModel
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import catalog
-from databricks.sdk.service.sql import Format, ExecuteStatementRequestOnWaitTimeout
+from databricks.sdk.service.sql import Format
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any
@@ -223,7 +223,7 @@ class DatabricksControl(BaseModel):
             statement=sql,
             format=Format.JSON_ARRAY
             wait_timeout="10s",
-            on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CONTINUE,
+            on_wait_timeout="CONTINUE",
         )
 
         status = getattr(resp, "status", None)
