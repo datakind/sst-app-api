@@ -13,7 +13,6 @@ from .database import (
     get_session,
     ApiKeyTable,
 )
-from unittest.mock import patch
 from .authn import get_password_hash, get_api_key_hash
 from .test_helper import (
     DATAKINDER,
