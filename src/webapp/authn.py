@@ -52,13 +52,15 @@ def get_api_key(
         detail="Invalid or missing API Key",
     )
 
+
 def check_creds(username: str, password: str) -> bool:
     if username == env_vars["USERNAME"] and password == env_vars["PASSWORD"]:
         return True
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Creds for worker job not correct",
+        detail="Creds for webapp job not correct",
     )
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hash. Includes a 2y/2b replacement since Laravel

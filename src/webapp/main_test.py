@@ -149,6 +149,7 @@ def test_retrieve_token_gen_from_api_key(client: TestClient):
     response = client.post(
         "/token-from-api-key",
         headers={"X-API-KEY": "key_1"},
+        data={"username": "fake", "password": "fake"}  # required form fields
     )
     assert response.status_code == 200
     assert response.json()["token_type"] == "bearer"
