@@ -6,7 +6,6 @@ from datetime import timedelta
 import secrets
 from fastapi import FastAPI, Depends, HTTPException, status, Security
 from fastapi.responses import FileResponse
-from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.future import select
 from sqlalchemy import update
@@ -38,7 +37,6 @@ from .authn import (
     create_access_token,
     get_api_key,
     get_api_key_hash,
-    check_creds,
 )
 
 # Set the logging

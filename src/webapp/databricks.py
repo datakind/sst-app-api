@@ -8,7 +8,6 @@ from databricks.sdk.service.sql import Format, ExecuteStatementRequestOnWaitTime
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any
-import time
 
 # List of data medallion levels
 MEDALLION_LEVELS = ["silver", "gold", "bronze"]
@@ -222,36 +221,20 @@ class DatabricksControl(BaseModel):
             warehouse_id=warehouse_id,
             statement=sql,
             format=Format.JSON_ARRAY,
-            wait_timeout="10s",
-            on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CONTINUE,
+            wait_timeout="30s",
+            on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CANCEL,
         )
 
-        status = getattr(resp, "status", None)
-        if status and status.state == "SUCCEEDED" and getattr(resp, "result", None):
-            # resp.results is a list of row‐arrays, resp.schema is a list of column metadata
-            column_names = [col.name for col in resp.manifest.schema]
-            rows = resp.result.data_array
-        else:
-            #  A. If the SQL didn’t finish in 10 seconds, resp.statement_id will be set.
-            stmt_id = getattr(resp, "statement_id", None)
-            if not stmt_id:
-                raise ValueError(
-                    f"fetch_table_data(): unexpected response state: {resp}"
-                )
+        if not resp or not getattr(resp, "status", None):
+            raise ValueError("fetch_table_data(): invalid response or missing status")
 
-            #  B. Poll until the statement succeeds (or fails/cancels)
-            status = resp.status.state if getattr(resp, "status", None) else None
-            while status not in ("SUCCEEDED", "FAILED", "CANCELED"):
-                time.sleep(1)
-                resp2 = w.statement_execution.get_statement(statement_id=stmt_id)
-                status = resp2.status.state if getattr(resp2, "status", None) else None
-                resp = resp2
-            if status != "SUCCEEDED":
-                raise ValueError(f"fetch_table_data(): query ended with state {status}")
+        if resp.status.state != "SUCCEEDED":
+            raise ValueError(
+                f"fetch_table_data(): query failed with state {resp.status.state}"
+            )
 
-            #  C. At this point, resp holds the final manifest and first chunk
-            column_names = [col.name for col in resp.manifest.schema]
-            rows = resp.result.data_array
+        # Extract rows
+        column_names = [col.name for col in resp.manifest.schema]
+        rows = resp.result.data_array
 
-        # Transform each row (a list of values) into a dict
         return [dict(zip(column_names, row)) for row in rows]
