@@ -13,6 +13,7 @@ from .database import (
     get_session,
     ApiKeyTable,
 )
+from unittest.mock import patch
 from .authn import get_password_hash, get_api_key_hash
 from .test_helper import (
     DATAKINDER,
@@ -145,13 +146,14 @@ def test_get_root(client: TestClient):
 
 
 def test_retrieve_token_gen_from_api_key(client: TestClient):
-    """Test POST /token-from-api-key."""
-    response = client.post(
-        "/token-from-api-key",
-        headers={"X-API-KEY": "key_1"},
-    )
-    assert response.status_code == 200
-    assert response.json()["token_type"] == "bearer"
+    with patch.dict("os.environ", {"USERNAME": "fake", "PASSWORD": "fake"}):
+        response = client.post(
+            "/token-from-api-key",
+            headers={"X-API-KEY": "key_1"},
+            data={"username": "fake", "password": "fake"},
+        )
+        assert response.status_code == 200
+        assert response.json()["token_type"] == "bearer"
 
 
 def test_get_cross_isnt_users(client: TestClient):

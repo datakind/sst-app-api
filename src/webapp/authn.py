@@ -53,6 +53,10 @@ def get_api_key(
     )
 
 
+def check_creds(username: str, password: str) -> bool:
+    return username == env_vars.get("USERNAME") and password == env_vars.get("PASSWORD")
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hash. Includes a 2y/2b replacement since Laravel
     Generates hashes that start with 2y. The hashing scheme recognizes both."""
