@@ -54,12 +54,7 @@ def get_api_key(
 
 
 def check_creds(username: str, password: str) -> bool:
-    if username == env_vars["USERNAME"] and password == env_vars["PASSWORD"]:
-        return True
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Creds for webapp job not correct",
-    )
+    return username == env_vars.get("USERNAME") and password == env_vars.get("PASSWORD")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
