@@ -6,6 +6,7 @@ from datetime import timedelta
 import secrets
 from fastapi import FastAPI, Depends, HTTPException, status, Security
 from fastapi.responses import FileResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.future import select
 from sqlalchemy import update
@@ -37,6 +38,7 @@ from .authn import (
     create_access_token,
     get_api_key,
     get_api_key_hash,
+    check_creds,
 )
 
 # Set the logging
@@ -99,13 +101,16 @@ async def access_token_from_api_key(
 ) -> Token:
     """Generate a token from an API key."""
     local_session.set(sql_session)
+
     user = authenticate_api_key(api_key_enduser_tuple, local_session.get())
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API key not valid",
+            detail="Invalid API key and credentials",
             headers={"WWW-Authenticate": "X-API-KEY"},
         )
+
     access_token_expires = timedelta(
         minutes=int(env_vars["ACCESS_TOKEN_EXPIRE_MINUTES"])
     )
