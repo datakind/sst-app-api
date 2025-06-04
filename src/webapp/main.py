@@ -106,7 +106,7 @@ async def access_token_from_api_key(
     user = authenticate_api_key(api_key_enduser_tuple, local_session.get())
     valid = check_creds(form_data.username, form_data.password)
 
-    if not user or not valid:
+    if not user and not valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key and credentials",
