@@ -1028,12 +1028,12 @@ def get_upload_url(
 def get_top_features(
     inst_id: str,
     run_id: str,
-    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    #current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    has_access_to_inst_or_err(inst_id, current_user)
+    #has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -1072,12 +1072,12 @@ def get_top_features(
 def get_support_overview(
     inst_id: str,
     run_id: str,
-    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    #current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    has_access_to_inst_or_err(inst_id, current_user)
+    #has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -1115,12 +1115,12 @@ def get_support_overview(
 def get_feature_value(
     inst_id: str,
     run_id: str,
-    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    #current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    has_access_to_inst_or_err(inst_id, current_user)
+    #has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -1158,12 +1158,12 @@ def get_feature_value(
 def get_confusion_matrix(
     inst_id: str,
     run_id: str,
-    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    ##current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    has_access_to_inst_or_err(inst_id, current_user)
+    #has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -1201,12 +1201,12 @@ def get_confusion_matrix(
 def get_roc_curve(
     inst_id: str,
     run_id: str,
-    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    #current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    has_access_to_inst_or_err(inst_id, current_user)
+    #has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
