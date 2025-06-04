@@ -16,6 +16,11 @@ from .config import env_vars
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+oauth2_apikey_scheme = OAuth2PasswordBearer(
+    scheme_name="api_key_scheme",
+    tokenUrl="token-from-api-key",
+)
+
 api_key_header = APIKeyHeader(name="X-API-KEY", scheme_name="api-key", auto_error=False)
 # The INST value may be empty for Datakinder or cross-institution access.
 api_key_inst_header = APIKeyHeader(
