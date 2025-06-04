@@ -105,6 +105,7 @@ async def access_token_from_api_key(
 
     user = authenticate_api_key(api_key_enduser_tuple, local_session.get())
     valid = check_creds(form_data.username, form_data.password)
+    logger.info(f"user: {user}, creds valid: {valid}")
 
     if not user and not valid:
         raise HTTPException(
