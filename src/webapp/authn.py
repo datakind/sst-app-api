@@ -54,7 +54,7 @@ def get_api_key(
 
 
 def check_creds(username: str, password: str) -> bool:
-    return username == env_vars.get("USERNAME") and password == env_vars.get("PASSWORD")
+    return username == env_vars["USERNAME"] and password == env_vars["PASSWORD"]
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
