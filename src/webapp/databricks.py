@@ -213,7 +213,10 @@ class DatabricksControl(BaseModel):
         """
         try:
             # Initialize the WorkspaceClient with default authentication
-            client = WorkspaceClient()
+            client = WorkspaceClient(
+                host=databricks_vars["DATABRICKS_HOST_URL"],
+                google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
         except Exception as e:
             raise ValueError(f"Failed to initialize WorkspaceClient: {e}")
 
