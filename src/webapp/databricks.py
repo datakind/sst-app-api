@@ -200,6 +200,7 @@ class DatabricksControl(BaseModel):
             w.schemas.delete(full_name=f"{cat_name}.{db_inst_name}_{medallion}")
 
     def fetch_table_data(
+        self,
         catalog_name: str,
         schema_name: str,
         table_name: str,
