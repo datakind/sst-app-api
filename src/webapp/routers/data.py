@@ -1024,6 +1024,28 @@ def get_upload_url(
 
 
 # Get SHAP Values for Inference
+@router.get("/inference/test")
+def test() -> Any:
+    """Returns a signed URL for uploading data to a specific institution."""
+    # raise error at this level instead bc otherwise it's getting wrapped as a 200
+
+    try:
+        dbc = DatabricksControl()
+        rows = dbc.fetch_table_data(
+            catalog_name="dev_sst_02",
+            schema_name="default",
+            table_name="test_dataset",
+            warehouse_id="28e1cbabfe6deb87",
+            limit=500,
+        )
+
+        return rows
+    except ValueError as ve:
+        # Return a 400 error with the specific message from ValueError
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+# Get SHAP Values for Inference
 @router.get("/{inst_id}/inference/top-features/{run_id}", response_model=str)
 def get_top_features(
     inst_id: str,
