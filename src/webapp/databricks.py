@@ -8,6 +8,7 @@ from databricks.sdk.service.sql import (
     Format,
     ExecuteStatementRequestOnWaitTimeout,
     Disposition,
+    StatementState,
 )
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
@@ -241,7 +242,7 @@ class DatabricksControl(BaseModel):
             raise ValueError(f"Databricks API call failed: {e}")
 
         # Check if the query execution was successful
-        if response.status.state != "SUCCEEDED":
+        if response.status.state != StatementState.SUCCEEDED:
             error_message = (
                 response.status.error.message
                 if response.status.error
