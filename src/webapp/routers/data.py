@@ -1077,7 +1077,7 @@ def get_top_features(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_features_with_most_impact",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
