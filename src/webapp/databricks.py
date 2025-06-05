@@ -223,7 +223,7 @@ class DatabricksControl(BaseModel):
         # Construct the fully qualified table name
         schema_name = databricksify_inst_name(inst_name)
         fully_qualified_table = (
-            f"`{catalog_name}`.`{schema_name}__silver`.`{table_name}`"
+            f"`{catalog_name}`.`{schema_name}_silver`.`{table_name}`"
         )
         sql_query = f"SELECT * FROM {fully_qualified_table} LIMIT {limit}"
 
