@@ -259,7 +259,7 @@ class DatabricksControl(BaseModel):
             raise ValueError("Query succeeded but result data is missing.")
 
         # Extract column names and data rows
-        column_names = [column["name"] for column in response.manifest.schema.columns]
+        column_names = [column.name for column in response.manifest.schema.columns]
         data_rows = response.result.data_array
 
         # Combine column names with corresponding row values
