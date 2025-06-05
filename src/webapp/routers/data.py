@@ -1121,7 +1121,7 @@ def get_support_overview(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_support_overview",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
@@ -1164,7 +1164,7 @@ def get_feature_value(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_shap_feature_importance",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
@@ -1207,7 +1207,7 @@ def get_confusion_matrix(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_training_{run_id}_confusion_matrix",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
@@ -1250,7 +1250,7 @@ def get_roc_curve(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_training_{run_id}_roc_curve",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
