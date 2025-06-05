@@ -1024,7 +1024,7 @@ def get_upload_url(
 
 
 # Get SHAP Values for Inference
-@router.get("/{inst_id}/inference/top-features/{run_id}", response_model=str)
+@router.get("/{inst_id}/inference/top-features/{run_id}")
 def get_top_features(
     inst_id: str,
     run_id: str,
@@ -1068,7 +1068,7 @@ def get_top_features(
 
 
 # Get SHAP Values for Inference
-@router.get("/{inst_id}/inference/support-overview/{run_id}", response_model=str)
+@router.get("/{inst_id}/inference/support-overview/{run_id}")
 def get_support_overview(
     inst_id: str,
     run_id: str,
@@ -1111,7 +1111,7 @@ def get_support_overview(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/inference/feature_value/{run_id}", response_model=str)
+@router.get("/{inst_id}/inference/feature_value/{run_id}")
 def get_feature_value(
     inst_id: str,
     run_id: str,
@@ -1154,7 +1154,7 @@ def get_feature_value(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/confusion_matrix/{run_id}", response_model=str)
+@router.get("/{inst_id}/training/confusion_matrix/{run_id}")
 def get_confusion_matrix(
     inst_id: str,
     run_id: str,
@@ -1197,7 +1197,7 @@ def get_confusion_matrix(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/roc_curve/{run_id}", response_model=str)
+@router.get("/{inst_id}/training/roc_curve/{run_id}")
 def get_roc_curve(
     inst_id: str,
     run_id: str,
