@@ -202,7 +202,7 @@ class DatabricksControl(BaseModel):
     def fetch_table_data(
         self,
         catalog_name: str,
-        schema_name: str,
+        inst_name: str,
         table_name: str,
         warehouse_id: str,
         limit: int = 1000,
@@ -221,7 +221,10 @@ class DatabricksControl(BaseModel):
             raise ValueError(f"Failed to initialize WorkspaceClient: {e}")
 
         # Construct the fully qualified table name
-        fully_qualified_table = f"`{catalog_name}`.`{schema_name}`.`{table_name}`"
+        schema_name = databricksify_inst_name(inst_name)
+        fully_qualified_table = (
+            f"`{catalog_name}`.`{schema_name}__silver`.`{table_name}`"
+        )
         sql_query = f"SELECT * FROM {fully_qualified_table} LIMIT {limit}"
 
         try:
