@@ -87,17 +87,17 @@ def get_password_hash(password: str) -> Any:
     return initial_hash.replace("$2b", "$2y", 1)
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create a JWT."""
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(
-            minutes=int(env_vars["ACCESS_TOKEN_EXPIRE_MINUTES"])
+            minutes=env_vars["ACCESS_TOKEN_EXPIRE_MINUTES"]
         )
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
-        to_encode, str(env_vars["SECRET_KEY"]), algorithm=str(env_vars["ALGORITHM"])
+        to_encode, env_vars["SECRET_KEY"], algorithm=env_vars["ALGORITHM"]
     )
     return encoded_jwt
