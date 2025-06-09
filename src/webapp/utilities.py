@@ -313,7 +313,9 @@ def authenticate_api_key(api_key_enduser_tuple: str, sess: Session) -> BaseUser:
 
 async def get_current_user(
     sess: Annotated[Session, Depends(get_session)],
-    token_from_key: Annotated[HTTPAuthorizationCredentials, Depends(oauth2_apikey_scheme)],
+    token_from_key: Annotated[
+        HTTPAuthorizationCredentials, Depends(oauth2_apikey_scheme)
+    ],
 ) -> BaseUser:
     """Get the user from a given token."""
     credentials_exception = HTTPException(
@@ -322,7 +324,6 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     usrname = None
-    print(token_from_key)
     token_from_key = token_from_key.credentials
     try:
         if not token_from_key:
