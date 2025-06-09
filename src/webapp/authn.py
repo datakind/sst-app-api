@@ -6,7 +6,7 @@ from datetime import timedelta, datetime, timezone
 import jwt
 from fastapi import Security, HTTPException, status
 from fastapi.security import (
-    # OAuth2PasswordBearer,
+    OAuth2PasswordBearer,
     APIKeyHeader,
     HTTPBearer,
 )
@@ -16,6 +16,12 @@ from .config import env_vars
 from typing import Any
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# TODO: Implement an alternative to HTTPBearer
+# oauth2_apikey_scheme = OAuth2PasswordBearer(
+#   scheme_name="api_key_scheme",
+#  tokenUrl="token-from-api-key",
+# )
 
 oauth2_apikey_scheme = HTTPBearer(
     auto_error=True, scheme_name="Bearer token (get from /token-from-api-key)"
