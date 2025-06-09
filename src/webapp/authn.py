@@ -6,8 +6,9 @@ from datetime import timedelta, datetime, timezone
 import jwt
 from fastapi import Security, HTTPException, status
 from fastapi.security import (
-    OAuth2PasswordBearer,
+    #OAuth2PasswordBearer,
     APIKeyHeader,
+    HTTPBearer
 )
 from passlib.context import CryptContext
 from pydantic import BaseModel
@@ -16,10 +17,11 @@ from .config import env_vars
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-oauth2_apikey_scheme = OAuth2PasswordBearer(
-    scheme_name="api_key_scheme",
-    tokenUrl="token-from-api-key",
-)
+#oauth2_apikey_scheme = OAuth2PasswordBearer(
+   # scheme_name="api_key_scheme",
+    #tokenUrl="token-from-api-key",
+#)
+oauth2_apikey_scheme = HTTPBearer(auto_error=True)
 
 api_key_header = APIKeyHeader(name="X-API-KEY", scheme_name="api-key", auto_error=False)
 # The INST value may be empty for Datakinder or cross-institution access.
