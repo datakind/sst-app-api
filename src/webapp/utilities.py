@@ -322,6 +322,7 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     usrname = None
+    print(token_from_key)
     token_from_key = token_from_key.credentials
     try:
         if not token_from_key:
