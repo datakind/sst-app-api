@@ -1028,12 +1028,12 @@ def get_upload_url(
 def get_top_features(
     inst_id: str,
     run_id: str,
-    # current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    # has_access_to_inst_or_err(inst_id, current_user)
+    has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -1072,12 +1072,12 @@ def get_top_features(
 def get_support_overview(
     inst_id: str,
     run_id: str,
-    # current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    # has_access_to_inst_or_err(inst_id, current_user)
+    has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -1111,16 +1111,59 @@ def get_support_overview(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/inference/feature_value/{run_id}")
-def get_feature_value(
+@router.get("/{inst_id}/training/support-overview/{run_id}")
+def get_training_support_overview(
     inst_id: str,
     run_id: str,
-    # current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    # has_access_to_inst_or_err(inst_id, current_user)
+    has_access_to_inst_or_err(inst_id, current_user)
+    local_session.set(sql_session)
+    query_result = (
+        local_session.get()
+        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
+        .all()
+    )
+    if not query_result or len(query_result) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Institution not found.",
+        )
+    if len(query_result) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Institution duplicates found.",
+        )
+
+    try:
+        dbc = DatabricksControl()
+        rows = dbc.fetch_table_data(
+            catalog_name=env_vars["CATALOG_NAME"],
+            inst_name=f"{query_result[0][0].name}",
+            table_name=f"sample_training_{run_id}_support_overview",
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            limit=500,
+        )
+
+        return rows
+    except ValueError as ve:
+        # Return a 400 error with the specific message from ValueError
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.get("/{inst_id}/inference/feature_value/{run_id}")
+def get_feature_value(
+    inst_id: str,
+    run_id: str,
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    sql_session: Annotated[Session, Depends(get_session)],
+) -> List[dict[str, Any]]:
+    """Returns a signed URL for uploading data to a specific institution."""
+    # raise error at this level instead bc otherwise it's getting wrapped as a 200
+    has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -1158,12 +1201,12 @@ def get_feature_value(
 def get_confusion_matrix(
     inst_id: str,
     run_id: str,
-    ##current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    # has_access_to_inst_or_err(inst_id, current_user)
+    has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
@@ -1201,12 +1244,12 @@ def get_confusion_matrix(
 def get_roc_curve(
     inst_id: str,
     run_id: str,
-    # current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
     """Returns a signed URL for uploading data to a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
-    # has_access_to_inst_or_err(inst_id, current_user)
+    has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
     query_result = (
         local_session.get()
