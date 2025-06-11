@@ -8,7 +8,7 @@
           "student_id": {
             "dtype": "string",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": true,
             "aliases": ["student_id", "guid", "student_guid", "study_id"],
             "checks": [
@@ -63,7 +63,7 @@
             "dtype": "string",
             "coerce": true,
             "nullable": true,
-            "required": true,
+            "required": false,
             "aliases": ["racial_identification", "ipeds_race"],
             "checks": []
           },
@@ -373,7 +373,7 @@
             "dtype": "float64",
             "coerce": true,
             "nullable": true,
-            "required": true,
+            "required": false,
             "aliases": ["credits_attempted", "ug_att", "number_of_credits_attempted_year_1", "number_of_credits_attempted_year_2",
           "number_of_credits_attempted_year_3", "number_of_credits_attempted_year_4"],
             "checks": []
@@ -390,7 +390,7 @@
             "dtype": "float64",
             "coerce": true,
             "nullable": true,
-            "required": true,
+            "required": false,
             "aliases": ["credits_earned", "ug_earn", "number_of_credits_earned_year_1", "number_of_credits_earned_year_2",
           "number_of_credits_earned_year_3", "number_of_credits_earned_year_4"],
             "checks": [{"type": "ge", "args": [0.0]}]
@@ -398,7 +398,7 @@
           "course_pass_rate": {
             "dtype": "float64",
             "coerce": true,
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "in_range", "args": [0.0, 1.0]}]
@@ -585,7 +585,7 @@
           },
           "years_enrolled": {
             "dtype": "string",
-            "nullable": false,
+            "nullable": true,
             "required": false,
             "aliases": [],
             "checks": [{"type": "str_length", "args": [], "kwargs": {"min_value": 1}}]
