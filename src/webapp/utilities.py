@@ -2,7 +2,7 @@
 
 import uuid
 import re
-from typing import Annotated, Final
+from typing import Annotated, Final, Any
 from urllib.parse import unquote
 from strenum import StrEnum  # needed for python pre 3.11
 import jwt
@@ -12,6 +12,7 @@ from jwt.exceptions import InvalidTokenError
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 from sqlalchemy import and_
+from fastapi.security import HTTPAuthorizationCredentials
 
 from .authn import (
     verify_api_key,
@@ -21,7 +22,7 @@ from .database import get_session, AccountTable, ApiKeyTable
 from .config import env_vars
 
 
-def decode_url_piece(src: str):
+def decode_url_piece(src: str) -> str:
     """Decode encoded URL."""
     return unquote(src)
 
@@ -164,29 +165,29 @@ class BaseUser(BaseModel):
     def __init__(self, usr: str | None, inst: str, access: str, email: str) -> None:
         super().__init__(user_id=usr, institution=inst, access_type=access, email=email)
 
-    def is_datakinder(self) -> bool:
+    def is_datakinder(self) -> Any:
         """Whether a given user is a Datakinder."""
         return self.access_type and self.access_type == AccessType.DATAKINDER
 
-    def is_model_owner(self) -> bool:
+    def is_model_owner(self) -> Any:
         """Whether a given user is a model owner."""
         return self.access_type and self.access_type == AccessType.MODEL_OWNER
 
-    def is_data_owner(self) -> bool:
+    def is_data_owner(self) -> Any:
         """Whether a given user is a data owner."""
         return self.access_type and self.access_type == AccessType.DATA_OWNER
 
-    def is_viewer(self) -> bool:
+    def is_viewer(self) -> Any:
         """Whether a given user is a viewer."""
         return self.access_type and self.access_type == AccessType.VIEWER
 
-    def has_access_to_inst(self, inst: str) -> bool:
+    def has_access_to_inst(self, inst: str) -> Any:
         """Whether a given user has access to a given institution."""
         return self.access_type and (
             self.access_type == AccessType.DATAKINDER or self.institution == inst
         )
 
-    def has_full_data_access(self) -> bool:
+    def has_full_data_access(self) -> Any:
         """Datakinders, model_owners, data_owners, all have full data access."""
         return self.access_type and self.access_type in (
             AccessType.DATAKINDER,
@@ -312,7 +313,9 @@ def authenticate_api_key(api_key_enduser_tuple: str, sess: Session) -> BaseUser:
 
 async def get_current_user(
     sess: Annotated[Session, Depends(get_session)],
-    token_from_key: Annotated[str, Depends(oauth2_apikey_scheme)],
+    token_from_key: Annotated[
+        HTTPAuthorizationCredentials, Depends(oauth2_apikey_scheme)
+    ],
 ) -> BaseUser:
     """Get the user from a given token."""
     credentials_exception = HTTPException(
@@ -321,6 +324,7 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     usrname = None
+    token_from_key = token_from_key.credentials
     try:
         if not token_from_key:
             raise credentials_exception

@@ -1024,7 +1024,7 @@ def get_upload_url(
 
 
 # Get SHAP Values for Inference
-@router.get("/{inst_id}/inference/top-features/{run_id}", response_model=str)
+@router.get("/{inst_id}/inference/top-features/{run_id}")
 def get_top_features(
     inst_id: str,
     run_id: str,
@@ -1055,7 +1055,7 @@ def get_top_features(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_features_with_most_impact",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
@@ -1068,7 +1068,7 @@ def get_top_features(
 
 
 # Get SHAP Values for Inference
-@router.get("/{inst_id}/inference/support-overview/{run_id}", response_model=str)
+@router.get("/{inst_id}/inference/support-overview/{run_id}")
 def get_support_overview(
     inst_id: str,
     run_id: str,
@@ -1099,7 +1099,7 @@ def get_support_overview(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_support_overview",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
@@ -1111,7 +1111,50 @@ def get_support_overview(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/inference/feature_value/{run_id}", response_model=str)
+@router.get("/{inst_id}/training/support-overview/{run_id}")
+def get_training_support_overview(
+    inst_id: str,
+    run_id: str,
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    sql_session: Annotated[Session, Depends(get_session)],
+) -> List[dict[str, Any]]:
+    """Returns a signed URL for uploading data to a specific institution."""
+    # raise error at this level instead bc otherwise it's getting wrapped as a 200
+    has_access_to_inst_or_err(inst_id, current_user)
+    local_session.set(sql_session)
+    query_result = (
+        local_session.get()
+        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
+        .all()
+    )
+    if not query_result or len(query_result) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Institution not found.",
+        )
+    if len(query_result) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Institution duplicates found.",
+        )
+
+    try:
+        dbc = DatabricksControl()
+        rows = dbc.fetch_table_data(
+            catalog_name=env_vars["CATALOG_NAME"],
+            inst_name=f"{query_result[0][0].name}",
+            table_name=f"sample_training_{run_id}_support_overview",
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            limit=500,
+        )
+
+        return rows
+    except ValueError as ve:
+        # Return a 400 error with the specific message from ValueError
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+
+@router.get("/{inst_id}/inference/feature_value/{run_id}")
 def get_feature_value(
     inst_id: str,
     run_id: str,
@@ -1142,7 +1185,7 @@ def get_feature_value(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_shap_feature_importance",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
@@ -1154,7 +1197,7 @@ def get_feature_value(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/confusion_matrix/{run_id}", response_model=str)
+@router.get("/{inst_id}/training/confusion_matrix/{run_id}")
 def get_confusion_matrix(
     inst_id: str,
     run_id: str,
@@ -1185,7 +1228,7 @@ def get_confusion_matrix(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_training_{run_id}_confusion_matrix",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,
@@ -1197,7 +1240,7 @@ def get_confusion_matrix(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/roc_curve/{run_id}", response_model=str)
+@router.get("/{inst_id}/training/roc_curve/{run_id}")
 def get_roc_curve(
     inst_id: str,
     run_id: str,
@@ -1228,7 +1271,7 @@ def get_roc_curve(
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],
-            schema_name=f"{query_result[0][0].name}_silver",
+            inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_training_{run_id}_roc_curve",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
             limit=500,

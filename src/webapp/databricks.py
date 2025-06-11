@@ -4,11 +4,17 @@ import os
 from pydantic import BaseModel
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service import catalog
-from databricks.sdk.service.sql import Format, ExecuteStatementRequestOnWaitTimeout
+from databricks.sdk.service.sql import (
+    Format,
+    ExecuteStatementRequestOnWaitTimeout,
+    Disposition,
+    StatementState,
+)
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
-from typing import List, Any
-import time
+from typing import List, Any, Dict
+from databricks.sdk.errors import DatabricksError
+
 
 # List of data medallion levels
 MEDALLION_LEVELS = ["silver", "gold", "bronze"]
@@ -196,62 +202,65 @@ class DatabricksControl(BaseModel):
 
     def fetch_table_data(
         self,
-        catalog_name: Any,
-        schema_name: Any,
-        table_name: Any,
-        warehouse_id: Any,
+        catalog_name: str,
+        inst_name: str,
+        table_name: str,
+        warehouse_id: str,
         limit: int = 1000,
-    ) -> List[dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """
-        Runs a simple SELECT * FROM <catalog>.<schema>.<table> LIMIT <limit>
-        against the specified SQL warehouse, and returns a list of row‐dicts.
+        Executes a SELECT * query on the specified table within the given catalog and schema,
+        using the provided SQL warehouse. Returns the result as a list of dictionaries.
         """
-        w = WorkspaceClient(
-            host=databricks_vars["DATABRICKS_HOST_URL"],
-            google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+        try:
+            # Initialize the WorkspaceClient with default authentication
+            client = WorkspaceClient(
+                host=databricks_vars["DATABRICKS_HOST_URL"],
+                google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to initialize WorkspaceClient: {e}")
+
+        # Construct the fully qualified table name
+        schema_name = databricksify_inst_name(inst_name)
+        fully_qualified_table = (
+            f"`{catalog_name}`.`{schema_name}_silver`.`{table_name}`"
         )
-        if not w:
+        sql_query = f"SELECT * FROM {fully_qualified_table} LIMIT {limit}"
+
+        try:
+            # Execute the SQL statement
+            response = client.statement_execution.execute_statement(
+                warehouse_id=warehouse_id,
+                statement=sql_query,
+                disposition=Disposition.INLINE,  # Use Enum member
+                format=Format.JSON_ARRAY,  # Use Enum member
+                wait_timeout="30s",  # Wait up to 30 seconds for execution
+                on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CANCEL,  # Use Enum member
+            )
+        except DatabricksError as e:
+            raise ValueError(f"Databricks API call failed: {e}")
+
+        # Check if the query execution was successful
+        if response.status.state != StatementState.SUCCEEDED:
+            error_message = (
+                response.status.error.message
+                if response.status.error
+                else "No additional error info."
+            )
             raise ValueError(
-                "fetch_table_data(): could not initialize WorkspaceClient."
+                f"Query did not succeed (state={response.status.state}): {error_message}"
             )
 
-        fq_table = f"`{catalog_name}`.`{schema_name}`.`{table_name}`"
-        sql = f"SELECT * FROM {fq_table} LIMIT {limit}"
+        # Validate the presence of the result and schema
+        if not response.manifest or not response.manifest.schema:
+            raise ValueError("Query succeeded but schema manifest is missing.")
+        if not response.result or not response.result.data_array:
+            raise ValueError("Query succeeded but result data is missing.")
 
-        resp = w.statement_execution.execute_statement(
-            warehouse_id=warehouse_id,
-            statement=sql,
-            format=Format.JSON_ARRAY,
-            wait_timeout="10s",
-            on_wait_timeout=ExecuteStatementRequestOnWaitTimeout.CONTINUE,
-        )
+        # Extract column names and data rows
+        column_names = [column.name for column in response.manifest.schema.columns]
+        data_rows = response.result.data_array
 
-        status = getattr(resp, "status", None)
-        if status and status.state == "SUCCEEDED" and getattr(resp, "result", None):
-            # resp.results is a list of row‐arrays, resp.schema is a list of column metadata
-            column_names = [col.name for col in resp.manifest.schema]
-            rows = resp.result.data_array
-        else:
-            #  A. If the SQL didn’t finish in 10 seconds, resp.statement_id will be set.
-            stmt_id = getattr(resp, "statement_id", None)
-            if not stmt_id:
-                raise ValueError(
-                    f"fetch_table_data(): unexpected response state: {resp}"
-                )
-
-            #  B. Poll until the statement succeeds (or fails/cancels)
-            status = resp.status.state if getattr(resp, "status", None) else None
-            while status not in ("SUCCEEDED", "FAILED", "CANCELED"):
-                time.sleep(1)
-                resp2 = w.statement_execution.get_statement(statement_id=stmt_id)
-                status = resp2.status.state if getattr(resp2, "status", None) else None
-                resp = resp2
-            if status != "SUCCEEDED":
-                raise ValueError(f"fetch_table_data(): query ended with state {status}")
-
-            #  C. At this point, resp holds the final manifest and first chunk
-            column_names = [col.name for col in resp.manifest.schema]
-            rows = resp.result.data_array
-
-        # Transform each row (a list of values) into a dict
-        return [dict(zip(column_names, row)) for row in rows]
+        # Combine column names with corresponding row values
+        return [dict(zip(column_names, row)) for row in data_rows]
