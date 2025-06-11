@@ -862,6 +862,9 @@ def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]
     if "cohort" in name:
         inferred.add("STUDENT")
         inferred.add("SEMESTER")
+    if "course" not in name and ("ar" in name or "deidentified" in name):
+        inferred.add("STUDENT")
+        inferred.add("SEMESTER")
 
     if not inferred:
         logging.error(

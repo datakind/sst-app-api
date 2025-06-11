@@ -17,10 +17,6 @@ from typing import Any
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# oauth2_apikey_scheme = OAuth2PasswordBearer(
-# scheme_name="api_key_scheme",
-# tokenUrl="token-from-api-key",
-# )
 oauth2_apikey_scheme = HTTPBearer(
     auto_error=True, scheme_name="Bearer token (get from /token-from-api-key)"
 )
