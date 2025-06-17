@@ -147,7 +147,7 @@ def session_fixture():
                         schema_type=SchemaType.STUDENT,
                         optional=False,
                         multiple_allowed=False,
-                    )
+                    ),
                 ]
             ]
         ),
@@ -410,7 +410,7 @@ def test_check_file_types_valid_schema_configs():
             schema_type=SchemaType.STUDENT,
             optional=False,
             multiple_allowed=False,
-        )
+        ),
     ]
     sst_configs = [
         SchemaConfigObj(
@@ -422,7 +422,7 @@ def test_check_file_types_valid_schema_configs():
             schema_type=SchemaType.COURSE,
             optional=False,
             multiple_allowed=False,
-        )
+        ),
     ]
     custom = [
         SchemaConfigObj(

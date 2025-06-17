@@ -523,7 +523,9 @@ def trigger_inference_run(
 
     for config_group in schema_configs:
         for config in config_group:
-            config.schema_type = LEGACY_TO_NEW_SCHEMA.get(config.schema_type, config.schema_type)
+            config.schema_type = LEGACY_TO_NEW_SCHEMA.get(
+                config.schema_type, config.schema_type
+            )
 
     if not check_file_types_valid_schema_configs(
         inst_file_schemas,
