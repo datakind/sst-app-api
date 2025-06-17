@@ -133,11 +133,12 @@ class SchemaType(StrEnum):
     SST_OUTPUT = "SST_OUTPUT"
     PNG = "PNG"
 
+
 LEGACY_TO_NEW_SCHEMA = {
     "PDP_COHORT": "STUDENT",
     "SST_PDP_COHORT": "STUDENT",
     "PDP_COURSE": "COURSE",
-    "SST_PDP_COURSE": "COURSE"
+    "SST_PDP_COURSE": "COURSE",
 }
 
 PDP_SCHEMA_GROUP: Final = {
