@@ -230,21 +230,3 @@ async def execute_pdp_pull(
         "pdp_inst_not_found": list(result["invalid_ids"]),
         "upload_status": dict(result["uploads"]),
     }
-
-
-@app.get("/confusion-matrix-test")
-async def confusion_matrix_test(
-    run_id: str,
-    inst_id: str,
-) -> Any:
-    """Performs the PDP pull of the file."""
-
-    result = confusion_matrix_table(
-        institution_id=inst_id,
-        webapp_url=env_vars["WEBAPP_URL"],
-        backend_api_key=env_vars["BACKEND_API_KEY"],
-        run_id=run_id,
-    )
-
-    # Aggregate results to return
-    return result
