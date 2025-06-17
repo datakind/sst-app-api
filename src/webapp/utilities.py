@@ -2,7 +2,7 @@
 
 import uuid
 import re
-from typing import Annotated, Final, Any
+from typing import Annotated, Any
 from urllib.parse import unquote
 from strenum import StrEnum  # needed for python pre 3.11
 import jwt

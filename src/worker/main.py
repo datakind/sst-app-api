@@ -18,7 +18,6 @@ from .utilities import (
     transfer_file,
     sftp_file_to_gcs_helper,
     validate_sftp_file,
-    confusion_matrix_table,
 )
 
 from .config import sftp_vars, env_vars, startup_env_vars
