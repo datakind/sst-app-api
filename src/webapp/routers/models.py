@@ -520,11 +520,10 @@ def trigger_inference_run(
         )
     inst_file_schemas = [x.schemas for x in batch_result[0][0].files]
     schema_configs = jsonpickle.decode(query_result[0][0].schema_configs)
+
     for config_group in schema_configs:
         for config in config_group:
-            config["schema_type"] = LEGACY_TO_NEW_SCHEMA.get(
-                config["schema_type"], config["schema_type"]
-            )
+            config.schema_type = LEGACY_TO_NEW_SCHEMA.get(config.schema_type, config.schema_type)
 
     if not check_file_types_valid_schema_configs(
         inst_file_schemas,
