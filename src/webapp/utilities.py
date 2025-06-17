@@ -2,7 +2,7 @@
 
 import uuid
 import re
-from typing import Annotated, Any
+from typing import Annotated, Final, Any
 from urllib.parse import unquote
 from strenum import StrEnum  # needed for python pre 3.11
 import jwt
@@ -139,6 +139,12 @@ LEGACY_TO_NEW_SCHEMA = {
     "PDP_COURSE": "COURSE",
     "SST_PDP_COURSE": "COURSE"
 }
+
+PDP_SCHEMA_GROUP: Final = {
+    SchemaType.STUDENT,
+    SchemaType.COURSE,
+}
+
 
 class BaseUser(BaseModel):
     """BaseUser represents an access type. The frontend will include more detailed User info."""
