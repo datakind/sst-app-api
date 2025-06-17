@@ -140,15 +140,6 @@ LEGACY_TO_NEW_SCHEMA = {
     "SST_PDP_COURSE": "COURSE"
 }
 
-PDP_SCHEMA_GROUP: Final = {
-    SchemaType.PDP_COHORT,
-    SchemaType.PDP_COURSE,
-    SchemaType.SST_PDP_FINANCE,
-    SchemaType.SST_PDP_COHORT,
-    SchemaType.SST_PDP_COURSE,
-}
-
-
 class BaseUser(BaseModel):
     """BaseUser represents an access type. The frontend will include more detailed User info."""
 
