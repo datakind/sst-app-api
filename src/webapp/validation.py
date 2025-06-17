@@ -269,6 +269,7 @@ def validate_dataset(
             print("Optional column validation errors on: ", opt_failures)
             return {
                 "validation_status": "passed_with_soft_errors",
+                "schemas": model_list,
                 "missing_optional": missing_optional,
                 "optional_validation_failures": opt_failures,
                 "failure_cases": err.failure_cases.to_dict(orient="records"),
