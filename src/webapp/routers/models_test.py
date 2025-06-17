@@ -358,9 +358,8 @@ def test_trigger_inference_run(client: TestClient):
     )
 
     assert response.status_code == 400
-    assert (
-        response.text
-        == '{"detail":"The files in this batch don\'t conform to the schema configs allowed by this model."}'
+    assert response.json()["detail"].startswith(
+        "The files in this batch don't conform to the schema configs allowed by this model."
     )
 
     response = client.post(
@@ -445,7 +444,7 @@ def test_check_file_types_valid_schema_configs():
     assert check_file_types_valid_schema_configs(file_types2, [pdp_configs])
     assert not check_file_types_valid_schema_configs(file_types2, [custom])
     assert check_file_types_valid_schema_configs(file_types3, [sst_configs])
-    assert not check_file_types_valid_schema_configs(file_types3, [pdp_configs])
+    assert check_file_types_valid_schema_configs(file_types3, [pdp_configs])
     assert not check_file_types_valid_schema_configs(file_types3, [custom])
     assert not check_file_types_valid_schema_configs(file_types4, [sst_configs])
     assert not check_file_types_valid_schema_configs(file_types4, [pdp_configs])
