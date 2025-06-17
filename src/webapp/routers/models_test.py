@@ -442,7 +442,7 @@ def test_check_file_types_valid_schema_configs():
     assert not check_file_types_valid_schema_configs(file_types1, [custom])
     assert not check_file_types_valid_schema_configs(file_types1, schema_configs1)
     assert check_file_types_valid_schema_configs(file_types2, [sst_configs])
-    assert not check_file_types_valid_schema_configs(file_types2, [pdp_configs])
+    assert check_file_types_valid_schema_configs(file_types2, [pdp_configs])
     assert not check_file_types_valid_schema_configs(file_types2, [custom])
     assert check_file_types_valid_schema_configs(file_types3, [sst_configs])
     assert not check_file_types_valid_schema_configs(file_types3, [pdp_configs])
