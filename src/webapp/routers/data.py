@@ -855,16 +855,12 @@ def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]
         inferred.add("COURSE")
     if "student" in name:
         inferred.add("STUDENT")
-        if institution_id == "pdp":
-            inferred.add("SEMESTER")
     if "semester" in name:
         inferred.add("SEMESTER")
     if "cohort" in name:
         inferred.add("STUDENT")
-        inferred.add("SEMESTER")
     if "course" not in name and ("ar" in name or "deidentified" in name):
         inferred.add("STUDENT")
-        inferred.add("SEMESTER")
 
     if not inferred:
         logging.error(

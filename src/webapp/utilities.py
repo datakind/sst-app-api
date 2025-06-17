@@ -125,18 +125,21 @@ class SchemaType(StrEnum):
 
     # If an institution uses UNKNOWN as an allowed schema, it means bypass the validation check.
     UNKNOWN = "UNKNOWN"
-    # The standard PDP ARF file schemas
-    PDP_COHORT = "PDP_COHORT"
-    PDP_COURSE = "PDP_COURSE"
-    # The PDP aligned SST schemas
-    SST_PDP_COHORT = "SST_PDP_COHORT"
-    SST_PDP_COURSE = "SST_PDP_COURSE"
-    SST_PDP_FINANCE = "SST_PDP_FINANCE"
+    STUDENT = "STUDENT"
+    SEMESTER = "SEMESTER"
+    COURSE = "COURSE"
 
     # Schema Types of output files
     SST_OUTPUT = "SST_OUTPUT"
     PNG = "PNG"
 
+LEGACY_TO_NEW_SCHEMA = {
+    "PDP_COHORT": "STUDENT",
+    "SST_PDP_COHORT": "STUDENT",
+    "PDP_COURSE": "COURSE",
+    "SST_PDP_COURSE": "COURSE",
+    "SST_PDP_FINANCE": "SEMESTER",  # if that's how you're using it
+}
 
 PDP_SCHEMA_GROUP: Final = {
     SchemaType.PDP_COHORT,
