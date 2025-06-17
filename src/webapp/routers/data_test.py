@@ -135,7 +135,7 @@ def session_fixture():
         updated_at=DATETIME_TESTING,
         sst_generated=True,
         valid=True,
-        schemas=[SchemaType.PDP_COHORT],
+        schemas=[SchemaType.STUDENT],
     )
     file_4 = FileTable(
         id=SAMPLE_UUID,
@@ -145,7 +145,7 @@ def session_fixture():
         updated_at=DATETIME_TESTING,
         sst_generated=True,
         valid=True,
-        schemas=[SchemaType.PDP_COHORT],
+        schemas=[SchemaType.STUDENT],
     )
     try:
         with sqlalchemy.orm.Session(engine) as session:
@@ -168,7 +168,7 @@ def session_fixture():
                         updated_at=DATETIME_TESTING,
                         sst_generated=False,
                         valid=False,
-                        schemas=[SchemaType.PDP_COURSE],
+                        schemas=[SchemaType.COURSE],
                     ),
                     file_3,
                     file_4,
