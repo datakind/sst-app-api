@@ -262,7 +262,7 @@
               "checks": []
             },
             "reading_placement": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,

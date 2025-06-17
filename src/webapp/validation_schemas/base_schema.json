@@ -37,9 +37,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["first_generation_college_student", "first_gen", "first_gen_flag", "firstgenflag"],
-            "checks": [
-              {"type": "isin", "args": [["Yes","No","Other","Unknown", "Y", "N", "0", "U"]]}
-            ]
+            "checks": []
           },
           "age": {
             "dtype": "string",
@@ -55,9 +53,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["gender_identification", "sex"],
-            "checks": [
-              {"type": "isin", "args": [["Male","Female", "M", "F", "Other","Unknown", "N", "Not specified"]]}
-            ]
+            "checks": []
           },
           "race": {
             "dtype": "string",
@@ -254,9 +250,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["pell_status_first_year"],
-            "checks": [
-              {"type": "isin", "args": [["true", "false", "yes", "no", "Y", "N", "UK"]]}
-            ]
+            "checks": []
           }
         }
       },
@@ -463,9 +457,7 @@
             "nullable": true,
             "required": false,
             "aliases": [],
-            "checks": [
-              {"type": "isin", "args": [["lecture", "lab", "seminar", "other", "schedules"]]}
-              ]
+            "checks": []
           },
           "course_type": {
             "dtype": "string",
@@ -481,9 +473,7 @@
             "nullable": true,
             "required": false,
             "aliases": [],
-            "checks": [
-              {"type": "isin", "args": [["y", "n", "yes", "no", "true", "false", "unknown", "other"]]}
-              ]
+            "checks": []
           },
           "pass_fail_flag": {
             "dtype": "string",
@@ -491,9 +481,7 @@
             "nullable": true,
             "required": false,
             "aliases": ["pass_fail", "pass/fail_flag"],
-            "checks": [
-              {"type": "isin", "args": [["y", "n", "Y", "N", "yes", "no", "true", "false", "unknown", "other"]]}
-              ]
+            "checks": []
           },
           "grade": {
             "dtype": "string",
@@ -509,9 +497,7 @@
             "nullable": true,
             "required": false,
             "aliases": [],
-            "checks": [
-              {"type": "isin", "args": [["Y", "N", "yes", "no", "true", "false", "unknown", "other"]]}
-              ]
+            "checks": []
           },
           "course_credits": {
             "dtype": "float64",
