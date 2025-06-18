@@ -131,7 +131,7 @@ class DatabricksControl(BaseModel):
             or not check_types(req.filepath_to_type.values(), SchemaType.STUDENT)
         ):
             raise ValueError(
-                "run_pdp_inference() requires PDP_COURSE and PDP_COHORT type files to run."
+                "run_pdp_inference() requires COURSE and STUDENT type files to run."
             )
         w = WorkspaceClient(
             host=databricks_vars["DATABRICKS_HOST_URL"],
