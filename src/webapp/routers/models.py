@@ -30,7 +30,8 @@ from ..database import (
     ModelTable,
     JobTable,
 )
-
+import traceback
+import logging
 from ..gcsdbutils import update_db_from_bucket
 
 from ..gcsutil import StorageControl
@@ -550,9 +551,11 @@ def trigger_inference_run(
     try:
         res = databricks_control.run_pdp_inference(db_req)
     except Exception as e:
+        tb = traceback.format_exc()
+        logging.error(f"Databricks run failure:\n{tb}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Databricks run_pdp_inference error. " + str(e),
+            detail=f"Databricks run_pdp_inference error. Error = {str(e)}",
         ) from e
     triggered_timestamp = datetime.now()
     job = JobTable(
