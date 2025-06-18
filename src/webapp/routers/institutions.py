@@ -444,7 +444,7 @@ def read_inst_id(
     if len(query_result) > 1:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Institution duplicates found.",
+            detail="Institution duplicates found."
         )
     return {
         "inst_id": uuid_to_str(query_result[0][0].id),
