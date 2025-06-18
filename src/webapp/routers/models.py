@@ -519,13 +519,15 @@ def trigger_inference_run(
             + str(len(inst_result)),
         )
     inst_file_schemas = [x.schemas for x in batch_result[0][0].files]
-    schema_configs = jsonpickle.decode(query_result[0][0].schema_configs)
+    raw_config = query_result[0][0].schema_configs
 
-    for config_group in schema_configs:
-        for config in config_group:
-            config.schema_type = LEGACY_TO_NEW_SCHEMA.get(
-                config.schema_type, config.schema_type
-            )
+    # Inline legacy → new mapping directly on the string
+    for legacy, new in LEGACY_TO_NEW_SCHEMA.items():
+        # This replaces every occurrence of "PDP_COURSE", "PDP_COHORT", etc.
+        raw_config = raw_config.replace(f'"{legacy}"', f'"{new}"')
+
+    schema_configs = jsonpickle.decode(raw_config)
+    # POTENTIAL_REVERSE: schema_configs = jsonpickle.decode(query_result[0][0].schema_configs)
 
     if not check_file_types_valid_schema_configs(
         inst_file_schemas,
