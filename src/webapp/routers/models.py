@@ -20,6 +20,7 @@ from ..utilities import (
     get_external_bucket_name,
     SchemaType,
     decode_url_piece,
+    LEGACY_TO_NEW_SCHEMA,
 )
 from ..database import (
     get_session,
@@ -517,13 +518,22 @@ def trigger_inference_run(
             detail="Unexpected number of batches found: Expected 1, got "
             + str(len(inst_result)),
         )
+    inst_file_schemas = [x.schemas for x in batch_result[0][0].files]
+    schema_configs = jsonpickle.decode(query_result[0][0].schema_configs)
+
+    for config_group in schema_configs:
+        for config in config_group:
+            config.schema_type = LEGACY_TO_NEW_SCHEMA.get(
+                config.schema_type, config.schema_type
+            )
+
     if not check_file_types_valid_schema_configs(
-        [x.schemas for x in batch_result[0][0].files],
-        jsonpickle.decode(query_result[0][0].schema_configs),
+        inst_file_schemas,
+        schema_configs,
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The files in this batch don't conform to the schema configs allowed by this model.",
+            detail=f"The files in this batch don't conform to the schema configs allowed by this model. For debugging reference - file_schema={inst_file_schemas} and model_schema={schema_configs}",
         )
     # Note to Datakind: In the long-term, this is where you would have a case block or something that would call different types of pipelines.
     db_req = DatabricksInferenceRunRequest(

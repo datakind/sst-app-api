@@ -855,16 +855,12 @@ def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]
         inferred.add("COURSE")
     if "student" in name:
         inferred.add("STUDENT")
-        if institution_id == "pdp":
-            inferred.add("SEMESTER")
     if "semester" in name:
         inferred.add("SEMESTER")
     if "cohort" in name:
         inferred.add("STUDENT")
-        inferred.add("SEMESTER")
     if "course" not in name and ("ar" in name or "deidentified" in name):
         inferred.add("STUDENT")
-        inferred.add("SEMESTER")
 
     if not inferred:
         logging.error(
@@ -938,7 +934,7 @@ def validation_helper(
                 uploader=str_to_uuid(current_user.user_id),
                 source=source_str,
                 sst_generated=False,
-                schemas=list(inferred_schemas),
+                schemas=list(allowed_schemas),
                 valid=True,
             )
             local_session.get().add(new_file_record)
@@ -960,7 +956,7 @@ def validation_helper(
     return {
         "name": file_name,
         "inst_id": inst_id,
-        "file_types": list(inferred_schemas),
+        "file_types": list(allowed_schemas),
         "source": source_str,
         "status": db_status,
     }
