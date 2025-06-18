@@ -575,7 +575,7 @@
               "checks": []
             },
             "core_competency_completed": {
-              "dtype": "float64",
+              "dtype": "category",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -599,7 +599,7 @@
               "checks": []
             },
             "course_instructor_employment_status": {
-              "dtype": "float64",
+              "dtype": "category",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -607,7 +607,7 @@
               "checks": []
             },
             "course_instructor_rank": {
-              "dtype": "float64",
+              "dtype": "category",
               "coerce": true,
               "nullable": true,
               "required": false,
@@ -615,7 +615,7 @@
               "checks": []
             },
             "credential_engine_identifier": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -671,7 +671,7 @@
               "checks": []
             },
             "institution_id": {
-              "dtype": "float64",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,

@@ -206,7 +206,6 @@ class DatabricksControl(BaseModel):
         inst_name: str,
         table_name: str,
         warehouse_id: str,
-        limit: int = 1000,
     ) -> List[Dict[str, Any]]:
         """
         Executes a SELECT * query on the specified table within the given catalog and schema,
@@ -226,7 +225,7 @@ class DatabricksControl(BaseModel):
         fully_qualified_table = (
             f"`{catalog_name}`.`{schema_name}_silver`.`{table_name}`"
         )
-        sql_query = f"SELECT * FROM {fully_qualified_table} LIMIT {limit}"
+        sql_query = f"SELECT * FROM {fully_qualified_table}"
 
         try:
             # Execute the SQL statement

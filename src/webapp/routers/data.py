@@ -1057,7 +1057,6 @@ def get_top_features(
             inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_features_with_most_impact",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
-            limit=500,
         )
 
         return rows
@@ -1101,7 +1100,6 @@ def get_support_overview(
             inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_support_overview",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
-            limit=500,
         )
 
         return rows
@@ -1144,7 +1142,6 @@ def get_training_support_overview(
             inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_training_{run_id}_support_overview",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
-            limit=500,
         )
 
         return rows
@@ -1187,7 +1184,6 @@ def get_feature_value(
             inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_inference_{run_id}_shap_feature_importance",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
-            limit=500,
         )
 
         return rows
@@ -1230,7 +1226,6 @@ def get_confusion_matrix(
             inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_training_{run_id}_confusion_matrix",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
-            limit=500,
         )
 
         return rows
@@ -1273,7 +1268,6 @@ def get_roc_curve(
             inst_name=f"{query_result[0][0].name}",
             table_name=f"sample_training_{run_id}_roc_curve",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
-            limit=500,
         )
 
         return rows
