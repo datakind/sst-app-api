@@ -118,7 +118,7 @@ def session_fixture():
         updated_at=DATETIME_TESTING,
         sst_generated=False,
         valid=True,
-        schemas=[SchemaType.PDP_COURSE],
+        schemas=[SchemaType.COURSE],
     )
     file_3 = FileTable(
         id=FILE_UUID_3,
@@ -129,7 +129,7 @@ def session_fixture():
         updated_at=DATETIME_TESTING,
         sst_generated=True,
         valid=True,
-        schemas=[SchemaType.PDP_COHORT],
+        schemas=[SchemaType.STUDENT],
     )
     model_1 = ModelTable(
         id=SAMPLE_UUID,
@@ -139,18 +139,13 @@ def session_fixture():
             [
                 [
                     SchemaConfigObj(
-                        schema_type=SchemaType.PDP_COURSE,
+                        schema_type=SchemaType.COURSE,
                         optional=False,
                         multiple_allowed=False,
                     ),
                     SchemaConfigObj(
-                        schema_type=SchemaType.PDP_COHORT,
+                        schema_type=SchemaType.STUDENT,
                         optional=False,
-                        multiple_allowed=False,
-                    ),
-                    SchemaConfigObj(
-                        schema_type=SchemaType.SST_PDP_FINANCE,
-                        optional=True,
                         multiple_allowed=False,
                     ),
                 ]
@@ -189,7 +184,7 @@ def session_fixture():
                         updated_at=DATETIME_TESTING,
                         sst_generated=False,
                         valid=False,
-                        schemas=[SchemaType.PDP_COURSE],
+                        schemas=[SchemaType.COURSE],
                     ),
                     file_3,
                     model_1,
@@ -329,23 +324,18 @@ def test_read_inst_model_output(client: TestClient):
 def test_create_model(client: TestClient):
     """Depending on timeline, fellows may not get to this."""
     schema_config_1 = {
-        "schema_type": SchemaType.PDP_COURSE,
+        "schema_type": SchemaType.COURSE,
         "count": 1,
     }
     schema_config_2 = {
-        "schema_type": SchemaType.PDP_COHORT,
+        "schema_type": SchemaType.STUDENT,
         "count": 1,
-    }
-    schema_config_3 = {
-        "schema_type": SchemaType.SST_PDP_FINANCE,
-        "count": 1,
-        "optional": True,
     }
     response = client.post(
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/models/",
         json={
             "name": "my_model",
-            "schema_configs": [[schema_config_1, schema_config_2, schema_config_3]],
+            "schema_configs": [[schema_config_1, schema_config_2]],
         },
     )
 
@@ -368,9 +358,8 @@ def test_trigger_inference_run(client: TestClient):
     )
 
     assert response.status_code == 400
-    assert (
-        response.text
-        == '{"detail":"The files in this batch don\'t conform to the schema configs allowed by this model."}'
+    assert response.json()["detail"].startswith(
+        "The files in this batch don't conform to the schema configs allowed by this model."
     )
 
     response = client.post(
@@ -395,54 +384,43 @@ def test_trigger_inference_run(client: TestClient):
 def test_check_file_types_valid_schema_configs():
     """Test batch schema validation logic."""
     file_types1 = [
-        [SchemaType.PDP_COURSE],
-        [SchemaType.PDP_COHORT],
+        [SchemaType.COURSE],
+        [SchemaType.STUDENT],
         [SchemaType.UNKNOWN],
     ]
     file_types2 = [
-        [SchemaType.SST_PDP_COHORT],
-        [SchemaType.SST_PDP_COURSE],
-        [SchemaType.SST_PDP_FINANCE],
+        [SchemaType.STUDENT],
+        [SchemaType.COURSE],
     ]
     file_types3 = [
-        [SchemaType.SST_PDP_COHORT, SchemaType.UNKNOWN],
-        [SchemaType.SST_PDP_COURSE],
+        [SchemaType.STUDENT, SchemaType.UNKNOWN],
+        [SchemaType.COURSE],
     ]
     file_types4 = [
-        [SchemaType.SST_PDP_COHORT, SchemaType.UNKNOWN],
+        [SchemaType.STUDENT, SchemaType.UNKNOWN],
         [SchemaType.UNKNOWN],
     ]
     pdp_configs = [
         SchemaConfigObj(
-            schema_type=SchemaType.PDP_COURSE,
+            schema_type=SchemaType.COURSE,
             optional=False,
             multiple_allowed=False,
         ),
         SchemaConfigObj(
-            schema_type=SchemaType.PDP_COHORT,
+            schema_type=SchemaType.STUDENT,
             optional=False,
-            multiple_allowed=False,
-        ),
-        SchemaConfigObj(
-            schema_type=SchemaType.SST_PDP_FINANCE,
-            optional=True,
             multiple_allowed=False,
         ),
     ]
     sst_configs = [
         SchemaConfigObj(
-            schema_type=SchemaType.SST_PDP_COHORT,
+            schema_type=SchemaType.STUDENT,
             optional=False,
             multiple_allowed=False,
         ),
         SchemaConfigObj(
-            schema_type=SchemaType.SST_PDP_COURSE,
+            schema_type=SchemaType.COURSE,
             optional=False,
-            multiple_allowed=False,
-        ),
-        SchemaConfigObj(
-            schema_type=SchemaType.SST_PDP_FINANCE,
-            optional=True,
             multiple_allowed=False,
         ),
     ]
@@ -463,10 +441,10 @@ def test_check_file_types_valid_schema_configs():
     assert not check_file_types_valid_schema_configs(file_types1, [custom])
     assert not check_file_types_valid_schema_configs(file_types1, schema_configs1)
     assert check_file_types_valid_schema_configs(file_types2, [sst_configs])
-    assert not check_file_types_valid_schema_configs(file_types2, [pdp_configs])
+    assert check_file_types_valid_schema_configs(file_types2, [pdp_configs])
     assert not check_file_types_valid_schema_configs(file_types2, [custom])
     assert check_file_types_valid_schema_configs(file_types3, [sst_configs])
-    assert not check_file_types_valid_schema_configs(file_types3, [pdp_configs])
+    assert check_file_types_valid_schema_configs(file_types3, [pdp_configs])
     assert not check_file_types_valid_schema_configs(file_types3, [custom])
     assert not check_file_types_valid_schema_configs(file_types4, [sst_configs])
     assert not check_file_types_valid_schema_configs(file_types4, [pdp_configs])
