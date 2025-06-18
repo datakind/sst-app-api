@@ -518,7 +518,7 @@ def trigger_inference_run(
             detail="Unexpected number of batches found: Expected 1, got "
             + str(len(inst_result)),
         )
-    #inst_file_schemas = [x.schemas for x in batch_result[0][0].files]
+    # inst_file_schemas = [x.schemas for x in batch_result[0][0].files]
     inst_file_schemas = [list({s for f in batch_result[0][0].files for s in f.schemas})]
     raw_config = query_result[0][0].schema_configs
 
