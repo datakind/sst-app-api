@@ -5,6 +5,42 @@
       "data_models": {
         "student": {
           "columns": {
+            "cohort_term": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": ["semester"],
+              "checks": []
+            },
+            "enrollment_type": {
+            "dtype": "string",
+            "coerce": true,
+            "nullable": true,
+            "required": false,
+            "aliases": ["time_status"],
+            "checks": [
+              {"type": "str_length", "args": [], "kwargs": {"min_value": 1}}
+              ]
+            },
+            "number_of_credits_attempted": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": ["credits_attempted", "ug_att", "number_of_credits_attempted_year_1", "number_of_credits_attempted_year_2",
+            "number_of_credits_attempted_year_3", "number_of_credits_attempted_year_4"],
+              "checks": []
+            },
+            "number_of_credits_earned": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": ["credits_earned", "ug_earn", "number_of_credits_earned_year_1", "number_of_credits_earned_year_2",
+            "number_of_credits_earned_year_3", "number_of_credits_earned_year_4"],
+              "checks": [{"type": "ge", "args": [0.0]}]
+            },
             "attempteddevenglishy1": {
               "dtype": "category",
               "coerce": true,
