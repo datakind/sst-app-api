@@ -48,7 +48,7 @@ class DatabricksInferenceRunResponse(BaseModel):
 
 def get_filepath_of_filetype(
     file_dict: dict[str, list[SchemaType]], file_type: SchemaType
-):
+) -> str:
     """Helper functions to get a file of a given file_type.
     For both, we will return the first file that matches the schema."""
     for k, v in file_dict.items():
@@ -57,7 +57,7 @@ def get_filepath_of_filetype(
     return ""
 
 
-def check_types(dict_values, file_type: SchemaType):
+def check_types(dict_values: list[list[SchemaType]], file_type: SchemaType) -> bool:
     """Check the file type is in the dict dictionary."""
     for elem in dict_values:
         if file_type in elem:
@@ -327,7 +327,7 @@ class DatabricksControl(BaseModel):
             raise ValueError("Query succeeded but result data is missing.")
 
         # Extract column names and data rows
-        column_names = [column.name for column in response.manifest.schema.columns]
+        column_names = [str(column.name) for column in response.manifest.schema.columns]
         data_rows = response.result.data_array
 
         LOGGER.info(f"Fetched {len(data_rows)} rows from table: {fully_qualified_table}")
