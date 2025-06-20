@@ -4,7 +4,6 @@ import os
 import logging
 from pydantic import BaseModel
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.jobs import Wait
 from databricks.sdk.service import catalog
 from databricks.sdk.service.jobs import RunResponse
 from databricks.sdk.service.sql import (
@@ -15,7 +14,7 @@ from databricks.sdk.service.sql import (
 )
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
-from typing import List, Any, Dict
+from typing import List, Any, Dict, cast
 from databricks.sdk.errors import DatabricksError
 
 # Setting up logger
@@ -189,7 +188,7 @@ class DatabricksControl(BaseModel):
 
 
         try:
-            run_job: Wait[RunResponse] = w.jobs.run_now(
+            run_job = w.jobs.run_now(
                 job_id,
                 job_parameters={
                     "cohort_file_name": get_filepath_of_filetype(
@@ -208,6 +207,7 @@ class DatabricksControl(BaseModel):
                     "notification_email": req.email,
                 },
             )
+            response = cast(RunResponse, run_job.response)
             LOGGER.info(f"Successfully triggered job run. Run ID: {run_job.response.run_id}")
         except Exception as e:
             LOGGER.exception("Failed to run the PDP inference job.")
