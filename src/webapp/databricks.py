@@ -224,7 +224,7 @@ class DatabricksControl(BaseModel):
         """Cleanup tasks required on the Databricks side to delete an institution."""
         db_inst_name = databricksify_inst_name(inst_name)
         cat_name = databricks_vars["CATALOG_NAME"]
-    
+
         LOGGER.info(f"Starting deletion of Databricks resources for: {db_inst_name}")
 
         try:
