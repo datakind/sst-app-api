@@ -211,12 +211,14 @@ class DatabricksControl(BaseModel):
             LOGGER.exception("Failed to run the PDP inference job.")
             raise ValueError(f"run_pdp_inference(): Job could not be run: {e}")
 
-        run_id = getattr(getattr(run_job, "response", None), "run_id", None)
-        if run_id is None:
+        if not run_job.response or run_job.response.run_id is None:
             raise ValueError("run_pdp_inference(): Job did not return a valid run_id.")
+
+        run_id = run_job.response.run_id
         LOGGER.info(f"Successfully triggered job run. Run ID: {run_id}")
 
-        return DatabricksInferenceRunResponse(job_run_id=run_job.response.run_id)
+        return DatabricksInferenceRunResponse(job_run_id=run_id)
+
 
     def delete_inst(self, inst_name: str) -> None:
         """Cleanup tasks required on the Databricks side to delete an institution."""
