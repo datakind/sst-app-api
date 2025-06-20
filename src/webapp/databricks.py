@@ -80,8 +80,8 @@ class DatabricksControl(BaseModel):
         except Exception as e:
             LOGGER.exception(
                 "Failed to create Databricks WorkspaceClient with host: %s and service account: %s",
-                databricks_vars['DATABRICKS_HOST_URL'],
-                gcs_vars['GCP_SERVICE_ACCOUNT_EMAIL']
+                databricks_vars["DATABRICKS_HOST_URL"],
+                gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
             )
             raise ValueError(f"setup_new_inst(): Workspace client creation failed: {e}")
 
@@ -101,7 +101,9 @@ class DatabricksControl(BaseModel):
                 name="bronze_volume",
                 volume_type=catalog.VolumeType.MANAGED,
             )
-            LOGGER.info(f"Created volume 'bronze_volume' in schema '{db_inst_name}_bronze'.")
+            LOGGER.info(
+                f"Created volume 'bronze_volume' in schema '{db_inst_name}_bronze'."
+            )
 
             created_volume_silver = w.volumes.create(
                 catalog_name=cat_name,
@@ -109,7 +111,9 @@ class DatabricksControl(BaseModel):
                 name="silver_volume",
                 volume_type=catalog.VolumeType.MANAGED,
             )
-            LOGGER.info(f"Created volume 'silver_volume' in schema '{db_inst_name}_silver'.")
+            LOGGER.info(
+                f"Created volume 'silver_volume' in schema '{db_inst_name}_silver'."
+            )
 
             created_volume_gold = w.volumes.create(
                 catalog_name=cat_name,
@@ -117,7 +121,9 @@ class DatabricksControl(BaseModel):
                 name="gold_volume",
                 volume_type=catalog.VolumeType.MANAGED,
             )
-            LOGGER.info(f"Created volume 'gold_volume' in schema '{db_inst_name}_gold'.")
+            LOGGER.info(
+                f"Created volume 'gold_volume' in schema '{db_inst_name}_gold'."
+            )
 
         except Exception as e:
             LOGGER.exception("Failed to create one or more volumes.")
@@ -167,24 +173,26 @@ class DatabricksControl(BaseModel):
         except Exception as e:
             LOGGER.exception(
                 "Failed to create Databricks WorkspaceClient with host: %s and service account: %s",
-                databricks_vars['DATABRICKS_HOST_URL'],
-                gcs_vars['GCP_SERVICE_ACCOUNT_EMAIL']
+                databricks_vars["DATABRICKS_HOST_URL"],
+                gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
             )
-            raise ValueError(f"run_pdp_inference(): Workspace client initialization failed: {e}")
+            raise ValueError(
+                f"run_pdp_inference(): Workspace client initialization failed: {e}"
+            )
 
         db_inst_name = databricksify_inst_name(req.inst_name)
-
 
         try:
             job = next(w.jobs.list(name=PDP_INFERENCE_JOB_NAME), None)
             if not job or job.job_id is None:
-                raise ValueError(f"run_pdp_inference(): Job '{PDP_INFERENCE_JOB_NAME}' was not found or has no job_id.")
+                raise ValueError(
+                    f"run_pdp_inference(): Job '{PDP_INFERENCE_JOB_NAME}' was not found or has no job_id."
+                )
             job_id = job.job_id
             LOGGER.info(f"Resolved job ID for '{PDP_INFERENCE_JOB_NAME}': {job_id}")
         except Exception as e:
             LOGGER.exception(f"Job lookup failed for '{PDP_INFERENCE_JOB_NAME}'.")
             raise ValueError(f"run_pdp_inference(): Failed to find job: {e}")
-
 
         try:
             run_job: Any = w.jobs.run_now(
@@ -206,7 +214,9 @@ class DatabricksControl(BaseModel):
                     "notification_email": req.email,
                 },
             )
-            LOGGER.info(f"Successfully triggered job run. Run ID: {run_job.response.run_id}")
+            LOGGER.info(
+                f"Successfully triggered job run. Run ID: {run_job.response.run_id}"
+            )
         except Exception as e:
             LOGGER.exception("Failed to run the PDP inference job.")
             raise ValueError(f"run_pdp_inference(): Job could not be run: {e}")
@@ -218,7 +228,6 @@ class DatabricksControl(BaseModel):
         LOGGER.info(f"Successfully triggered job run. Run ID: {run_id}")
 
         return DatabricksInferenceRunResponse(job_run_id=run_id)
-
 
     def delete_inst(self, inst_name: str) -> None:
         """Cleanup tasks required on the Databricks side to delete an institution."""
@@ -237,10 +246,12 @@ class DatabricksControl(BaseModel):
         except Exception as e:
             LOGGER.exception(
                 "Failed to create Databricks WorkspaceClient with host: %s and service account: %s",
-                databricks_vars['DATABRICKS_HOST_URL'],
-                gcs_vars['GCP_SERVICE_ACCOUNT_EMAIL']
+                databricks_vars["DATABRICKS_HOST_URL"],
+                gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
             )
-            raise ValueError(f"delete_inst(): Workspace client initialization failed: {e}")
+            raise ValueError(
+                f"delete_inst(): Workspace client initialization failed: {e}"
+            )
 
         # Delete managed volumes
         for medallion in MEDALLION_LEVELS:
@@ -249,7 +260,9 @@ class DatabricksControl(BaseModel):
                 w.volumes.delete(name=volume_name)
                 LOGGER.info(f"Deleted volume: {volume_name}")
             except Exception as e:
-                LOGGER.exception(f"Volume not found or could not be deleted: {volume_name} — {e}")
+                LOGGER.exception(
+                    f"Volume not found or could not be deleted: {volume_name} — {e}"
+                )
 
         # TODO implement model deletion
 
@@ -269,8 +282,9 @@ class DatabricksControl(BaseModel):
                     )
                 w.schemas.delete(full_name=f"{cat_name}.{db_inst_name}_{medallion}")
             except Exception as e:
-                LOGGER.exception(f"Tables or schemas could not be deleted for {medallion}  — {e}")
-
+                LOGGER.exception(
+                    f"Tables or schemas could not be deleted for {medallion}  — {e}"
+                )
 
     def fetch_table_data(
         self,
@@ -292,10 +306,12 @@ class DatabricksControl(BaseModel):
         except Exception as e:
             LOGGER.exception(
                 "Failed to create Databricks WorkspaceClient with host: %s and service account: %s",
-                databricks_vars['DATABRICKS_HOST_URL'],
-                gcs_vars['GCP_SERVICE_ACCOUNT_EMAIL']
+                databricks_vars["DATABRICKS_HOST_URL"],
+                gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
             )
-            raise ValueError(f"fetch_table_data(): Workspace client initialization failed: {e}")
+            raise ValueError(
+                f"fetch_table_data(): Workspace client initialization failed: {e}"
+            )
 
         # Construct the fully qualified table name
         schema_name = databricksify_inst_name(inst_name)
@@ -324,25 +340,29 @@ class DatabricksControl(BaseModel):
         status = response.status
         if not status or status.state != StatementState.SUCCEEDED:
             error_message = (
-                status.error.message if status and status.error else "No additional error info."
+                status.error.message
+                if status and status.error
+                else "No additional error info."
             )
             raise ValueError(
                 f"Query did not succeed (state={status.state if status else 'None'}): {error_message}"
             )
 
         if (
-            not response.manifest or
-            not response.manifest.schema or
-            not response.manifest.schema.columns or
-            not response.result or
-            not response.result.data_array
+            not response.manifest
+            or not response.manifest.schema
+            or not response.manifest.schema.columns
+            or not response.result
+            or not response.result.data_array
         ):
             raise ValueError("Query succeeded but schema or result data is missing.")
 
         column_names = [str(column.name) for column in response.manifest.schema.columns]
         data_rows = response.result.data_array
 
-        LOGGER.info(f"Fetched {len(data_rows)} rows from table: {fully_qualified_table}")
+        LOGGER.info(
+            f"Fetched {len(data_rows)} rows from table: {fully_qualified_table}"
+        )
 
         # Combine column names with corresponding row values
         return [dict(zip(column_names, row)) for row in data_rows]
