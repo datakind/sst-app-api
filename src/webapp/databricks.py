@@ -13,7 +13,7 @@ from databricks.sdk.service.sql import (
 )
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
-from typing import List, Any, Dict, cast
+from typing import List, Any, Dict
 from databricks.sdk.errors import DatabricksError
 
 # Setting up logger
@@ -269,7 +269,8 @@ class DatabricksControl(BaseModel):
                     )
                 w.schemas.delete(full_name=f"{cat_name}.{db_inst_name}_{medallion}")
             except Exception as e:
-                LOGGER.exception(f"Tables or schemas could not be deleted for {medallion}.")
+                LOGGER.exception(f"Tables or schemas could not be deleted for {medallion}  — {e}")
+
 
     def fetch_table_data(
         self,
