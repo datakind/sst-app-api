@@ -151,8 +151,8 @@ class DatabricksControl(BaseModel):
         LOGGER.info(f"Running PDP inference for institution: {req.inst_name}")
         if (
             not req.filepath_to_type
-            or not check_types(req.filepath_to_type.values(), SchemaType.COURSE)
-            or not check_types(req.filepath_to_type.values(), SchemaType.STUDENT)
+            or not check_types(list(req.filepath_to_type.values()), SchemaType.COURSE)
+            or not check_types(list(req.filepath_to_type.values()), SchemaType.STUDENT)
         ):
             LOGGER.error("Missing required file types: COURSE and STUDENT")
             raise ValueError(
@@ -174,12 +174,17 @@ class DatabricksControl(BaseModel):
 
         db_inst_name = databricksify_inst_name(req.inst_name)
 
+
         try:
-            job_id = next(w.jobs.list(name=PDP_INFERENCE_JOB_NAME)).job_id
+            job = next(w.jobs.list(name=PDP_INFERENCE_JOB_NAME), None)
+            if not job or job.job_id is None:
+                raise ValueError(f"run_pdp_inference(): Job '{PDP_INFERENCE_JOB_NAME}' was not found or has no job_id.")
+            job_id = job.job_id
             LOGGER.info(f"Resolved job ID for '{PDP_INFERENCE_JOB_NAME}': {job_id}")
         except Exception as e:
-            LOGGER.exception(f"Job '{PDP_INFERENCE_JOB_NAME}' not found.")
-            raise ValueError(f"run_pdp_inference(): Job was not created or is missing: {e}")
+            LOGGER.exception(f"Job lookup failed for '{PDP_INFERENCE_JOB_NAME}'.")
+            raise ValueError(f"run_pdp_inference(): Failed to find job: {e}")
+
 
         try:
             run_job = w.jobs.run_now(
@@ -206,8 +211,11 @@ class DatabricksControl(BaseModel):
             LOGGER.exception("Failed to run the PDP inference job.")
             raise ValueError(f"run_pdp_inference(): Job could not be run: {e}")
 
-        if not run_job:
-            raise ValueError("run_pdp_inference(): Job could not be run.")
+        run_id = getattr(getattr(run_job, "response", None), "run_id", None)
+        if run_id is None:
+            raise ValueError("run_pdp_inference(): Job did not return a valid run_id.")
+        LOGGER.info(f"Successfully triggered job run. Run ID: {run_id}")
+
         return DatabricksInferenceRunResponse(job_run_id=run_job.response.run_id)
 
     def delete_inst(self, inst_name: str) -> None:
@@ -310,23 +318,25 @@ class DatabricksControl(BaseModel):
             raise ValueError(f"Databricks API call failed: {e}")
 
         # Check if the query execution was successful
-        if response.status.state != StatementState.SUCCEEDED:
+        if not response.status or response.status.state != StatementState.SUCCEEDED:
             error_message = (
                 response.status.error.message
-                if response.status.error
+                if response.status and response.status.error
                 else "No additional error info."
             )
             raise ValueError(
                 f"Query did not succeed (state={response.status.state}): {error_message}"
             )
 
-        # Validate the presence of the result and schema
-        if not response.manifest or not response.manifest.schema:
-            raise ValueError("Query succeeded but schema manifest is missing.")
-        if not response.result or not response.result.data_array:
-            raise ValueError("Query succeeded but result data is missing.")
+        if (
+            not response.manifest or
+            not response.manifest.schema or
+            not response.manifest.schema.columns or
+            not response.result or
+            not response.result.data_array
+        ):
+            raise ValueError("Query succeeded but schema or result data is missing.")
 
-        # Extract column names and data rows
         column_names = [str(column.name) for column in response.manifest.schema.columns]
         data_rows = response.result.data_array
 
