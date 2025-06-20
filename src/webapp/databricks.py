@@ -318,14 +318,13 @@ class DatabricksControl(BaseModel):
             raise ValueError(f"Databricks API call failed: {e}")
 
         # Check if the query execution was successful
-        if not response.status or response.status.state != StatementState.SUCCEEDED:
+        status = response.status
+        if not status or status.state != StatementState.SUCCEEDED:
             error_message = (
-                response.status.error.message
-                if response.status and response.status.error
-                else "No additional error info."
+                status.error.message if status and status.error else "No additional error info."
             )
             raise ValueError(
-                f"Query did not succeed (state={response.status.state}): {error_message}"
+                f"Query did not succeed (state={status.state if status else 'None'}): {error_message}"
             )
 
         if (
