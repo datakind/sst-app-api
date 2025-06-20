@@ -4,7 +4,9 @@ import os
 import logging
 from pydantic import BaseModel
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.jobs import Wait
 from databricks.sdk.service import catalog
+from databricks.sdk.service.jobs import RunResponse
 from databricks.sdk.service.sql import (
     Format,
     ExecuteStatementRequestOnWaitTimeout,
@@ -187,7 +189,7 @@ class DatabricksControl(BaseModel):
 
 
         try:
-            run_job = w.jobs.run_now(
+            run_job: Wait[RunResponse] = w.jobs.run_now(
                 job_id,
                 job_parameters={
                     "cohort_file_name": get_filepath_of_filetype(
