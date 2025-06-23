@@ -1027,7 +1027,7 @@ def get_upload_url(
 
 # Get SHAP Values for Inference
 @router.get("/{inst_id}/inference/top-features/{run_id}")
-def get_top_features(
+def get_inference_top_features(
     inst_id: str,
     run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
@@ -1070,7 +1070,7 @@ def get_top_features(
 
 # Get SHAP Values for Inference
 @router.get("/{inst_id}/inference/support-overview/{run_id}")
-def get_support_overview(
+def get_inference_support_overview(
     inst_id: str,
     run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
@@ -1112,7 +1112,7 @@ def get_support_overview(
 
 
 @router.get("/{inst_id}/inference/feature_importance/{run_id}")
-def get_feature_importance(
+def get_inference_feature_importance(
     inst_id: str,
     run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
@@ -1157,7 +1157,7 @@ def get_feature_importance(
 
 
 @router.get("/{inst_id}/training/feature_importance/{run_id}")
-def get_feature_importance(
+def get_training_feature_importance(
     inst_id: str,
     run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
@@ -1199,7 +1199,7 @@ def get_feature_importance(
 
 
 @router.get("/{inst_id}/training/confusion_matrix/{run_id}")
-def get_confusion_matrix(
+def get_training_confusion_matrix(
     inst_id: str,
     run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
@@ -1241,7 +1241,7 @@ def get_confusion_matrix(
 
 
 @router.get("/{inst_id}/training/roc_curve/{run_id}")
-def get_roc_curve(
+def get_training_roc_curve(
     inst_id: str,
     run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
