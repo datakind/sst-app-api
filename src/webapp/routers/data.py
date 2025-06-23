@@ -150,7 +150,7 @@ def get_all_files(
     inst_id: str,
     sst_generated_value: bool | None,
     sess: Session,
-    storage_control,
+    storage_control: Any,
 ) -> list[DataInfo]:
     """Retrieve all files."""
     # Update from bucket
