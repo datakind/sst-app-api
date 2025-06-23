@@ -463,7 +463,7 @@ def create_batch(
         batch = BatchTable(
             name=req.name,
             inst_id=str_to_uuid(inst_id),
-            created_by=str_to_uuid(current_user.user_id),
+            created_by=str_to_uuid(current_user.user_id),  # type: ignore
         )
         f_names = [] if not req.file_names else req.file_names
         f_ids = [] if not req.file_ids else strs_to_uuids(req.file_ids)
@@ -647,7 +647,7 @@ def update_batch(
         existing_batch.name = update_data_req["name"]
     if "completed" in update_data_req:
         existing_batch.completed = update_data_req["completed"]
-    existing_batch.updated_by = str_to_uuid(current_user.user_id)
+    existing_batch.updated_by = str_to_uuid(current_user.user_id)  # type: ignore
     local_session.get().commit()
     res = (
         local_session.get()
@@ -931,7 +931,7 @@ def validation_helper(
             new_file_record = FileTable(
                 name=file_name,
                 inst_id=str_to_uuid(inst_id),
-                uploader=str_to_uuid(current_user.user_id),
+                uploader=str_to_uuid(current_user.user_id),  # type: ignore
                 source=source_str,
                 sst_generated=False,
                 schemas=list(allowed_schemas),
@@ -974,7 +974,7 @@ def validate_file_sftp(
 ) -> Any:
     """Validate a given file pulled from SFTP. The file_name should be url encoded."""
     file_name = decode_url_piece(file_name)
-    if not current_user.is_datakinder:
+    if not current_user.is_datakinder:  # type: ignore
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="SFTP validation needs to be done by a datakinder.",
@@ -1056,10 +1056,10 @@ def get_inference_top_features(
     try:
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
-            catalog_name=env_vars["CATALOG_NAME"],
+            catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
             table_name=f"inference_{run_id}_features_with_most_impact",
-            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
         return rows
@@ -1099,10 +1099,10 @@ def get_inference_support_overview(
     try:
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
-            catalog_name=env_vars["CATALOG_NAME"],
+            catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
             table_name=f"inference_{run_id}_support_overview",
-            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
         return rows
@@ -1141,10 +1141,10 @@ def get_inference_feature_importance(
     try:
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
-            catalog_name=env_vars["CATALOG_NAME"],
+            catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
             table_name=f"inference_{run_id}_shap_feature_importance",
-            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
         return rows
@@ -1186,10 +1186,10 @@ def get_training_feature_importance(
     try:
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
-            catalog_name=env_vars["CATALOG_NAME"],
+            catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
             table_name=f"training_{run_id}_shap_feature_importance",
-            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
         return rows
@@ -1228,10 +1228,10 @@ def get_training_confusion_matrix(
     try:
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
-            catalog_name=env_vars["CATALOG_NAME"],
+            catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
             table_name=f"training_{run_id}_confusion_matrix",
-            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
         return rows
@@ -1270,10 +1270,10 @@ def get_training_roc_curve(
     try:
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
-            catalog_name=env_vars["CATALOG_NAME"],
+            catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
             table_name=f"training_{run_id}_roc_curve",
-            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
         return rows
@@ -1312,10 +1312,10 @@ def get_training_support_overview(
     try:
         dbc = DatabricksControl()
         rows = dbc.fetch_table_data(
-            catalog_name=env_vars["CATALOG_NAME"],
+            catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
             table_name=f"training_{run_id}_support_overview",
-            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],
+            warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
         return rows
