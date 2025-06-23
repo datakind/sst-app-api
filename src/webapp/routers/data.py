@@ -191,7 +191,7 @@ def get_all_files(
                 "uploaded_date": elem.created_at,
             }
         )
-    return result_files
+    return result_files # type: ignore
 
 
 def get_all_batches(
@@ -225,19 +225,19 @@ def get_all_batches(
                 "updated_at": elem.updated_at,
             }
         )
-    return result_batches
+    return result_batches # type: ignore
 
 
-def uuids_to_strs(files) -> set[str]:
+def uuids_to_strs(files: Any) -> set[str]: 
     """Convert a set of uuids to strings.
     The input is of type sqlalchemy.orm.collections.InstrumentedSet.
     """
-    return [uuid_to_str(x.id) for x in files]
+    return [uuid_to_str(x.id) for x in files] # type: ignore
 
 
-def strs_to_uuids(files) -> set[uuid.UUID]:
+def strs_to_uuids(files: Any) -> set[uuid.UUID]:
     """Convert a set of strs to uuids."""
-    return [str_to_uuid(x) for x in files]
+    return [str_to_uuid(x) for x in files] # type: ignore
 
 
 @router.get("/{inst_id}/input", response_model=DataOverview)
