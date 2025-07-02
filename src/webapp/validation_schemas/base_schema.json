@@ -32,7 +32,7 @@
             "checks": []
           },
           "first_generation_student": {
-            "dtype": "string",
+            "dtype": "category",
             "coerce": true,
             "nullable": true,
             "required": false,
