@@ -6,6 +6,7 @@ from datetime import datetime, date
 from typing import Annotated, Any, Dict, List
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi.responses import FileResponse
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
@@ -1353,12 +1354,17 @@ def get_model_cards(
     try:
         dbc = DatabricksControl()
         artifact_path = f"model_card/model-card-{model_name}.pdf"
-        rows = dbc.fetch_model_cards(
+        local_file_path = dbc.fetch_model_cards(
             run_id = run_id,
             artifact_path = artifact_path
         )
 
-        return rows
+        return FileResponse(
+            path=local_file_path,
+            filename=os.path.basename(artifact_path),
+            media_type="application/pdf"
+        )
+
     except ValueError as ve:
         # Return a 400 error with the specific message from ValueError
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
