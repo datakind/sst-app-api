@@ -13,7 +13,8 @@ from sqlalchemy.future import select
 import os
 import logging
 from sqlalchemy.exc import IntegrityError
-from ..config import env_vars
+from ..config import databricks_vars, env_vars
+import mlflow
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -1324,6 +1325,7 @@ def get_training_support_overview(
         # Return a 400 error with the specific message from ValueError
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
+
 @router.get("/{inst_id}/training/model_cards/{model_name}/{run_id}")
 def get_model_cards(
     run_id: str,
@@ -1353,16 +1355,28 @@ def get_model_cards(
 
     try:
         dbc = DatabricksControl()
+        mlflow.set_tracking_uri("databricks")
         artifact_path = f"model_card/model-card-{model_name}.pdf"
-        local_file_path = dbc.fetch_model_cards(
-            run_id = run_id,
-            artifact_path = artifact_path
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            artifact_uri = f"runs:/{run_id}/{artifact_path}"
+            local_path = mlflow.artifacts.download_artifacts(
+                artifact_uri=artifact_uri,
+                dst_path=tmpdir
+            )
+            LOGGER.info("Artifact download successful: %s", local_path)
+
+            return FileResponse(
+                path=local_path,
+                filename=os.path.basename(local_path),
+                media_type="application/pdf",
+            )
+        
+        
 
         return FileResponse(
             path=local_file_path,
             filename=os.path.basename(artifact_path),
-            media_type="application/pdf"
+            media_type="application/pdf",
         )
 
     except ValueError as ve:
