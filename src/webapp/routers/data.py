@@ -1384,7 +1384,7 @@ def get_model_cards(
                 artifact_uri=artifact_uri, dst_path=tmpdir
             )
 
-            LOGGER.debug(f"Artifact provisioned successfully")
+            LOGGER.debug("Artifact provisioned successfully")
             return FileResponse(
                 path=local_path,
                 filename=os.path.basename(local_path),
