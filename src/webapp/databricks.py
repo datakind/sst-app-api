@@ -15,6 +15,7 @@ from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict
 from databricks.sdk.errors import DatabricksError
+import tempfile
 
 # Setting up logger
 LOGGER = logging.getLogger(__name__)
@@ -366,3 +367,46 @@ class DatabricksControl(BaseModel):
 
         # Combine column names with corresponding row values
         return [dict(zip(column_names, row)) for row in data_rows]
+
+    def fetch_model_cards(
+        self,
+        run_id: str,
+        artifact_path: str,
+    ) -> str:
+        """
+        Executes a SELECT * query on the specified table within the given catalog and schema,
+        using the provided SQL warehouse. Returns the result as a list of dictionaries.
+        """
+        try:
+            w = WorkspaceClient(
+                host=databricks_vars["DATABRICKS_HOST_URL"],
+                google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
+            LOGGER.info("Successfully created Databricks WorkspaceClient.")
+        except Exception as e:
+            LOGGER.exception(
+                "Failed to create Databricks WorkspaceClient with host: %s and service account: %s",
+                databricks_vars["DATABRICKS_HOST_URL"],
+                gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
+            raise ValueError(
+                f"fetch_model_cards(): Workspace client initialization failed: {e}"
+            )
+
+        # Construct the fully qualified table name
+        with tempfile.TemporaryDirectory() as tmpdir:
+            local_file_path = os.path.join(tmpdir, os.path.basename(artifact_path))
+
+        try:
+            # Execute the SQL statement
+            w.mlflow.artifacts.download_artifact(
+                run_id=run_id,
+                path=artifact_path,
+                dest_path=local_file_path,
+            )
+            LOGGER.info("Databricks model card pull successful.")
+        except DatabricksError as e:
+            LOGGER.exception("Databricks API call failed.")
+            raise ValueError(f"Databricks API call failed: {e}")
+
+        return local_file_path
