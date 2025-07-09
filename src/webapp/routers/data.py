@@ -1384,6 +1384,7 @@ def get_model_cards(
                 artifact_uri=artifact_uri, dst_path=tmpdir
             )
 
+            LOGGER.debug(f"Artifact provisioned successfully")
             return FileResponse(
                 path=local_path,
                 filename=os.path.basename(local_path),
@@ -1392,4 +1393,5 @@ def get_model_cards(
 
     except MlflowException as e:
         # 6. Handle errors gracefully
+        LOGGER.debug(f"Artifact download failed: {e}")
         raise HTTPException(status_code=500, detail=f"Artifact download failed: {e}")
