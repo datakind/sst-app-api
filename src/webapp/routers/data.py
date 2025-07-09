@@ -1322,3 +1322,43 @@ def get_training_support_overview(
     except ValueError as ve:
         # Return a 400 error with the specific message from ValueError
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+@router.get("/{inst_id}/training/model_cards/{model_name}/{run_id}")
+def get_model_cards(
+    run_id: str,
+    model_name: str,
+    inst_id: str,
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    sql_session: Annotated[Session, Depends(get_session)],
+    artifact_path: str,
+) -> Any:
+    has_access_to_inst_or_err(inst_id, current_user)
+    local_session.set(sql_session)
+    query_result = (
+        local_session.get()
+        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
+        .all()
+    )
+    if not query_result or len(query_result) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Institution not found.",
+        )
+    if len(query_result) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Institution duplicates found.",
+        )
+
+    try:
+        dbc = DatabricksControl()
+        artifact_path = f"model_card/model-card-{model_name}.pdf"
+        rows = dbc.fetch_model_cards(
+            run_id = run_id,
+            artifact_path = artifact_path
+        )
+
+        return rows
+    except ValueError as ve:
+        # Return a 400 error with the specific message from ValueError
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
