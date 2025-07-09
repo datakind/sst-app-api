@@ -56,6 +56,7 @@ router = APIRouter(
 
 LOGGER = logging.getLogger(__name__)
 
+
 class BatchCreationRequest(BaseModel):
     """The Batch creation request."""
 
@@ -1361,8 +1362,8 @@ def get_model_cards(
             host=databricks_vars["DATABRICKS_HOST_URL"],
             google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
         )
-        os.environ["DATABRICKS_HOST"] = w._config.host  
-        os.environ["DATABRICKS_TOKEN"] = w._config.token 
+        os.environ["DATABRICKS_HOST"] = w._config.host
+        os.environ["DATABRICKS_TOKEN"] = w._config.token
         LOGGER.info("Successfully created Databricks WorkspaceClient.")
     except Exception as e:
         LOGGER.exception(
@@ -1380,14 +1381,13 @@ def get_model_cards(
             artifact_path = f"model_card/model-card-{model_name}.pdf"
             artifact_uri = f"runs:/{run_id}/{artifact_path}"
             local_path = mlflow.artifacts.download_artifacts(
-                artifact_uri = artifact_uri,
-                dst_path=tmpdir
+                artifact_uri=artifact_uri, dst_path=tmpdir
             )
 
             return FileResponse(
                 path=local_path,
                 filename=os.path.basename(local_path),
-                media_type = "application/pdf"
+                media_type="application/pdf",
             )
 
     except MlflowException as e:
