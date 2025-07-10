@@ -14,9 +14,9 @@ import os
 import logging
 from sqlalchemy.exc import IntegrityError
 from ..config import databricks_vars, env_vars, gcs_vars
-import mlflow
 from mlflow.exceptions import MlflowException
-import tempfile, pathlib
+import tempfile
+import pathlib
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -1374,8 +1374,9 @@ def get_model_cards(
         )
 
     try:
-        run_resp = w.runs.get(run_id=run_id)
-        experiment_id = run_resp.experiment_id
+        run_resp = w.experiments.get_run(run_id=run_id)
+        experiment_id = run_resp.run.info.experiment_id
+
         dbfs_path = f"/databricks/mlflow-tracking/{experiment_id}/{run_id}/artifacts/" \
             f"model_card/model-card-{model_name}.pdf"
         with tempfile.TemporaryDirectory() as tmpdir:
