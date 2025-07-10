@@ -1361,7 +1361,7 @@ def get_model_cards(
             host=databricks_vars["DATABRICKS_HOST_URL"],
             google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
         )
-        
+
         LOGGER.info("Successfully created Databricks WorkspaceClient.")
     except Exception as e:
         LOGGER.exception(
@@ -1377,15 +1377,26 @@ def get_model_cards(
         run_resp = w.experiments.get_run(run_id=run_id)
         experiment_id = run_resp.run.info.experiment_id
 
-        dbfs_path = f"/databricks/mlflow-tracking/{experiment_id}/{run_id}/artifacts/" \
+        assert run_resp.run is not None, "Expected non-None Run object"
+        assert run_resp.run.info is not None, "Expected non-None RunInfo object"
+
+        dbfs_path = (
+            f"/databricks/mlflow-tracking/{experiment_id}/{run_id}/artifacts/"
             f"model_card/model-card-{model_name}.pdf"
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             local_file = pathlib.Path(tmpdir) / f"model-card-{model_name}.pdf"
-            with w.dbfs.download(f"dbfs:{dbfs_path}") as stream:  # DBFS API download() returns a bytes stream
+            with w.dbfs.download(
+                f"dbfs:{dbfs_path}"
+            ) as stream:  # DBFS API download() returns a bytes stream
                 local_file.write_bytes(stream.read())
 
             LOGGER.debug("Artifact provisioned successfully")
-            return FileResponse(path=str(local_file), filename=local_file.name, media_type="application/pdf")
+            return FileResponse(
+                path=str(local_file),
+                filename=local_file.name,
+                media_type="application/pdf",
+            )
 
     except MlflowException as e:
         # 6. Handle errors gracefully
