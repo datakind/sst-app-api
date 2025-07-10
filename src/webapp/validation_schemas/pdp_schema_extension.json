@@ -515,7 +515,7 @@
               "checks": []
             },
             "years_to_associates_or_certificate_at_cohort_inst": {
-              "dtype": "category",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -523,7 +523,7 @@
               "checks": []
             },
             "years_to_associates_or_certificate_at_other_inst": {
-              "dtype": "category",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,
@@ -531,7 +531,7 @@
               "checks": []
             },
             "years_to_bachelor_at_other_inst": {
-              "dtype": "category",
+              "dtype": "string",
               "coerce": true,
               "nullable": true,
               "required": true,

@@ -29,7 +29,8 @@ dependencies = [
     "types-six",
     "fuzzywuzzy",
     "databricks-sql-connector",
-    "pandera~=0.13"
+    "pandera~=0.13",
+    "mlflow"
 ]
 
 [project.urls]
