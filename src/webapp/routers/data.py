@@ -1337,7 +1337,6 @@ def get_model_cards(
     inst_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
-    artifact_path: str,
 ) -> FileResponse:
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
