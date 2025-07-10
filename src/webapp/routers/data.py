@@ -1375,10 +1375,11 @@ def get_model_cards(
 
     try:
         run_resp = w.experiments.get_run(run_id=run_id)
-        experiment_id = run_resp.run.info.experiment_id
 
         assert run_resp.run is not None, "Expected non-None Run object"
         assert run_resp.run.info is not None, "Expected non-None RunInfo object"
+
+        experiment_id = run_resp.run.info.experiment_id
 
         dbfs_path = (
             f"/databricks/mlflow-tracking/{experiment_id}/{run_id}/artifacts/"
