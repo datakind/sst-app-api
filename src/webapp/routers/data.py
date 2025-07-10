@@ -14,9 +14,9 @@ import os
 import logging
 from sqlalchemy.exc import IntegrityError
 from ..config import databricks_vars, env_vars, gcs_vars
-import mlflow
 from mlflow.exceptions import MlflowException
 import tempfile
+import pathlib
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -1337,7 +1337,6 @@ def get_model_cards(
     inst_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
-    artifact_path: str,
 ) -> FileResponse:
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1362,8 +1361,7 @@ def get_model_cards(
             host=databricks_vars["DATABRICKS_HOST_URL"],
             google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
         )
-        os.environ["DATABRICKS_HOST"] = w._config.host
-        os.environ["DATABRICKS_TOKEN"] = w._config.token
+
         LOGGER.info("Successfully created Databricks WorkspaceClient.")
     except Exception as e:
         LOGGER.exception(
@@ -1376,18 +1374,28 @@ def get_model_cards(
         )
 
     try:
-        mlflow.set_tracking_uri("databricks")
+        run_resp = w.experiments.get_run(run_id=run_id)
+
+        assert run_resp.run is not None, "Expected non-None Run object"
+        assert run_resp.run.info is not None, "Expected non-None RunInfo object"
+
+        experiment_id = run_resp.run.info.experiment_id
+
+        dbfs_path = (
+            f"/databricks/mlflow-tracking/{experiment_id}/{run_id}/artifacts/"
+            f"model_card/model-card-{model_name}.pdf"
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
-            artifact_path = f"model_card/model-card-{model_name}.pdf"
-            artifact_uri = f"runs:/{run_id}/{artifact_path}"
-            local_path = mlflow.artifacts.download_artifacts(
-                artifact_uri=artifact_uri, dst_path=tmpdir
-            )
+            local_file = pathlib.Path(tmpdir) / f"model-card-{model_name}.pdf"
+            with w.dbfs.download(
+                f"dbfs:{dbfs_path}"
+            ) as stream:  # DBFS API download() returns a bytes stream
+                local_file.write_bytes(stream.read())
 
             LOGGER.debug("Artifact provisioned successfully")
             return FileResponse(
-                path=local_path,
-                filename=os.path.basename(local_path),
+                path=str(local_file),
+                filename=local_file.name,
                 media_type="application/pdf",
             )
 
