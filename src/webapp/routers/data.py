@@ -14,7 +14,6 @@ import os
 import logging
 from sqlalchemy.exc import IntegrityError
 from ..config import databricks_vars, env_vars, gcs_vars
-from mlflow.tracking import MlflowClient
 import tempfile
 import pathlib
 
