@@ -28,6 +28,7 @@ from ..utilities import (
     DataSource,
     get_external_bucket_name,
     decode_url_piece,
+    databricksify_inst_name,
 )
 
 from ..database import (
@@ -1373,7 +1374,7 @@ def get_model_cards(
         )
 
     try:
-        volume_path = f"/Volumes/staging_sst_01/{query_result[0][0].name}_gold/gold_volume/model-card-{model_name}.pdf"
+        volume_path = f"/Volumes/staging_sst_01/{databricksify_inst_name(query_result[0][0].name)}_gold/gold_volume/model-card-{model_name}.pdf"
         response = w.files.download(volume_path)
         stream = cast(IO[bytes], response.contents)
         pdf_bytes = stream.read()
