@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, date
 from databricks.sdk import WorkspaceClient
-from typing import Annotated, Any, Dict, List
+from typing import Annotated, Any, Dict, List, cast, IO
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.responses import FileResponse
@@ -1375,7 +1375,8 @@ def get_model_cards(
     try:
         volume_path = f"/Volumes/staging_sst_01/{query_result[0][0].name}_gold/gold_volume/model-card-{model_name}.pdf"
         response = w.files.download(volume_path)
-        pdf_bytes = response.contents.read()  # pylint: disable=no-member
+        stream = cast(IO[bytes], response.contents)
+        pdf_bytes = stream.read()
 
     except Exception as e:
         raise HTTPException(500, detail=f"Failed to fetch model card: {e}")
