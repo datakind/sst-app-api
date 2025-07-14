@@ -1377,7 +1377,7 @@ def get_model_cards(
         volume_path = f"/Volumes/staging_sst_01/{query_result[0][0].name}_gold/gold_volume/model-card-{model_name}.pdf"
         response = w.files.download(volume_path)
         pdf_bytes = response.read()
-        
+
     except Exception as e:
         raise HTTPException(500, detail=f"Failed to fetch model card: {e}")
 
