@@ -1330,9 +1330,8 @@ def get_training_support_overview(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/model-cards/{run_id}/{model_name}")
+@router.get("/{inst_id}/training/model-cards/{model_name}")
 def get_model_cards(
-    run_id: str,
     model_name: str,
     inst_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
