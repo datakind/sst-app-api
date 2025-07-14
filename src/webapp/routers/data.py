@@ -1382,7 +1382,7 @@ def get_model_cards(
     # 3. Let WorkspaceClient’s ApiClient perform the authenticated GET
     try:
         # perform_query will attach the same OAuth creds that WorkspaceClient uses
-        resp = w.api_client.perform_query(
+        resp = w.api_client.perform_query(  # type: ignore[attr-defined]
             method="GET",
             path=download_endpoint,
             query_params=params,
