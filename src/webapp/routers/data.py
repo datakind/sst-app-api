@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, date
 from databricks.sdk import WorkspaceClient
-from typing import Annotated, Any, Dict, List
+from typing import Annotated, Any, Dict, List, cast, IO
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.responses import FileResponse
@@ -1372,34 +1372,22 @@ def get_model_cards(
             f"get_model_cards(): Workspace client initialization failed: {e}"
         )
 
-    host = w.config.host  # e.g. "https://12345.gcp.databricks.com"
-
-    # 2. Build the MLflow REST endpoint URL and params
-    download_endpoint = f"{host}/api/2.0/mlflow/artifacts/download"
-    artifact_path = f"model_card/model-card-{model_name}.pdf"
-    params = {"run_id": run_id, "path": artifact_path}
-
-    # 3. Let WorkspaceClient’s ApiClient perform the authenticated GET
     try:
-        # perform_query will attach the same OAuth creds that WorkspaceClient uses
-        resp = w.api_client.perform_query(  # type: ignore[attr-defined]
-            method="GET",
-            path=download_endpoint,
-            query_params=params,
-        )  # type: ignore[attr-defined]
-        # resp here is the raw bytes of the PDF
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Could not download model card via MLflow REST API: {e}",
-        )
+        volume_path = f"/Volumes/staging_sst_01/{query_result[0][0].name}_gold/gold_volume/model-card-{model_name}.pdf"
+        response = w.files.download(volume_path)
+        stream = cast(IO[bytes], response.contents)
+        pdf_bytes = stream.read()
 
-    # 4. Write to a temp file and return it
-    with tempfile.TemporaryDirectory() as td:
-        out_path = pathlib.Path(td) / f"model-card-{model_name}.pdf"
-        out_path.write_bytes(resp)
-        return FileResponse(
-            path=str(out_path),
-            filename=out_path.name,
-            media_type="application/pdf",
-        )
+    except Exception as e:
+        raise HTTPException(500, detail=f"Failed to fetch model card: {e}")
+
+    # Stream back as FileResponse
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    tmp.write(pdf_bytes)
+    tmp.flush()
+
+    return FileResponse(
+        tmp.name,
+        filename=pathlib.Path(tmp.name).name,
+        media_type="application/pdf",
+    )
