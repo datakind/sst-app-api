@@ -14,7 +14,6 @@ import os
 import logging
 from sqlalchemy.exc import IntegrityError
 from ..config import databricks_vars, env_vars, gcs_vars
-from mlflow.exceptions import MlflowException
 import tempfile
 import pathlib
 
@@ -1376,7 +1375,7 @@ def get_model_cards(
     try:
         volume_path = f"/Volumes/staging_sst_01/{query_result[0][0].name}_gold/gold_volume/model-card-{model_name}.pdf"
         response = w.files.download(volume_path)
-        pdf_bytes = response.read()
+        pdf_bytes = response.contents.read()  # pylint: disable=no-member
 
     except Exception as e:
         raise HTTPException(500, detail=f"Failed to fetch model card: {e}")
@@ -1385,6 +1384,9 @@ def get_model_cards(
     tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     tmp.write(pdf_bytes)
     tmp.flush()
+
     return FileResponse(
-        tmp.name, filename=tmp.name.split("/")[-1], media_type="application/pdf"
+        tmp.name,
+        filename=pathlib.Path(tmp.name).name,
+        media_type="application/pdf",
     )
