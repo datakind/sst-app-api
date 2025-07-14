@@ -1375,11 +1375,14 @@ def get_model_cards(
 
     try:
         volume_path = f"/Volumes/staging_sst_01/{databricksify_inst_name(query_result[0][0].name)}_gold/gold_volume/model_cards/model-card-{model_name}.pdf"
+        LOGGER.info(f"Attempting to download from {volume_path}")
         response = w.files.download(volume_path)
         stream = cast(IO[bytes], response.contents)
         pdf_bytes = stream.read()
 
+        LOGGER.info("Download successful, received %d bytes", len(pdf_bytes))
     except Exception as e:
+        LOGGER.exception(f"Failed to fetch model card: {e}")
         raise HTTPException(500, detail=f"Failed to fetch model card: {e}")
 
     # Stream back as FileResponse
