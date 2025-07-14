@@ -1386,7 +1386,7 @@ def get_model_cards(
             method="GET",
             path=download_endpoint,
             query_params=params,
-        )
+        ) # type: ignore[attr-defined]
         # resp here is the raw bytes of the PDF
     except Exception as e:
         raise HTTPException(
