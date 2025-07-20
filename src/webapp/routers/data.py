@@ -905,7 +905,7 @@ def validation_helper(
 
     inferred_schemas: list[str] = []
     # ----------------------- Fetch base schema from DB -------------------------------
-    base_schema = local_session.execute(
+    base_schema = local_session.get().execute(
         select(SchemaRegistryTable.json_doc)
         .where(
             SchemaRegistryTable.doc_type == DocType.base,
