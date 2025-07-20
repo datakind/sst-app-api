@@ -20,6 +20,7 @@ from ..database import (
     FileTable,
     BatchTable,
     InstTable,
+    SchemaRegistryTable,
     Base,
     get_session,
 )
@@ -156,6 +157,15 @@ def session_fixture():
                         name="school_1",
                         created_at=DATETIME_TESTING,
                         updated_at=DATETIME_TESTING,
+                    ),
+                    SchemaRegistryTable(
+                        doc_type="base",
+                        is_pdp=False,
+                        inst_id=None,
+                        version_label="1.0.0",
+                        extends_schema_id=None,
+                        json_doc={"version": "1.0.0", "base": {"data_models": {}}},
+                        is_active=True,
                     ),
                     batch_1,
                     file_1,
