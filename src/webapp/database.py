@@ -448,14 +448,14 @@ class SchemaRegistryTable(Base):
     )
 
     parent_schema: Mapped["SchemaRegistryTable | None"] = relationship(
-        "SchemaRegistry",
-        remote_side="SchemaRegistry.schema_id",
+        "SchemaRegistryTable",
+        remote_side="SchemaRegistryTable.schema_id",
         foreign_keys=[extends_schema_id],
         back_populates="child_schemas",
     )
 
     child_schemas: Mapped[List["SchemaRegistryTable"]] = relationship(
-        "SchemaRegistry", back_populates="parent_schema", cascade="all, delete-orphan"
+        "SchemaRegistryTable", back_populates="parent_schema", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
