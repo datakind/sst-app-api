@@ -21,6 +21,7 @@ from ..database import (
     BatchTable,
     InstTable,
     SchemaRegistryTable,
+    DocType,
     Base,
     get_session,
 )
@@ -159,7 +160,7 @@ def session_fixture():
                         updated_at=DATETIME_TESTING,
                     ),
                     SchemaRegistryTable(
-                        doc_type="base",
+                        doc_type=DocType.base,  # ✅ fix this
                         is_pdp=False,
                         version_label="1.0.0",
                         json_doc={"version": "1.0.0", "base": {"data_models": {}}},
