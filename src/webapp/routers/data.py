@@ -39,6 +39,7 @@ from ..database import (
     FileTable,
     InstTable,
     SchemaRegistry,
+    DocType
 )
 
 from ..databricks import DatabricksControl
@@ -951,7 +952,7 @@ def validation_helper(
         )
     
     base_json = json.dumps(base_schema)
-    inst_schema_json = json.dumps(inst_schema) if inst_schema is not None else None
+    inst_json = json.dumps(inst_schema) if inst_schema is not None else None
 
     # ----------------------- File validation logic logic --------------------------------------
     try:
@@ -959,6 +960,8 @@ def validation_helper(
             get_external_bucket_name(inst_id),
             file_name,
             allowed_schemas,
+            base_json,
+            inst_json,
         )
         logging.debug(
             f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
