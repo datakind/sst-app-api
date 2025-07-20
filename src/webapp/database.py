@@ -4,6 +4,7 @@ import uuid
 import datetime
 from typing import Set, List
 from contextvars import ContextVar
+import enum
 import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableDict, MutableList
@@ -16,9 +17,12 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     Text,
+    Enum,
+    Boolean,
     JSON,
     Integer,
     BigInteger,
+    Index,
 )
 from sqlalchemy.orm import sessionmaker, Session, relationship, mapped_column, Mapped
 from sqlalchemy.sql import func
@@ -394,6 +398,77 @@ class JobTable(Base):
     err_msg = Column(String(VAR_CHAR_STANDARD_LENGTH), nullable=True)
     completed: Mapped[bool] = mapped_column(nullable=True)
 
+class DocType(enum.Enum):
+    base = "base"
+    extension = "extension"
+
+class SchemaRegistry(Base):
+    """
+    Stores versioned schema documents:
+      - Base schema (doc_type=base, is_pdp=False, inst_id NULL)
+      - PDP shared extension (doc_type=extension, is_pdp=True, inst_id NULL)
+      - Custom institution extension (doc_type=extension, is_pdp=False, inst_id=<UUID>)
+    Layers can reference a parent (extends_schema_id) that they extend.
+    """
+
+    __tablename__ = "schema_registry"
+
+    schema_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    doc_type: Mapped[DocType] = mapped_column(Enum(DocType), nullable=False)
+    # Nullable: NULL for base and PDP shared extension
+    inst_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("inst.id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True
+    )
+    is_pdp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    version_label: Mapped[str] = mapped_column(String(32), nullable=False)
+    extends_schema_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("schema_registry.schema_id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True
+    )
+    json_doc: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # ---------------- Relationships ----------------
+    inst: Mapped["InstTable | None"] = relationship(
+        "InstTable",
+        back_populates="schemas_registry",  # we'll add this new relationship on InstTable (see below)
+    )
+
+    parent_schema: Mapped["SchemaRegistry | None"] = relationship(
+        "SchemaRegistry",
+        remote_side="SchemaRegistry.schema_id",
+        foreign_keys=[extends_schema_id],
+        back_populates="child_schemas"
+    )
+
+    child_schemas: Mapped[List["SchemaRegistry"]] = relationship(
+        "SchemaRegistry",
+        back_populates="parent_schema",
+        cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("doc_type", "version_label", name="uq_base_version"),
+        UniqueConstraint("is_pdp", "version_label", name="uq_pdp_version"),
+        UniqueConstraint("inst_id", "version_label", name="uq_inst_version"),
+        Index("idx_schema_active_base", "doc_type", "is_active"),
+        Index("idx_schema_active_pdp", "is_pdp", "is_active"),
+        Index("idx_schema_active_inst", "inst_id", "is_active"),
+    )
+
+    # Convenience: identify logical namespace
+    @property
+    def namespace(self) -> str:
+        if self.doc_type == DocType.base:
+            return "base"
+        if self.is_pdp:
+            return "pdp"
+        if self.inst_id:
+            return f"inst:{self.inst_id}"
+        return "unknown"
 
 def get_session():
     """Get the session."""

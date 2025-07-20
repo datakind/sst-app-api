@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from ..config import databricks_vars, env_vars, gcs_vars
 import tempfile
 import pathlib
+import json
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -37,6 +38,7 @@ from ..database import (
     BatchTable,
     FileTable,
     InstTable,
+    SchemaRegistry,
 )
 
 from ..databricks import DatabricksControl
@@ -901,7 +903,66 @@ def validation_helper(
         allowed_schemas = infer_models_from_filename(file_name, "pdp")
 
     inferred_schemas: list[str] = []
+    # ----------------------- Fetch base schema from DB -------------------------------
+    base_json_val = (
+        local_session.execute(
+            select(SchemaRegistry.json_doc)
+            .where(
+                SchemaRegistry.doc_type == DocType.base,
+                SchemaRegistry.is_active.is_(True)
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+    )
+    if base_json_val is None:
+        raise RuntimeError("No active base schema found")
 
+    # ----------------------- Fetch inst specific extension schema from DB ---------------------
+    inst = (
+        local_session.get().execute(
+            select(InstTable).where(InstTable.id == str_to_uuid(inst_id))
+        )
+        .scalar_one_or_none()
+    )
+    if inst is None:
+        raise ValueError(f"Institution {inst_id} not found")
+
+    if inst.pdp_id:  # institution is PDP
+        inst_layer_val = (
+            local_session.get().execute(
+                select(SchemaRegistry.json_doc)
+                .where(
+                    SchemaRegistry.is_pdp.is_(True),
+                    SchemaRegistry.is_active.is_(True)
+                )
+                .limit(1)
+            ).scalar_one_or_none()
+        )
+    else:  # custom (or none)
+        inst_layer_val = (
+            local_session.get().execute(
+                select(SchemaRegistry.json_doc)
+                .where(
+                    SchemaRegistry.inst_id == inst.id,
+                    SchemaRegistry.is_active.is_(True)
+                )
+                .limit(1)
+            ).scalar_one_or_none()
+        )
+    
+    if isinstance(base_json_val, (dict, list)):
+        base_json_str = json.dumps(base_json_val)
+    else:
+        base_json_str = str(base_json_val)
+
+    if inst_layer_val is None:
+        inst_schema_json_str = None
+    elif isinstance(inst_layer_val, (dict, list)):
+        inst_schema_json_str = json.dumps(inst_layer_val)
+    else:
+        inst_schema_json_str = str(inst_layer_val)
+
+    # ----------------------- File validation logic logic --------------------------------------
     try:
         inferred_schemas = storage_control.validate_file(
             get_external_bucket_name(inst_id),
