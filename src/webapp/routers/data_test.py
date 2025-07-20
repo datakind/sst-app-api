@@ -162,7 +162,6 @@ def session_fixture():
                         doc_type="base",
                         is_pdp=False,
                         version_label="1.0.0",
-                        extends_schema_id=None,
                         json_doc={"version": "1.0.0", "base": {"data_models": {}}},
                         is_active=True,
                         created_at=DATETIME_TESTING,
