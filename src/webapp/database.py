@@ -454,7 +454,9 @@ class SchemaRegistryTable(Base):
     )
 
     child_schemas: Mapped[List["SchemaRegistryTable"]] = relationship(
-        "SchemaRegistryTable", back_populates="parent_schema", cascade="all, delete-orphan"
+        "SchemaRegistryTable",
+        back_populates="parent_schema",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (

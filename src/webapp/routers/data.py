@@ -905,14 +905,18 @@ def validation_helper(
 
     inferred_schemas: list[str] = []
     # ----------------------- Fetch base schema from DB -------------------------------
-    base_schema = local_session.get().execute(
-        select(SchemaRegistryTable.json_doc)
-        .where(
-            SchemaRegistryTable.doc_type == DocType.base,
-            SchemaRegistryTable.is_active.is_(True),
+    base_schema = (
+        local_session.get()
+        .execute(
+            select(SchemaRegistryTable.json_doc)
+            .where(
+                SchemaRegistryTable.doc_type == DocType.base,
+                SchemaRegistryTable.is_active.is_(True),
+            )
+            .limit(1)
         )
-        .limit(1)
-    ).scalar_one_or_none()
+        .scalar_one_or_none()
+    )
     if base_schema is None:
         raise RuntimeError("No active base schema found")
 
