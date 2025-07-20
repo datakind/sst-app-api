@@ -38,7 +38,7 @@ from ..database import (
     BatchTable,
     FileTable,
     InstTable,
-    SchemaRegistry,
+    SchemaRegistryTable,
     DocType,
 )
 
@@ -906,9 +906,10 @@ def validation_helper(
     inferred_schemas: list[str] = []
     # ----------------------- Fetch base schema from DB -------------------------------
     base_schema = local_session.execute(
-        select(SchemaRegistry.json_doc)
+        select(SchemaRegistryTable.json_doc)
         .where(
-            SchemaRegistry.doc_type == DocType.base, SchemaRegistry.is_active.is_(True)
+            SchemaRegistryTable.doc_type == DocType.base,
+            SchemaRegistryTable.is_active.is_(True),
         )
         .limit(1)
     ).scalar_one_or_none()
@@ -928,9 +929,10 @@ def validation_helper(
         inst_schema = (
             local_session.get()
             .execute(
-                select(SchemaRegistry.json_doc)
+                select(SchemaRegistryTable.json_doc)
                 .where(
-                    SchemaRegistry.is_pdp.is_(True), SchemaRegistry.is_active.is_(True)
+                    SchemaRegistryTable.is_pdp.is_(True),
+                    SchemaRegistryTable.is_active.is_(True),
                 )
                 .limit(1)
             )
@@ -940,10 +942,10 @@ def validation_helper(
         inst_schema = (
             local_session.get()
             .execute(
-                select(SchemaRegistry.json_doc)
+                select(SchemaRegistryTable.json_doc)
                 .where(
-                    SchemaRegistry.inst_id == inst.id,
-                    SchemaRegistry.is_active.is_(True),
+                    SchemaRegistryTable.inst_id == inst.id,
+                    SchemaRegistryTable.is_active.is_(True),
                 )
                 .limit(1)
             )
