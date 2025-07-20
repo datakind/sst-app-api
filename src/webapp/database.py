@@ -117,9 +117,7 @@ class InstTable(Base):
     )
     models: Mapped[Set["ModelTable"]] = relationship(back_populates="inst")
     schemas_registry: Mapped[List["SchemaRegistryTable"]] = relationship(
-        "SchemaRegistryTable",
-        back_populates="inst",
-        cascade="all, delete-orphan"
+        "SchemaRegistryTable", back_populates="inst", cascade="all, delete-orphan"
     )
 
     name = Column(String(VAR_CHAR_STANDARD_LENGTH), nullable=False, unique=True)
