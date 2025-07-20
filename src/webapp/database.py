@@ -116,6 +116,11 @@ class InstTable(Base):
         back_populates="inst"
     )
     models: Mapped[Set["ModelTable"]] = relationship(back_populates="inst")
+    schemas_registry: Mapped[List["SchemaRegistryTable"]] = relationship(
+        "SchemaRegistryTable",
+        back_populates="inst",
+        cascade="all, delete-orphan"
+    )
 
     name = Column(String(VAR_CHAR_STANDARD_LENGTH), nullable=False, unique=True)
     # If retention unset, the Datakind default is used. File-level retentions overrides
@@ -404,7 +409,7 @@ class DocType(enum.Enum):
     extension = "extension"
 
 
-class SchemaRegistry(Base):
+class SchemaRegistryTable(Base):
     """
     Stores versioned schema documents:
       - Base schema (doc_type=base, is_pdp=False, inst_id NULL)
@@ -444,14 +449,14 @@ class SchemaRegistry(Base):
         back_populates="schemas_registry",  # we'll add this new relationship on InstTable (see below)
     )
 
-    parent_schema: Mapped["SchemaRegistry | None"] = relationship(
+    parent_schema: Mapped["SchemaRegistryTable | None"] = relationship(
         "SchemaRegistry",
         remote_side="SchemaRegistry.schema_id",
         foreign_keys=[extends_schema_id],
         back_populates="child_schemas",
     )
 
-    child_schemas: Mapped[List["SchemaRegistry"]] = relationship(
+    child_schemas: Mapped[List["SchemaRegistryTable"]] = relationship(
         "SchemaRegistry", back_populates="parent_schema", cascade="all, delete-orphan"
     )
 
