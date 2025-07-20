@@ -417,9 +417,8 @@ class SchemaRegistryTable(Base):
     """
 
     __tablename__ = "schema_registry"
-
     schema_id: Mapped[int] = mapped_column(
-        BigInteger, primary_key=True, autoincrement=True
+        Integer, primary_key=True, autoincrement=True
     )
     doc_type: Mapped[DocType] = mapped_column(Enum(DocType), nullable=False)
     # Nullable: NULL for base and PDP shared extension
