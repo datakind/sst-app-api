@@ -155,7 +155,7 @@ def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
 def validate_dataset(
     filename: str,
     base_schema: dict,
-    ext_schema: dict = None,
+    ext_schema: Optional[Dict[Any, Any]] = None,
     models: Union[str, List[str], None] = None,
     institution_id: str = "pdp",
 ) -> Dict[str, Any]:
