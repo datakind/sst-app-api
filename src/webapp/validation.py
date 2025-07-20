@@ -16,9 +16,9 @@ from pandera.errors import SchemaErrors
 from fuzzywuzzy import fuzz
 
 
-def validate_file_reader(filename: str, allowed_schema: list[str]) -> dict[str, Any]:
+def validate_file_reader(filename: str, allowed_schema: list[str], base_schema: dict, inst_schema: dict) -> dict[str, Any]:
     """Validates given a filename."""
-    return validate_dataset(filename, allowed_schema)
+    return validate_dataset(filename, base_schema, inst_schema, allowed_schema)
 
 
 class HardValidationError(Exception):
@@ -153,24 +153,14 @@ def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
 
 def validate_dataset(
     filename: str,
+    base_schema: dict,
+    ext_schema: dict = None,
     models: Union[str, List[str], None] = None,
     institution_id: str = "pdp",
 ) -> Dict[str, Any]:
     df = pd.read_csv(filename)
     df = df.rename(columns={c: normalize_col(c) for c in df.columns})
     incoming = set(df.columns)
-
-    # 1) load schemas
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    base_schema_path = os.path.join(BASE_DIR, "validation_schemas/base_schema.json")
-    base_schema = load_json(base_schema_path)
-    ext_schema = None
-
-    extension_schema_path = os.path.join(
-        BASE_DIR, f"validation_schemas/{institution_id}_schema_extension.json"
-    )
-    if extension_schema_path and os.path.exists(extension_schema_path):
-        ext_schema = load_json(extension_schema_path)
 
     # 2) merge requested models
     if models is None:

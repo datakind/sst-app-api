@@ -268,7 +268,7 @@ class StorageControl(BaseModel):
         blob.delete()
 
     def validate_file(
-        self, bucket_name: str, file_name: str, allowed_schemas: list[str]
+        self, bucket_name: str, file_name: str, allowed_schemas: list[str], base_schema: dict, inst_schema: dict
     ) -> List[str]:
         """Validate that a file is one of the allowed schemas."""
         client = storage.Client()
@@ -278,7 +278,7 @@ class StorageControl(BaseModel):
         schems: List[str] = []
         try:
             with blob.open("r") as file:
-                schemas = validate_file_reader(file, allowed_schemas)
+                schemas = validate_file_reader(file, allowed_schemas, base_schema, inst_schema)
                 schems = [str(s) for s in schemas.get("schemas", [])]
                 logging.debug(
                     f"If you see this file validation was successful {schems}"

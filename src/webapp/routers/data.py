@@ -904,7 +904,7 @@ def validation_helper(
 
     inferred_schemas: list[str] = []
     # ----------------------- Fetch base schema from DB -------------------------------
-    base_json_val = (
+    base_schema = (
         local_session.execute(
             select(SchemaRegistry.json_doc)
             .where(
@@ -914,7 +914,7 @@ def validation_helper(
             .limit(1)
         ).scalar_one_or_none()
     )
-    if base_json_val is None:
+    if base_schema is None:
         raise RuntimeError("No active base schema found")
 
     # ----------------------- Fetch inst specific extension schema from DB ---------------------
@@ -928,7 +928,7 @@ def validation_helper(
         raise ValueError(f"Institution {inst_id} not found")
 
     if inst.pdp_id:  # institution is PDP
-        inst_layer_val = (
+        inst_schema = (
             local_session.get().execute(
                 select(SchemaRegistry.json_doc)
                 .where(
@@ -939,7 +939,7 @@ def validation_helper(
             ).scalar_one_or_none()
         )
     else:  # custom (or none)
-        inst_layer_val = (
+        inst_schema = (
             local_session.get().execute(
                 select(SchemaRegistry.json_doc)
                 .where(
@@ -950,17 +950,8 @@ def validation_helper(
             ).scalar_one_or_none()
         )
     
-    if isinstance(base_json_val, (dict, list)):
-        base_json_str = json.dumps(base_json_val)
-    else:
-        base_json_str = str(base_json_val)
-
-    if inst_layer_val is None:
-        inst_schema_json_str = None
-    elif isinstance(inst_layer_val, (dict, list)):
-        inst_schema_json_str = json.dumps(inst_layer_val)
-    else:
-        inst_schema_json_str = str(inst_layer_val)
+    base_json = json.dumps(base_schema)
+    inst_schema_json = json.dumps(inst_schema) if inst_schema is not None else None
 
     # ----------------------- File validation logic logic --------------------------------------
     try:
