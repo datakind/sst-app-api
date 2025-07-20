@@ -15,7 +15,9 @@ from pandera.errors import SchemaErrors
 from fuzzywuzzy import fuzz
 
 
-def validate_file_reader(filename: str, allowed_schema: list[str], base_schema: dict, inst_schema: dict) -> dict[str, Any]:
+def validate_file_reader(
+    filename: str, allowed_schema: list[str], base_schema: dict, inst_schema: dict
+) -> dict[str, Any]:
     """Validates given a filename."""
     return validate_dataset(filename, base_schema, inst_schema, allowed_schema)
 

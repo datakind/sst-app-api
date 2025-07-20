@@ -398,9 +398,11 @@ class JobTable(Base):
     err_msg = Column(String(VAR_CHAR_STANDARD_LENGTH), nullable=True)
     completed: Mapped[bool] = mapped_column(nullable=True)
 
+
 class DocType(enum.Enum):
     base = "base"
     extension = "extension"
+
 
 class SchemaRegistry(Base):
     """
@@ -413,23 +415,28 @@ class SchemaRegistry(Base):
 
     __tablename__ = "schema_registry"
 
-    schema_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    schema_id: Mapped[int] = mapped_column(
+        BigInteger, primary_key=True, autoincrement=True
+    )
     doc_type: Mapped[DocType] = mapped_column(Enum(DocType), nullable=False)
     # Nullable: NULL for base and PDP shared extension
     inst_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("inst.id", ondelete="RESTRICT", onupdate="CASCADE"),
-        nullable=True
+        ForeignKey("inst.id", ondelete="RESTRICT", onupdate="CASCADE"), nullable=True
     )
     is_pdp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     version_label: Mapped[str] = mapped_column(String(32), nullable=False)
     extends_schema_id: Mapped[int | None] = mapped_column(
         BigInteger,
-        ForeignKey("schema_registry.schema_id", ondelete="SET NULL", onupdate="CASCADE"),
-        nullable=True
+        ForeignKey(
+            "schema_registry.schema_id", ondelete="SET NULL", onupdate="CASCADE"
+        ),
+        nullable=True,
     )
     json_doc: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     # ---------------- Relationships ----------------
     inst: Mapped["InstTable | None"] = relationship(
@@ -441,13 +448,11 @@ class SchemaRegistry(Base):
         "SchemaRegistry",
         remote_side="SchemaRegistry.schema_id",
         foreign_keys=[extends_schema_id],
-        back_populates="child_schemas"
+        back_populates="child_schemas",
     )
 
     child_schemas: Mapped[List["SchemaRegistry"]] = relationship(
-        "SchemaRegistry",
-        back_populates="parent_schema",
-        cascade="all, delete-orphan"
+        "SchemaRegistry", back_populates="parent_schema", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
@@ -469,6 +474,7 @@ class SchemaRegistry(Base):
         if self.inst_id:
             return f"inst:{self.inst_id}"
         return "unknown"
+
 
 def get_session():
     """Get the session."""

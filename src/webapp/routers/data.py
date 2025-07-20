@@ -39,7 +39,7 @@ from ..database import (
     FileTable,
     InstTable,
     SchemaRegistry,
-    DocType
+    DocType,
 )
 
 from ..databricks import DatabricksControl
@@ -905,24 +905,20 @@ def validation_helper(
 
     inferred_schemas: list[str] = []
     # ----------------------- Fetch base schema from DB -------------------------------
-    base_schema = (
-        local_session.execute(
-            select(SchemaRegistry.json_doc)
-            .where(
-                SchemaRegistry.doc_type == DocType.base,
-                SchemaRegistry.is_active.is_(True)
-            )
-            .limit(1)
-        ).scalar_one_or_none()
-    )
+    base_schema = local_session.execute(
+        select(SchemaRegistry.json_doc)
+        .where(
+            SchemaRegistry.doc_type == DocType.base, SchemaRegistry.is_active.is_(True)
+        )
+        .limit(1)
+    ).scalar_one_or_none()
     if base_schema is None:
         raise RuntimeError("No active base schema found")
 
     # ----------------------- Fetch inst specific extension schema from DB ---------------------
     inst = (
-        local_session.get().execute(
-            select(InstTable).where(InstTable.id == str_to_uuid(inst_id))
-        )
+        local_session.get()
+        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
         .scalar_one_or_none()
     )
     if inst is None:
@@ -930,27 +926,30 @@ def validation_helper(
 
     if inst.pdp_id:  # institution is PDP
         inst_schema = (
-            local_session.get().execute(
+            local_session.get()
+            .execute(
                 select(SchemaRegistry.json_doc)
                 .where(
-                    SchemaRegistry.is_pdp.is_(True),
-                    SchemaRegistry.is_active.is_(True)
+                    SchemaRegistry.is_pdp.is_(True), SchemaRegistry.is_active.is_(True)
                 )
                 .limit(1)
-            ).scalar_one_or_none()
+            )
+            .scalar_one_or_none()
         )
     else:  # custom (or none)
         inst_schema = (
-            local_session.get().execute(
+            local_session.get()
+            .execute(
                 select(SchemaRegistry.json_doc)
                 .where(
                     SchemaRegistry.inst_id == inst.id,
-                    SchemaRegistry.is_active.is_(True)
+                    SchemaRegistry.is_active.is_(True),
                 )
                 .limit(1)
-            ).scalar_one_or_none()
+            )
+            .scalar_one_or_none()
         )
-    
+
     base_json = json.dumps(base_schema)
     inst_json = json.dumps(inst_schema) if inst_schema is not None else None
 
