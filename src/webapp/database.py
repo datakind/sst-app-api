@@ -434,7 +434,7 @@ class SchemaRegistryTable(Base): # type: ignore
         ),
         nullable=True,
     )
-    json_doc: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=False)
+    json_doc: Mapped[dict] = mapped_column(MutableDict.as_mutable(JSON), nullable=False) # type: ignore
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -520,7 +520,7 @@ def connect_tcp_socket(
             username=engine_args["DB_USER"],
             password=engine_args["DB_PASS"],
             host=engine_args["INSTANCE_HOST"],
-            port=engine_args["DB_PORT"],
+            port=int(engine_args["DB_PORT"]),
             database=engine_args["DB_NAME"],
         ),
         connect_args=connect_args,
@@ -556,7 +556,7 @@ def init_connection_pool() -> sqlalchemy.engine.Engine:
     return connect_tcp_socket(engine_vars, ssl_args)
 
 
-def setup_db(env: str):
+def setup_db(env: str) -> Any:
     """Setup Database. Called by all environments."""
     # initialize connection pool
     global db_engine

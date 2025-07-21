@@ -44,7 +44,7 @@ def counter_repr(x):
     return {frozenset(Counter(item).items()) for item in x}
 
 
-def same_file_orderless(a_elem: DataInfo, b_elem: DataInfo):
+def same_file_orderless(a_elem: DataInfo, b_elem: DataInfo): # type: ignore
     """Compares two DataInfo objects."""
     if (
         a_elem["inst_id"] != b_elem["inst_id"]

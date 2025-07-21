@@ -956,17 +956,14 @@ def validation_helper(
             .scalar_one_or_none()
         )
 
-    base_json = json.dumps(base_schema)
-    inst_json = json.dumps(inst_schema) if inst_schema is not None else None
-
     # ----------------------- File validation logic logic --------------------------------------
     try:
         inferred_schemas = storage_control.validate_file(
             get_external_bucket_name(inst_id),
             file_name,
             allowed_schemas,
-            base_json,
-            inst_json,
+            base_schema,
+            inst_schema,
         )
         logging.debug(
             f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
