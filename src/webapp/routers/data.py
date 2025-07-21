@@ -37,6 +37,8 @@ from ..database import (
     BatchTable,
     FileTable,
     InstTable,
+    SchemaRegistryTable,
+    DocType,
 )
 
 from ..databricks import DatabricksControl
@@ -901,12 +903,66 @@ def validation_helper(
         allowed_schemas = infer_models_from_filename(file_name, "pdp")
 
     inferred_schemas: list[str] = []
+    # ----------------------- Fetch base schema from DB -------------------------------
+    base_schema = (
+        local_session.get()
+        .execute(
+            select(SchemaRegistryTable.json_doc)
+            .where(
+                SchemaRegistryTable.doc_type == DocType.base,
+                SchemaRegistryTable.is_active.is_(True),
+            )
+            .limit(1)
+        )
+        .scalar_one_or_none()
+    )
+    if base_schema is None:
+        raise RuntimeError("No active base schema found")
 
+    # ----------------------- Fetch inst specific extension schema from DB ---------------------
+    inst = (
+        local_session.get()
+        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
+        .scalar_one_or_none()
+    )
+    if inst is None:
+        raise ValueError(f"Institution {inst_id} not found")
+
+    if inst.pdp_id:  # institution is PDP
+        inst_schema = (
+            local_session.get()
+            .execute(
+                select(SchemaRegistryTable.json_doc)
+                .where(
+                    SchemaRegistryTable.is_pdp.is_(True),
+                    SchemaRegistryTable.is_active.is_(True),
+                )
+                .limit(1)
+            )
+            .scalar_one_or_none()
+        )
+    else:  # custom (or none)
+        inst_schema = (
+            local_session.get()
+            .execute(
+                select(SchemaRegistryTable.json_doc)
+                .where(
+                    SchemaRegistryTable.inst_id == inst.id,
+                    SchemaRegistryTable.is_active.is_(True),
+                )
+                .limit(1)
+            )
+            .scalar_one_or_none()
+        )
+
+    # ----------------------- File validation logic logic --------------------------------------
     try:
         inferred_schemas = storage_control.validate_file(
             get_external_bucket_name(inst_id),
             file_name,
             allowed_schemas,
+            base_schema,
+            inst_schema,
         )
         logging.debug(
             f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
@@ -1330,9 +1386,8 @@ def get_training_support_overview(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/model-cards/{run_id}/{model_name}")
+@router.get("/{inst_id}/training/model-cards/{model_name}")
 def get_model_cards(
-    run_id: str,
     model_name: str,
     inst_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
