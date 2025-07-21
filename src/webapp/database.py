@@ -442,7 +442,7 @@ class SchemaRegistryTable(Base):  # type: ignore
     schema_id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True
     )
-    doc_type: Mapped[DocType] = mapped_column(Enum(DocType), nullable=False)
+    doc_type: Mapped[DocType] = mapped_column(Enum(DocType, native_enum=False), nullable=False)
     # Nullable: NULL for base and PDP shared extension
     inst_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("inst.id", ondelete="RESTRICT", onupdate="CASCADE"), nullable=True
