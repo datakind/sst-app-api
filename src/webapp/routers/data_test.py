@@ -230,7 +230,7 @@ def test_read_inst_all_input_files(client: TestClient) -> Any:
     assert response.status_code == 200
     assert same_orderless( # type: ignore
         response.json(),
-        {
+        { # type: ignore
             "batches": [
                 {
                     "batch_id": "5b2420f3103546ab90eb74d5df97de43",
@@ -298,7 +298,7 @@ def test_read_inst_all_output_files(client: TestClient) -> Any:
     assert response.status_code == 200
     assert same_orderless( # type: ignore
         response.json(),
-        {
+        { # type: ignore
             "batches": [
                 {
                     "batch_id": "5b2420f3103546ab90eb74d5df97de43",
@@ -373,7 +373,7 @@ def test_read_batch_info(client: TestClient) -> Any:
     assert response.status_code == 200
     assert same_orderless( # type: ignore
         response.json(),
-        {
+        { # type: ignore
             "batches": [
                 {
                     "batch_id": "5b2420f3103546ab90eb74d5df97de43",
@@ -448,7 +448,7 @@ def test_read_file_id_info(client: TestClient) -> Any:
     assert response.status_code == 200
     assert same_file_orderless( # type: ignore
         response.json(),
-        {
+        { # type: ignore
             "name": "file_input_one",
             "data_id": "f0bb3a206d924254afed6a72f43c562a",
             "batch_ids": ["5b2420f3103546ab90eb74d5df97de43"],
