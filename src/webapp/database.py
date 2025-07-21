@@ -55,6 +55,7 @@ LOCAL_USER_EMAIL = "tester@datakind.org"
 LOCAL_PASSWORD = "tester_password"
 DATETIME_TESTING = datetime.datetime(2024, 12, 26, 19, 37, 59, 753357)
 
+
 @event.listens_for(Mapper, "before_insert")
 @event.listens_for(Mapper, "before_update")
 def validate_string_lengths(mapper, connection, target):
@@ -67,6 +68,7 @@ def validate_string_lengths(mapper, connection, target):
                     f"Value for '{column.name}' exceeds max length "
                     f"{col_type.length}: {len(val)} characters provided"
                 )
+
 
 def init_db(env: str) -> Any:
     """Initialize the database for LOCAL and DEV environemtns for ease of use."""
@@ -440,7 +442,9 @@ class SchemaRegistryTable(Base):  # type: ignore
     schema_id: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True
     )
-    doc_type: Mapped[DocType] = mapped_column(Enum(DocType, native_enum=False), nullable=False)
+    doc_type: Mapped[DocType] = mapped_column(
+        Enum(DocType, native_enum=False), nullable=False
+    )
     # Nullable: NULL for base and PDP shared extension
     inst_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("inst.id", ondelete="RESTRICT", onupdate="CASCADE"), nullable=True
