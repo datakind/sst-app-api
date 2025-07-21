@@ -16,7 +16,6 @@ from sqlalchemy.exc import IntegrityError
 from ..config import databricks_vars, env_vars, gcs_vars
 import tempfile
 import pathlib
-import json
 
 from ..utilities import (
     has_access_to_inst_or_err,
