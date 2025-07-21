@@ -47,7 +47,12 @@ def test_validate_file_reader_passes(tmp_csv_file):
         mock_load.side_effect = lambda path: (
             MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
         )
-        result = validate_file_reader(tmp_csv_file, ["test_model"], base_schema=MOCK_BASE_SCHEMA, inst_schema=MOCK_EXT_SCHEMA,)
+        result = validate_file_reader(
+            tmp_csv_file,
+            ["test_model"],
+            base_schema=MOCK_BASE_SCHEMA,
+            inst_schema=MOCK_EXT_SCHEMA,
+        )
         assert result["validation_status"] == "passed"
         assert result["schemas"] == ["test_model"]
 
@@ -65,5 +70,10 @@ def test_validate_file_reader_fails_missing_required(tmp_path):
             MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
         )
         with pytest.raises(HardValidationError) as exc_info:
-            validate_file_reader(str(file_path), ["test_model"], base_schema=MOCK_BASE_SCHEMA, inst_schema=MOCK_EXT_SCHEMA,)
+            validate_file_reader(
+                str(file_path),
+                ["test_model"],
+                base_schema=MOCK_BASE_SCHEMA,
+                inst_schema=MOCK_EXT_SCHEMA,
+            )
         assert "Missing required columns" in str(exc_info.value)

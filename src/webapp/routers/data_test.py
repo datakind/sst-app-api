@@ -45,20 +45,20 @@ def counter_repr(x):
     return {frozenset(Counter(item).items()) for item in x}
 
 
-def same_file_orderless(a_elem: DataInfo, b_elem: DataInfo): # type: ignore
+def same_file_orderless(a_elem: DataInfo, b_elem: DataInfo):  # type: ignore
     """Compares two DataInfo objects."""
     if (
-        a_elem["inst_id"] != b_elem["inst_id"] # type: ignore
-        or counter_repr(a_elem["batch_ids"]) != counter_repr(b_elem["batch_ids"]) # type: ignore
-        or a_elem["name"] != b_elem["name"] # type: ignore
-        or a_elem["uploader"] != b_elem["uploader"] # type: ignore
-        or a_elem["deleted"] != b_elem["deleted"] # type: ignore
-        or a_elem["source"] != b_elem["source"] # type: ignore
-        or a_elem["deletion_request_time"] != b_elem["deletion_request_time"] # type: ignore
-        or a_elem["retention_days"] != b_elem["retention_days"] # type: ignore
-        or a_elem["sst_generated"] != b_elem["sst_generated"] # type: ignore
-        or a_elem["valid"] != b_elem["valid"] # type: ignore
-        or a_elem["uploaded_date"] != b_elem["uploaded_date"] # type: ignore
+        a_elem["inst_id"] != b_elem["inst_id"]  # type: ignore
+        or counter_repr(a_elem["batch_ids"]) != counter_repr(b_elem["batch_ids"])  # type: ignore
+        or a_elem["name"] != b_elem["name"]  # type: ignore
+        or a_elem["uploader"] != b_elem["uploader"]  # type: ignore
+        or a_elem["deleted"] != b_elem["deleted"]  # type: ignore
+        or a_elem["source"] != b_elem["source"]  # type: ignore
+        or a_elem["deletion_request_time"] != b_elem["deletion_request_time"]  # type: ignore
+        or a_elem["retention_days"] != b_elem["retention_days"]  # type: ignore
+        or a_elem["sst_generated"] != b_elem["sst_generated"]  # type: ignore
+        or a_elem["valid"] != b_elem["valid"]  # type: ignore
+        or a_elem["uploaded_date"] != b_elem["uploaded_date"]  # type: ignore
     ):
         return False
     return True
@@ -66,9 +66,9 @@ def same_file_orderless(a_elem: DataInfo, b_elem: DataInfo): # type: ignore
 
 def same_orderless(a: DataOverview, b: DataOverview) -> bool:
     """Compares two DataOverview objects."""
-    for a_elem in a["batches"]: # type: ignore
+    for a_elem in a["batches"]:  # type: ignore
         found = False
-        for b_elem in b["batches"]: # type: ignore
+        for b_elem in b["batches"]:  # type: ignore
             if a_elem["batch_id"] != b_elem["batch_id"]:
                 continue
             found = True
@@ -85,9 +85,9 @@ def same_orderless(a: DataOverview, b: DataOverview) -> bool:
                 return False
         if not found:
             return False
-    for a_elem in a["files"]: # type: ignore
+    for a_elem in a["files"]:  # type: ignore
         found = False
-        for b_elem in b["files"]: # type: ignore
+        for b_elem in b["files"]:  # type: ignore
             if a_elem["data_id"] != b_elem["data_id"]:
                 continue
             found = True
@@ -228,9 +228,9 @@ def test_read_inst_all_input_files(client: TestClient) -> Any:
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/input"
     )
     assert response.status_code == 200
-    assert same_orderless( # type: ignore
+    assert same_orderless(  # type: ignore
         response.json(),
-        { # type: ignore
+        {  # type: ignore
             "batches": [
                 {
                     "batch_id": "5b2420f3103546ab90eb74d5df97de43",
@@ -296,9 +296,9 @@ def test_read_inst_all_output_files(client: TestClient) -> Any:
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/output"
     )
     assert response.status_code == 200
-    assert same_orderless( # type: ignore
+    assert same_orderless(  # type: ignore
         response.json(),
-        { # type: ignore
+        {  # type: ignore
             "batches": [
                 {
                     "batch_id": "5b2420f3103546ab90eb74d5df97de43",
@@ -371,9 +371,9 @@ def test_read_batch_info(client: TestClient) -> Any:
         + uuid_to_str(BATCH_UUID)
     )
     assert response.status_code == 200
-    assert same_orderless( # type: ignore
+    assert same_orderless(  # type: ignore
         response.json(),
-        { # type: ignore
+        {  # type: ignore
             "batches": [
                 {
                     "batch_id": "5b2420f3103546ab90eb74d5df97de43",
@@ -446,9 +446,9 @@ def test_read_file_id_info(client: TestClient) -> Any:
         + uuid_to_str(FILE_UUID_1)
     )
     assert response.status_code == 200
-    assert same_file_orderless( # type: ignore
+    assert same_file_orderless(  # type: ignore
         response.json(),
-        { # type: ignore
+        {  # type: ignore
             "name": "file_input_one",
             "data_id": "f0bb3a206d924254afed6a72f43c562a",
             "batch_ids": ["5b2420f3103546ab90eb74d5df97de43"],

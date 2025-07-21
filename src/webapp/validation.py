@@ -16,7 +16,10 @@ from fuzzywuzzy import fuzz
 
 
 def validate_file_reader(
-    filename: str, allowed_schema: list[str], base_schema: dict, inst_schema: Optional[Dict[Any, Any]] = None
+    filename: str,
+    allowed_schema: list[str],
+    base_schema: dict,
+    inst_schema: Optional[Dict[Any, Any]] = None,
 ) -> dict[str, Any]:
     """Validates given a filename."""
     return validate_dataset(filename, base_schema, inst_schema, allowed_schema)
