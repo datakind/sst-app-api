@@ -23,8 +23,9 @@ from sqlalchemy import (
     Integer,
     BigInteger,
     Index,
+    event,
 )
-from sqlalchemy.orm import sessionmaker, Session, relationship, mapped_column, Mapped
+from sqlalchemy.orm import sessionmaker, Session, relationship, mapped_column, Mapped, Mapper
 from sqlalchemy.sql import func
 from sqlalchemy.pool import StaticPool
 from .config import engine_vars, ssl_env_vars, setup_database_vars
@@ -47,7 +48,19 @@ LOCAL_USER_EMAIL = "tester@datakind.org"
 LOCAL_PASSWORD = "tester_password"
 DATETIME_TESTING = datetime.datetime(2024, 12, 26, 19, 37, 59, 753357)
 
-
+@event.listens_for(Mapper, "before_insert")
+@event.listens_for(Mapper, "before_update")
+def validate_string_lengths(mapper, connection, target):
+    for column in mapper.columns:
+        col_type = column.type
+        if isinstance(col_type, String) and col_type.length:
+            value = getattr(target, column.name, None)
+            if value is not None and len(value) > col_type.length:
+                raise ValueError(
+                    f"Value for '{column.name}' exceeds max length "
+                    f"{col_type.length}: {len(value)} characters provided"
+                )
+            
 def init_db(env: str) -> Any:
     """Initialize the database for LOCAL and DEV environemtns for ease of use."""
     # add some sample users to the database for development utility.
@@ -426,7 +439,7 @@ class SchemaRegistryTable(Base):  # type: ignore
         ForeignKey("inst.id", ondelete="RESTRICT", onupdate="CASCADE"), nullable=True
     )
     is_pdp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    version_label: Mapped[str] = mapped_column(String(32), nullable=False)
+    version_label = Column(String(VAR_CHAR_STANDARD_LENGTH), nullable=False)
     extends_schema_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey(
