@@ -452,7 +452,7 @@ class SchemaRegistryTable(Base):  # type: ignore
     is_pdp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     version_label = Column(String(VAR_CHAR_STANDARD_LENGTH), nullable=False)
     extends_schema_id: Mapped[int | None] = mapped_column(
-        BigInteger,
+        Integer,
         ForeignKey(
             "schema_registry.schema_id", ondelete="SET NULL", onupdate="CASCADE"
         ),
