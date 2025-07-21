@@ -4,6 +4,7 @@ import uuid
 from unittest import mock
 from collections import Counter
 from fastapi.testclient import TestClient
+from typing import Any
 import pytest
 import sqlalchemy
 from sqlalchemy.pool import StaticPool
@@ -47,27 +48,27 @@ def counter_repr(x):
 def same_file_orderless(a_elem: DataInfo, b_elem: DataInfo): # type: ignore
     """Compares two DataInfo objects."""
     if (
-        a_elem["inst_id"] != b_elem["inst_id"]
-        or counter_repr(a_elem["batch_ids"]) != counter_repr(b_elem["batch_ids"])
-        or a_elem["name"] != b_elem["name"]
-        or a_elem["uploader"] != b_elem["uploader"]
-        or a_elem["deleted"] != b_elem["deleted"]
-        or a_elem["source"] != b_elem["source"]
-        or a_elem["deletion_request_time"] != b_elem["deletion_request_time"]
-        or a_elem["retention_days"] != b_elem["retention_days"]
-        or a_elem["sst_generated"] != b_elem["sst_generated"]
-        or a_elem["valid"] != b_elem["valid"]
-        or a_elem["uploaded_date"] != b_elem["uploaded_date"]
+        a_elem["inst_id"] != b_elem["inst_id"] # type: ignore
+        or counter_repr(a_elem["batch_ids"]) != counter_repr(b_elem["batch_ids"]) # type: ignore
+        or a_elem["name"] != b_elem["name"] # type: ignore
+        or a_elem["uploader"] != b_elem["uploader"] # type: ignore
+        or a_elem["deleted"] != b_elem["deleted"] # type: ignore
+        or a_elem["source"] != b_elem["source"] # type: ignore
+        or a_elem["deletion_request_time"] != b_elem["deletion_request_time"] # type: ignore
+        or a_elem["retention_days"] != b_elem["retention_days"] # type: ignore
+        or a_elem["sst_generated"] != b_elem["sst_generated"] # type: ignore
+        or a_elem["valid"] != b_elem["valid"] # type: ignore
+        or a_elem["uploaded_date"] != b_elem["uploaded_date"] # type: ignore
     ):
         return False
     return True
 
 
-def same_orderless(a: DataOverview, b: DataOverview):
+def same_orderless(a: DataOverview, b: DataOverview) -> bool:
     """Compares two DataOverview objects."""
-    for a_elem in a["batches"]:
+    for a_elem in a["batches"]: # type: ignore
         found = False
-        for b_elem in b["batches"]:
+        for b_elem in b["batches"]: # type: ignore
             if a_elem["batch_id"] != b_elem["batch_id"]:
                 continue
             found = True
@@ -84,9 +85,9 @@ def same_orderless(a: DataOverview, b: DataOverview):
                 return False
         if not found:
             return False
-    for a_elem in a["files"]:
+    for a_elem in a["files"]: # type: ignore
         found = False
-        for b_elem in b["files"]:
+        for b_elem in b["files"]: # type: ignore
             if a_elem["data_id"] != b_elem["data_id"]:
                 continue
             found = True
@@ -191,7 +192,7 @@ def session_fixture():
 
 
 @pytest.fixture(name="client")
-def client_fixture(session: sqlalchemy.orm.Session):
+def client_fixture(session: sqlalchemy.orm.Session) -> Any:
     """Unit test mocks setup."""
 
     def get_session_override():
@@ -213,7 +214,7 @@ def client_fixture(session: sqlalchemy.orm.Session):
     app.dependency_overrides.clear()
 
 
-def test_read_inst_all_input_files(client: TestClient):
+def test_read_inst_all_input_files(client: TestClient) -> Any:
     """Test GET /institutions/<uuid>/input."""
     response = client.get("/institutions/" + uuid_to_str(UUID_INVALID) + "/input")
 
@@ -227,7 +228,7 @@ def test_read_inst_all_input_files(client: TestClient):
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/input"
     )
     assert response.status_code == 200
-    assert same_orderless(
+    assert same_orderless( # type: ignore
         response.json(),
         {
             "batches": [
@@ -280,7 +281,7 @@ def test_read_inst_all_input_files(client: TestClient):
     )
 
 
-def test_read_inst_all_output_files(client: TestClient):
+def test_read_inst_all_output_files(client: TestClient) -> Any:
     """Test GET /institutions/<uuid>/output."""
     MOCK_STORAGE.list_blobs_in_folder.return_value = []
     response = client.get("/institutions/" + uuid_to_str(UUID_INVALID) + "/output")
@@ -295,7 +296,7 @@ def test_read_inst_all_output_files(client: TestClient):
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/output"
     )
     assert response.status_code == 200
-    assert same_orderless(
+    assert same_orderless( # type: ignore
         response.json(),
         {
             "batches": [
@@ -348,7 +349,7 @@ def test_read_inst_all_output_files(client: TestClient):
     )
 
 
-def test_read_batch_info(client: TestClient):
+def test_read_batch_info(client: TestClient) -> Any:
     """Test GET /institutions/<uuid>/batch/<uuid>."""
     response = client.get(
         "/institutions/"
@@ -370,7 +371,7 @@ def test_read_batch_info(client: TestClient):
         + uuid_to_str(BATCH_UUID)
     )
     assert response.status_code == 200
-    assert same_orderless(
+    assert same_orderless( # type: ignore
         response.json(),
         {
             "batches": [
@@ -423,7 +424,7 @@ def test_read_batch_info(client: TestClient):
     )
 
 
-def test_read_file_id_info(client: TestClient):
+def test_read_file_id_info(client: TestClient) -> Any:
     """Test GET /institutions/<uuid>/file-id/<uuid>."""
     response = client.get(
         "/institutions/"
@@ -445,7 +446,7 @@ def test_read_file_id_info(client: TestClient):
         + uuid_to_str(FILE_UUID_1)
     )
     assert response.status_code == 200
-    assert same_file_orderless(
+    assert same_file_orderless( # type: ignore
         response.json(),
         {
             "name": "file_input_one",
@@ -464,7 +465,7 @@ def test_read_file_id_info(client: TestClient):
     )
 
 
-def test_retrieve_file_as_bytes(client: TestClient):
+def test_retrieve_file_as_bytes(client: TestClient) -> Any:
     """Test GET /institutions/<uuid>/output-file-contents/<file_name>."""
     response = client.get(
         "/institutions/"
@@ -489,7 +490,7 @@ def test_retrieve_file_as_bytes(client: TestClient):
     assert response.text == '{"detail":"No such output file exists."}'
 
 
-def test_create_batch(client: TestClient):
+def test_create_batch(client: TestClient) -> None:
     """Test POST /institutions/<uuid>/batch."""
     response = client.post(
         "/institutions/" + uuid_to_str(UUID_INVALID) + "/batch",
@@ -527,7 +528,7 @@ def test_create_batch(client: TestClient):
     assert len(response.json()["file_names_to_ids"]) == 1
 
 
-def test_update_batch(client: TestClient):
+def test_update_batch(client: TestClient) -> None:
     """Test PATCH /institutions/<uuid>/batch."""
     response = client.patch(
         "/institutions/"
@@ -565,7 +566,7 @@ def test_update_batch(client: TestClient):
     }
 
 
-def test_validate_success_batch(client: TestClient):
+def test_validate_success_batch(client: TestClient) -> None:
     """Test PATCH /institutions/<uuid>/batch."""
     MOCK_STORAGE.validate_file.return_value = ["UNKNOWN"]
 
@@ -616,7 +617,7 @@ def test_validate_success_batch(client: TestClient):
     assert response_sftp.json()["source"] == "PDP_SFTP"
 
 
-def test_validate_failure_batch(client: TestClient):
+def test_validate_failure_batch(client: TestClient) -> None:
     """Test PATCH /institutions/<uuid>/batch."""
     MOCK_STORAGE.validate_file.return_value = ["COURSE"]
     # Authorized.

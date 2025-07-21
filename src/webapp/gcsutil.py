@@ -8,7 +8,7 @@ from google.auth.transport import requests
 
 from .config import gcs_vars, databricks_vars
 from .validation import validate_file_reader
-from typing import Any, List
+from typing import Any, List, Optional, Dict
 import logging
 
 # Set the logging
@@ -273,7 +273,7 @@ class StorageControl(BaseModel):
         file_name: str,
         allowed_schemas: list[str],
         base_schema: dict,
-        inst_schema: dict,
+        inst_schema: Optional[Dict[Any, Any]] = None,
     ) -> List[str]:
         """Validate that a file is one of the allowed schemas."""
         client = storage.Client()
