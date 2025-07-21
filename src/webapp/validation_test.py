@@ -28,11 +28,11 @@ MOCK_BASE_SCHEMA = {
     }
 }
 
-MOCK_EXT_SCHEMA = {"institutions": {"pdp": {"data_models": {}}}}
+MOCK_EXT_SCHEMA: dict = {"institutions": {"pdp": {"data_models": {}}}}
 
 
 @pytest.fixture
-def tmp_csv_file(tmp_path: Path):
+def tmp_csv_file(tmp_path: Path) -> str:
     df = pd.DataFrame({"foo_col": [1, 2], "bar_col": ["a", "b"]})
     file_path = tmp_path / "test.csv"
     df.to_csv(file_path, index=False)
