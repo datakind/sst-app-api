@@ -157,18 +157,28 @@ class InstTable(Base):
     # The emails for which self sign up will be allowed for this institution and will automatically be assigned to this institution.
     # The dict structure is {email: AccessType string}
     allowed_emails: Mapped[dict[str, str]] = mapped_column(
-        MutableDict.as_mutable(JSON())
+        MutableDict.as_mutable(JSON()),
+        nullable=False,
+        default=dict,
     )
     # Schemas that are allowed for validation.
-    schemas: Mapped[list[str]] = mapped_column(MutableList.as_mutable(JSON()))
+    schemas: Mapped[list[str]] = mapped_column(
+        MutableList.as_mutable(JSON()), nullable=False, default=list
+    )
     state: Mapped[str | None] = mapped_column(String(VAR_CHAR_LENGTH), nullable=True)
     # Only populated for PDP schools.
     pdp_id: Mapped[str | None] = mapped_column(String(VAR_CHAR_LENGTH), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        default=func.now(),
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True),
+        onupdate=func.now(),
+        nullable=False,
+        default=func.now(),
     )
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=True)
 
@@ -203,9 +213,17 @@ class ApiKeyTable(Base):
     allows_enduser: Mapped[bool] = mapped_column(nullable=True)
 
     access_type: Mapped[str] = mapped_column(String(VAR_CHAR_LENGTH), nullable=False)
-    created_at = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        default=func.now(),
+    )
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True),
+        onupdate=func.now(),
+        nullable=False,
+        default=func.now(),
     )
     # API key must be valid and not deleted.
     deleted: Mapped[bool] = mapped_column(nullable=True)
@@ -274,9 +292,17 @@ class AccountTable(Base):
         String(VAR_CHAR_LENGTH), nullable=True
     )
     # profile_photo_path : Mapped[dict[str, str]] = mapped_column(String(VAR_CHAR_LENGTH), nullable=True)
-    created_at = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        default=func.now(),
+    )
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True),
+        onupdate=func.now(),
+        nullable=False,
+        default=func.now(),
     )
 
 
@@ -377,10 +403,16 @@ class FileTable(Base):
     # Whether the file was approved (in the case of output) or valid for input.
     valid: Mapped[bool] = mapped_column(nullable=False, default=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        default=func.now(),
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True),
+        onupdate=func.now(),
+        nullable=False,
+        default=func.now(),
     )
 
     # Within a given institution, there should be no duplicated file names.
@@ -418,10 +450,16 @@ class BatchTable(Base):
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        default=func.now(),
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True),
+        onupdate=func.now(),
+        nullable=False,
+        default=func.now(),
     )
     # If a batch is deleted, the uuid of the user in the updated_by section is the deleter.
     updated_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=True)
@@ -460,10 +498,16 @@ class ModelTable(Base):
         DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        default=func.now(),
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True),
+        onupdate=func.now(),
+        nullable=False,
+        default=func.now(),
     )
     # version is unused. version is not currently supported. The webapp only knows about the name of the model and any usages of a model will only use the live version.
     version: Mapped[int] = mapped_column(Integer, default=0)
@@ -547,7 +591,10 @@ class SchemaRegistryTable(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        default=func.now(),
     )
 
     # ---------------- Relationships ----------------
