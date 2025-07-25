@@ -6,7 +6,6 @@ from typing import Set, List, Any
 from contextvars import ContextVar
 import enum
 import sqlalchemy
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
 from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlalchemy import (
     Column,
@@ -26,6 +25,7 @@ from sqlalchemy import (
     event,
 )
 from sqlalchemy.orm import (
+    DeclarativeBase,
     sessionmaker,
     Session,
     relationship,
