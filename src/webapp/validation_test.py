@@ -28,11 +28,11 @@ MOCK_BASE_SCHEMA = {
     }
 }
 
-MOCK_EXT_SCHEMA = {"institutions": {"pdp": {"data_models": {}}}}
+MOCK_EXT_SCHEMA: dict = {"institutions": {"pdp": {"data_models": {}}}}
 
 
 @pytest.fixture
-def tmp_csv_file(tmp_path: Path):
+def tmp_csv_file(tmp_path: Path) -> str:
     df = pd.DataFrame({"foo_col": [1, 2], "bar_col": ["a", "b"]})
     file_path = tmp_path / "test.csv"
     df.to_csv(file_path, index=False)
@@ -47,7 +47,12 @@ def test_validate_file_reader_passes(tmp_csv_file):
         mock_load.side_effect = lambda path: (
             MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
         )
-        result = validate_file_reader(tmp_csv_file, ["test_model"])
+        result = validate_file_reader(
+            tmp_csv_file,
+            ["test_model"],
+            base_schema=MOCK_BASE_SCHEMA,
+            inst_schema=MOCK_EXT_SCHEMA,
+        )
         assert result["validation_status"] == "passed"
         assert result["schemas"] == ["test_model"]
 
@@ -65,5 +70,10 @@ def test_validate_file_reader_fails_missing_required(tmp_path):
             MOCK_BASE_SCHEMA if "base" in path else MOCK_EXT_SCHEMA
         )
         with pytest.raises(HardValidationError) as exc_info:
-            validate_file_reader(str(file_path), ["test_model"])
+            validate_file_reader(
+                str(file_path),
+                ["test_model"],
+                base_schema=MOCK_BASE_SCHEMA,
+                inst_schema=MOCK_EXT_SCHEMA,
+            )
         assert "Missing required columns" in str(exc_info.value)

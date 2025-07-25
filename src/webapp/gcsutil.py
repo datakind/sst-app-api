@@ -8,7 +8,7 @@ from google.auth.transport import requests
 
 from .config import gcs_vars, databricks_vars
 from .validation import validate_file_reader
-from typing import Any, List
+from typing import Any, List, Optional, Dict
 import logging
 
 # Set the logging
@@ -241,7 +241,7 @@ class StorageControl(BaseModel):
             raise ValueError(file_name + ": File not found.")
         blob.download_to_filename(destination_file_name)
 
-    def move_file(self, bucket_name: str, prev_name: str, new_name: str):
+    def move_file(self, bucket_name: str, prev_name: str, new_name: str) -> None:
         """Rename a file."""
         storage_client = storage.Client()
         bucket = storage_client.bucket(bucket_name)
@@ -256,7 +256,7 @@ class StorageControl(BaseModel):
         bucket.copy_blob(blob, bucket, new_name)
         blob.delete()
 
-    def delete_file(self, bucket_name: str, file_name: str):
+    def delete_file(self, bucket_name: str, file_name: str) -> None:
         """Delete a file."""
         storage_client = storage.Client()
         bucket = storage_client.bucket(bucket_name)
@@ -268,7 +268,12 @@ class StorageControl(BaseModel):
         blob.delete()
 
     def validate_file(
-        self, bucket_name: str, file_name: str, allowed_schemas: list[str]
+        self,
+        bucket_name: str,
+        file_name: str,
+        allowed_schemas: list[str],
+        base_schema: dict,
+        inst_schema: Optional[Dict[Any, Any]] = None,
     ) -> List[str]:
         """Validate that a file is one of the allowed schemas."""
         client = storage.Client()
@@ -278,7 +283,9 @@ class StorageControl(BaseModel):
         schems: List[str] = []
         try:
             with blob.open("r") as file:
-                schemas = validate_file_reader(file, allowed_schemas)
+                schemas = validate_file_reader(
+                    file, allowed_schemas, base_schema, inst_schema
+                )
                 schems = [str(s) for s in schemas.get("schemas", [])]
                 logging.debug(
                     f"If you see this file validation was successful {schems}"
@@ -294,7 +301,7 @@ class StorageControl(BaseModel):
         logging.debug("If you see this file validation was complete")
         return schems
 
-    def get_file_contents(self, bucket_name: str, file_name: str):
+    def get_file_contents(self, bucket_name: str, file_name: str) -> Any:
         """Returns a file as a bytes object."""
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
