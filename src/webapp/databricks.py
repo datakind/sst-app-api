@@ -11,11 +11,13 @@ from databricks.sdk.service.sql import (
     Disposition,
     StatementState,
 )
+from google.cloud import storage
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
-from typing import List, Any, Dict
+from typing import List, Any, Dict, IO, cast
 from databricks.sdk.errors import DatabricksError
-
+from fastapi import HTTPException
+import tomllib  # Python 3.11+
 # Setting up logger
 LOGGER = logging.getLogger(__name__)
 
@@ -366,3 +368,77 @@ class DatabricksControl(BaseModel):
 
         # Combine column names with corresponding row values
         return [dict(zip(column_names, row)) for row in data_rows]
+
+    def get_key_for_file(self, mapping: Dict[str, Any], file_name: str) -> Optional[str]:
+        """Return the first key whose value equals file_name (or contains it if value is a list)."""
+        for k, v in mapping.items():
+            if isinstance(v, str) and v == file_name:
+                return k
+            if isinstance(v, list) and any(isinstance(x, str) and x == file_name for x in v):
+                return k
+        return None
+
+    def generate_schema_extension(
+        self,
+        bucket_name: str,
+        inst_query_result: Any,
+        file_name: str,
+    ) -> Dict[str, Any]:
+        try:
+            w = WorkspaceClient(
+                host=databricks_vars["DATABRICKS_HOST_URL"],
+                google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
+            LOGGER.info("Successfully created Databricks WorkspaceClient.")
+        except Exception as e:
+            LOGGER.exception(
+                "Failed to create Databricks WorkspaceClient with host: %s and service account: %s",
+                databricks_vars["DATABRICKS_HOST_URL"],
+                gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
+            raise ValueError(
+                f"fetch_table_data(): Workspace client initialization failed: {e}"
+            )
+        try:
+            config_volume_path = f"/Volumes/staging_sst_01/{databricksify_inst_name(inst_query_result[0][0].name)}_bronze/bronze_volume/config.toml"
+            LOGGER.info(f"Attempting to download from {config_volume_path}")
+            response = w.files.download(config_volume_path)
+            stream = cast(IO[bytes], response.contents)
+            file_bytes = stream.read()
+
+            LOGGER.info("Download successful, received %d bytes", len(file_bytes))
+        except Exception as e:
+            LOGGER.exception(f"Failed to fetch model card: {e}")
+            raise HTTPException(500, detail=f"Failed to fetch config: {e}")
+
+        try:
+        # Databricks files are UTF-8; decode then parse
+            cfg = tomllib.loads(file_bytes.decode("utf-8"))
+        except Exception as e:
+            LOGGER.exception("Invalid TOML in %s", file_name)
+            raise HTTPException(400, detail=f"Invalid TOML in {file_name}: {e}")
+        # Stream back as FileResponse
+
+        try:
+            mapping = cfg["webapp"]["validation_mapping"]
+        except KeyError:
+            raise HTTPException(404, detail="Missing [webapp].validation_mapping in config.toml")
+
+        if not isinstance(mapping, dict):
+            raise HTTPException(400, detail="validation_mapping must be a TOML table (dictionary)")
+
+        LOGGER.info("validation_mapping keys: %s", list(mapping.keys()))
+
+        key = self.get_key_for_file(mapping, file_name)
+        if key is None:
+            raise HTTPException(404, detail=f"{file_name} not found in validation_mapping")
+
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(f"unvalidated/{file_name}")
+        try:
+            with blob.open("r") as file:
+                
+        schems: List[str] = []
+
+        return mapping

@@ -1057,7 +1057,40 @@ def validate_file_manual_upload(
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> Any:
     """Validate a given file. The file_name should be url encoded."""
+    
     file_name = decode_url_piece(file_name)
+    local_session.set(sql_session)
+
+    inst_query_result = (
+        local_session.get()
+        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
+        .scalar_one_or_none()
+    )
+    if inst_query_result is None:
+        raise ValueError(f"Institution {inst_id} not found")
+
+    if inst_query_result.pdp_id:  # institution is PDP
+        pass
+    else:
+        existing_schema_extension = (
+                local_session.get()
+                .execute(
+                    select(SchemaRegistryTable.json_doc)
+                    .where(
+                        SchemaRegistryTable.inst_id == inst_id,
+                        SchemaRegistryTable.is_active.is_(True),
+                    )
+                    .limit(1)
+                )
+                .scalar_one_or_none()
+            )
+        if not existing_schema_extension:
+            schema_status = DatabricksControl.generate_schema_extension(
+                bucket_name=get_external_bucket_name(inst_id),
+                inst_query_result=inst_query_result, 
+                file_name=file_name,
+                )
+
     return validation_helper(
         "MANUAL_UPLOAD", inst_id, file_name, current_user, storage_control, sql_session
     )
