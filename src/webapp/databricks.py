@@ -20,6 +20,7 @@ from databricks.sdk.errors import DatabricksError
 from fastapi import HTTPException
 import toml  # Python 3.11+
 import pandas as pd
+import re
 
 # Setting up logger
 LOGGER = logging.getLogger(__name__)
@@ -375,14 +376,57 @@ class DatabricksControl(BaseModel):
     def get_key_for_file(
         self, mapping: Dict[str, Any], file_name: str
     ) -> Optional[str]:
-        """Return the first key whose value equals file_name (or contains it if value is a list)."""
-        for k, v in mapping.items():
-            if isinstance(v, str) and v == file_name:
-                return k
-            if isinstance(v, list) and any(
-                isinstance(x, str) and x == file_name for x in v
-            ):
-                return k
+        """
+        Case-insensitive match of file_name against mapping values.
+        - Value may be a string or a list of strings.
+        - Each string can be:
+            * literal filename (e.g., "student.csv"): allow optional base suffixes
+            like "_20240101" before the extension; also allow optional extension
+            if the literal has none.
+            * regex pattern: matched with re.IGNORECASE against the whole filename.
+        """
+        name = os.path.basename(file_name)
+        _REGEX_HINT = re.compile(r"[()\[\]\{\}\|\?\+\*\\]|^\^|$")
+
+        def looks_like_regex(s: str) -> bool:
+            return bool(_REGEX_HINT.search(s))
+
+        for key, val in mapping.items():
+            candidates = val if isinstance(val, list) else [val]
+            for pat in candidates:
+                if not isinstance(pat, str):
+                    continue
+                p = pat.strip()
+
+                # Fast path: exact literal, case-insensitive
+                if name.casefold() == p.casefold():
+                    return key
+
+                if looks_like_regex(p):
+                    # Respect user’s regex; apply IGNORECASE instead of lowercasing
+                    try:
+                        if re.fullmatch(p, name, flags=re.IGNORECASE):
+                            return key
+                    except re.error:
+                        # bad regex in config: skip
+                        continue
+                else:
+                    # Literal with suffix tolerance (case-insensitive)
+                    p_base, p_ext = os.path.splitext(p)
+                    if p_ext:
+                        # e.g., ^student(?:[._-].+)?\.csv$
+                        rx = re.compile(
+                            rf"^{re.escape(p_base)}(?:[._-].+)?{re.escape(p_ext)}$",
+                            re.IGNORECASE,
+                        )
+                    else:
+                        # e.g., ^student(?:[._-].+)?(?:\..+)?$
+                        rx = re.compile(
+                            rf"^{re.escape(p)}(?:[._-].+)?(?:\..+)?$",
+                            re.IGNORECASE,
+                        )
+                    if rx.fullmatch(name):
+                        return key
         return None
 
     def generate_schema_extension(
