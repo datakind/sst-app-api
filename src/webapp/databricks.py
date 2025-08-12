@@ -392,7 +392,7 @@ class DatabricksControl(BaseModel):
         file_name: str,
         base_schema: Dict[str, Any],  # pass base schema dict in
         extension_schema: Optional[dict] = None,  # existing extension or None
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Any:
         # 1) Databricks client
         try:
             w = WorkspaceClient(

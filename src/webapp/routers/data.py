@@ -1112,7 +1112,8 @@ def validate_file_manual_upload(
         .scalar_one_or_none()
     )
 
-    schema_extension = DatabricksControl.generate_schema_extension(
+    dbc = DatabricksControl()
+    schema_extension = dbc.generate_schema_extension(
         bucket_name=get_external_bucket_name(inst_id),
         inst_query=inst_query_result,
         file_name=file_name,

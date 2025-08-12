@@ -1,4 +1,4 @@
-from typing import Union, List, Dict, Optional
+from typing import Union, List, Dict, Optional, Any
 import pandas as pd
 import tempfile
 import os
@@ -7,7 +7,7 @@ import json
 from validation import validate_dataset, normalize_col, HardValidationError
 
 
-def load_json(path: str) -> dict:
+def load_json(path: str) -> Any:
     """Load JSON from a file, returning {} on failure."""
     try:
         with open(path, "r") as f:
