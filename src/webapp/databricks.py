@@ -12,7 +12,7 @@ from databricks.sdk.service.sql import (
     StatementState,
 )
 from google.cloud import storage
-from validation_extension import generate_extension_schema
+from .validation_extension import generate_extension_schema
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict, IO, cast, Optional
