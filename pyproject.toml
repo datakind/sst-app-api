@@ -30,8 +30,7 @@ dependencies = [
     "fuzzywuzzy",
     "databricks-sql-connector",
     "pandera~=0.13",
-    "mlflow",
-    "tomllib"
+    "mlflow"
 ]
 
 [project.urls]

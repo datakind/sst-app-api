@@ -18,7 +18,7 @@ from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict, IO, cast, Optional
 from databricks.sdk.errors import DatabricksError
 from fastapi import HTTPException
-import tomllib  # Python 3.11+
+import toml  # Python 3.11+
 import pandas as pd
 
 # Setting up logger
@@ -423,7 +423,7 @@ class DatabricksControl(BaseModel):
             raise HTTPException(500, detail=f"Failed to fetch config: {e}")
 
         try:
-            cfg = tomllib.loads(file_bytes.decode("utf-8"))
+            cfg = toml.loads(file_bytes.decode("utf-8"))
             mapping = cfg["webapp"]["validation_mapping"]
         except KeyError:
             raise HTTPException(
