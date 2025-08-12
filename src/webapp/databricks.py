@@ -12,7 +12,7 @@ from databricks.sdk.service.sql import (
     StatementState,
 )
 from google.cloud import storage
-import generate_extensions
+from validation_extension import generate_extension_schema
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict, IO, cast, Optional
@@ -476,7 +476,7 @@ class DatabricksControl(BaseModel):
             LOGGER.exception("Failed to read %s from GCS", file_name)
             raise HTTPException(500, detail=f"Failed to read {file_name} from GCS: {e}")
 
-        updated_extension = generate_extensions.generate_extension_schema(
+        updated_extension = generate_extension_schema(
             df=df,
             models=key,  # exactly one model
             institution_id=inst_id,
