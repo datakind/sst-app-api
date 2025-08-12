@@ -907,18 +907,19 @@ def validation_helper(
     base_schema = (
         local_session.get()
         .execute(
-            select(SchemaRegistryTable.json_doc)
+            select(SchemaRegistryTable.schema_id, SchemaRegistryTable.json_doc)
             .where(
                 SchemaRegistryTable.doc_type == DocType.base,
                 SchemaRegistryTable.is_active.is_(True),
             )
             .limit(1)
         )
-        .scalar_one_or_none()
+        .first()
     )
     if base_schema is None:
         raise RuntimeError("No active base schema found")
 
+    base_schema_id, base_schema = base_schema
     # ----------------------- Fetch inst specific extension schema from DB ---------------------
     inst = (
         local_session.get()
@@ -949,11 +950,55 @@ def validation_helper(
                 .where(
                     SchemaRegistryTable.inst_id == inst.id,
                     SchemaRegistryTable.is_active.is_(True),
+                    SchemaRegistryTable.doc_type == DocType.extension,  # be explicit
                 )
                 .limit(1)
             )
             .scalar_one_or_none()
         )
+
+        dbc = DatabricksControl()
+        schema_extension = dbc.generate_schema_extension(
+            bucket_name=get_external_bucket_name(inst_id),
+            inst_query=inst,
+            file_name=file_name,
+            base_schema=base_schema,
+            extension_schema=inst_schema,
+        )
+
+        if schema_extension is not None:
+            updated_inst_schema = schema_extension
+            try:
+                new_schema_extension_record = SchemaRegistryTable(
+                    doc_type=DocType.extension,
+                    inst_id=str_to_uuid(inst_id),
+                    is_pdp=False,  # type: ignore
+                    version_label="1.0.0",
+                    extends_schema_id=base_schema_id,
+                    json_doc=schema_extension,
+                    is_active=True,
+                )
+                sess = local_session.get()
+                sess.add(new_schema_extension_record)
+                sess.flush()
+                logging.info("Schema record inserted for '%s'", inst_id)
+            except IntegrityError as e:
+                sess = local_session.get()
+                sess.rollback()
+                logging.warning("IntegrityError: %s", e)
+            except Exception as e:
+                sess = local_session.get()
+                sess.rollback()
+                logging.error("Unexpected DB error: %s", e)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Unexpected database error while inserting file record: {e}",
+                )
+        else:
+            logging.info(
+                "No-op: extension already contains this model for inst %s", inst_id
+            )
+            updated_inst_schema = inst_schema
 
     # ----------------------- File validation logic logic --------------------------------------
     try:
@@ -962,7 +1007,7 @@ def validation_helper(
             file_name,
             allowed_schemas,
             base_schema,
-            inst_schema,
+            updated_inst_schema,
         )
         logging.debug(
             f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
@@ -1059,107 +1104,6 @@ def validate_file_manual_upload(
     """Validate a given file. The file_name should be url encoded."""
 
     file_name = decode_url_piece(file_name)
-    local_session.set(sql_session)
-
-    inst_query_result = (
-        local_session.get()
-        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
-        .scalar_one_or_none()
-    )
-    if inst_query_result is None:
-        raise ValueError(f"Institution {inst_id} not found")
-
-    if inst_query_result.pdp_id:  # institution is PDP
-        return validation_helper(
-            "MANUAL_UPLOAD",
-            inst_id,
-            file_name,
-            current_user,
-            storage_control,
-            sql_session,
-        )
-
-    base_schema = (
-        local_session.get()
-        .execute(
-            select(SchemaRegistryTable.schema_id, SchemaRegistryTable.json_doc)
-            .where(
-                SchemaRegistryTable.doc_type == DocType.base,
-                SchemaRegistryTable.is_active.is_(True),
-            )
-            .limit(1)
-        )
-        .first()
-    )
-
-    if not base_schema:
-        raise HTTPException(500, detail="Active base schema not found")
-
-    base_schema_id, base_schema = base_schema
-
-    existing_schema_extension = (
-        local_session.get()
-        .execute(
-            select(SchemaRegistryTable.json_doc)
-            .where(
-                SchemaRegistryTable.inst_id
-                == str_to_uuid(inst_id),  # FIX: compare UUID to UUID
-                SchemaRegistryTable.is_active.is_(True),
-                SchemaRegistryTable.doc_type == DocType.extension,  # be explicit
-            )
-            .limit(1)
-        )
-        .scalar_one_or_none()
-    )
-
-    dbc = DatabricksControl()
-    schema_extension = dbc.generate_schema_extension(
-        bucket_name=get_external_bucket_name(inst_id),
-        inst_query=inst_query_result,
-        file_name=file_name,
-        base_schema=base_schema,
-        extension_schema=existing_schema_extension,
-    )
-
-    if schema_extension is None:
-        logging.info(
-            "No-op: extension already contains this model for inst %s", inst_id
-        )
-        return validation_helper(
-            "MANUAL_UPLOAD",
-            inst_id,
-            file_name,
-            current_user,
-            storage_control,
-            sql_session,
-        )
-
-    try:
-        new_schema_extension_record = SchemaRegistryTable(
-            doc_type=DocType.extension,
-            inst_id=str_to_uuid(inst_id),
-            is_pdp=False,  # type: ignore
-            version_label="1.0.0",
-            extends_schema_id=base_schema_id,
-            json_doc=schema_extension,
-            is_active=True,
-        )
-        sess = local_session.get()
-        sess.add(new_schema_extension_record)
-        sess.flush()
-        logging.info("Schema record inserted for '%s'", inst_id)
-    except IntegrityError as e:
-        sess = local_session.get()
-        sess.rollback()
-        logging.warning("IntegrityError: %s", e)
-    except Exception as e:
-        sess = local_session.get()
-        sess.rollback()
-        logging.error("Unexpected DB error: %s", e)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Unexpected database error while inserting file record: {e}",
-        )
 
     return validation_helper(
         "MANUAL_UPLOAD", inst_id, file_name, current_user, storage_control, sql_session
