@@ -447,7 +447,7 @@ class DatabricksControl(BaseModel):
 
         return None
 
-    def generate_schema_extension(
+    def create_custom_schema_extension(
         self,
         bucket_name: str,
         inst_query: Any,

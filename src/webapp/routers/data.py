@@ -958,7 +958,7 @@ def validation_helper(
         )
 
         dbc = DatabricksControl()
-        schema_extension = dbc.generate_schema_extension(
+        schema_extension = dbc.create_custom_schema_extension(
             bucket_name=get_external_bucket_name(inst_id),
             inst_query=inst,
             file_name=file_name,
