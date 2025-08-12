@@ -11,10 +11,20 @@ from databricks.sdk.service.sql import (
     Disposition,
     StatementState,
 )
+from google.cloud import storage
+from .validation_extension import generate_extension_schema
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
-from typing import List, Any, Dict
+from typing import List, Any, Dict, IO, cast, Optional
 from databricks.sdk.errors import DatabricksError
+from fastapi import HTTPException
+
+try:
+    import tomllib as _toml  # Py 3.11+
+except ModuleNotFoundError:
+    import tomli as _toml  # Py ≤ 3.10
+import pandas as pd
+import re
 
 # Setting up logger
 LOGGER = logging.getLogger(__name__)
@@ -366,3 +376,180 @@ class DatabricksControl(BaseModel):
 
         # Combine column names with corresponding row values
         return [dict(zip(column_names, row)) for row in data_rows]
+
+    def get_key_for_file(
+        self, mapping: Dict[str, Any], file_name: str
+    ) -> Optional[str]:
+        """
+        Case-insensitive match of file_name against mapping values.
+        Values may be:
+        - str literal (e.g., "student.csv") → allow optional base suffixes before the ext.
+        - str regex (e.g., r"^course_.*\.csv$") → re.IGNORECASE fullmatch.
+        - compiled regex (re.Pattern) → fullmatch, adding IGNORECASE if missing.
+        - list of any of the above.
+        """
+        # normalize filename (handles windows paths + stray whitespace)
+        name = os.path.basename(file_name.replace("\\", "/")).strip()
+
+        REGEX_META = re.compile(r"[()\[\]\{\}\|\?\+\*\\]")
+
+        def looks_like_regex(s: str) -> bool:
+            s = s.strip()
+            return (
+                s.startswith("^") or s.endswith("$") or REGEX_META.search(s) is not None
+            )
+
+        def matches_one(pat: Any) -> bool:
+            # compiled regex
+            if isinstance(pat, re.Pattern):
+                # ensure case-insensitive
+                flags = pat.flags | re.IGNORECASE
+                return re.fullmatch(re.compile(pat.pattern, flags), name) is not None
+
+            # string literal / regex
+            if isinstance(pat, str):
+                p = pat.strip()
+
+                # exact literal (case-insensitive)
+                if name.casefold() == p.casefold():
+                    return True
+
+                if looks_like_regex(p):
+                    try:
+                        return re.fullmatch(p, name, flags=re.IGNORECASE) is not None
+                    except re.error:
+                        return False
+
+                # literal with suffix tolerance
+                p_base, p_ext = os.path.splitext(p)
+                if p_ext:
+                    # ^base(?:[._-].+)?ext$
+                    rx = re.compile(
+                        rf"^{re.escape(p_base)}(?:[._-].+)?{re.escape(p_ext)}$",
+                        re.IGNORECASE,
+                    )
+                else:
+                    # ^literal(?:[._-].+)?(?:\..+)?$
+                    rx = re.compile(
+                        rf"^{re.escape(p)}(?:[._-].+)?(?:\..+)?$",
+                        re.IGNORECASE,
+                    )
+                return rx.fullmatch(name) is not None
+
+            # unsupported type
+            return False
+
+        for key, val in mapping.items():
+            items = val if isinstance(val, list) else [val]
+            for pat in items:
+                if matches_one(pat):
+                    return key
+
+        return None
+
+    def create_custom_schema_extension(
+        self,
+        bucket_name: str,
+        inst_query: Any,
+        file_name: str,
+        base_schema: Dict[str, Any],  # pass base schema dict in
+        extension_schema: Optional[dict] = None,  # existing extension or None
+    ) -> Any:
+        if (
+            os.getenv("SST_SKIP_EXT_GEN") == "1"
+        ):  # skip using workspace client for tests
+            LOGGER.info("SST_SKIP_EXT_GEN=1; skipping Databricks extension generation.")
+            return None
+
+        # 1) Databricks client
+        try:
+            w = WorkspaceClient(
+                host=databricks_vars["DATABRICKS_HOST_URL"],
+                google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
+            LOGGER.info("Successfully created Databricks WorkspaceClient.")
+        except Exception as e:
+            LOGGER.exception("WorkspaceClient init failed")
+            raise ValueError(f"Workspace client initialization failed: {e}")
+
+        # 2) Fetch & parse config.toml to get validation_mapping
+        try:
+            inst_name = inst_query[0][0].name
+            inst_id_raw = inst_query[0][0].id
+            inst_id = str(inst_id_raw)  # be robust if id is not a string
+            config_volume_path = (
+                f"/Volumes/staging_sst_01/"
+                f"{databricksify_inst_name(inst_name)}_bronze/bronze_volume/config.toml"
+            )
+            LOGGER.info("Attempting to download from %s", config_volume_path)
+            response = w.files.download(config_volume_path)
+            stream = cast(IO[bytes], response.contents)
+            file_bytes = stream.read()
+            LOGGER.info("Download successful, received %d bytes", len(file_bytes))
+        except Exception as e:
+            LOGGER.exception("Failed to fetch config.toml")
+            raise HTTPException(500, detail=f"Failed to fetch config: {e}")
+
+        try:
+            cfg = _toml.loads(file_bytes.decode("utf-8"))
+            mapping = cfg["webapp"]["validation_mapping"]
+        except KeyError:
+            raise HTTPException(
+                404, detail="Missing [webapp].validation_mapping in config.toml"
+            )
+        except Exception as e:
+            LOGGER.exception("Invalid TOML")
+            raise HTTPException(400, detail=f"Invalid TOML in {file_name}: {e}")
+
+        if not isinstance(mapping, dict):
+            raise HTTPException(
+                400, detail="validation_mapping must be a TOML table (dictionary)"
+            )
+
+        key = self.get_key_for_file(mapping, file_name)  # e.g., "student"
+        if key is None:
+            raise HTTPException(
+                404, detail=f"{file_name} not found in {inst_name} validation_mapping"
+            )
+
+        key_lc = key.lower()
+
+        # 4) If this model already exists in the provided extension for this institution, skip
+        if extension_schema is not None:
+            if not isinstance(extension_schema, dict):
+                raise HTTPException(
+                    400, detail="extension_schema must be a dict if provided"
+                )
+
+            inst_block = extension_schema.get("institutions", {}).get(inst_id, {})
+            data_models = inst_block.get("data_models", {})
+            existing_keys_lc = {str(k).lower() for k in data_models.keys()}
+
+            if key_lc in existing_keys_lc:
+                LOGGER.info(
+                    "Model '%s' already present for institution '%s' — skipping (return None).",
+                    key,
+                    inst_id,
+                )
+                return None  # <-- sentinel: do not write
+
+        # 5) Read the unvalidated CSV from GCS
+        try:
+            client = storage.Client()
+            bucket = client.bucket(bucket_name)
+            blob = bucket.blob(f"unvalidated/{file_name}")
+            with blob.open("r") as fh:
+                df = pd.read_csv(fh)
+        except Exception as e:
+            LOGGER.exception("Failed to read %s from GCS", file_name)
+            raise HTTPException(500, detail=f"Failed to read {file_name} from GCS: {e}")
+
+        updated_extension = generate_extension_schema(
+            df=df,
+            models=key,  # exactly one model
+            institution_id=inst_id,
+            base_schema=base_schema,  # reference only, not mutated
+            existing_extension=extension_schema,  # may be None
+        )
+
+        return updated_extension
