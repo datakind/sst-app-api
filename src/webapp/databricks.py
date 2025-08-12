@@ -12,12 +12,14 @@ from databricks.sdk.service.sql import (
     StatementState,
 )
 from google.cloud import storage
+import generate_extensions
 from .config import databricks_vars, gcs_vars
 from .utilities import databricksify_inst_name, SchemaType
-from typing import List, Any, Dict, IO, cast
+from typing import List, Any, Dict, IO, cast, Optional
 from databricks.sdk.errors import DatabricksError
 from fastapi import HTTPException
 import tomllib  # Python 3.11+
+import pandas as pd
 # Setting up logger
 LOGGER = logging.getLogger(__name__)
 
@@ -383,7 +385,10 @@ class DatabricksControl(BaseModel):
         bucket_name: str,
         inst_query_result: Any,
         file_name: str,
-    ) -> Dict[str, Any]:
+        base_schema: Dict[str, Any],                # pass base schema dict in
+        extension_schema: Optional[dict] = None,    # existing extension or None
+    ) -> Optional[Dict[str, Any]]:
+        # 1) Databricks client
         try:
             w = WorkspaceClient(
                 host=databricks_vars["DATABRICKS_HOST_URL"],
@@ -391,54 +396,80 @@ class DatabricksControl(BaseModel):
             )
             LOGGER.info("Successfully created Databricks WorkspaceClient.")
         except Exception as e:
-            LOGGER.exception(
-                "Failed to create Databricks WorkspaceClient with host: %s and service account: %s",
-                databricks_vars["DATABRICKS_HOST_URL"],
-                gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
-            )
-            raise ValueError(
-                f"fetch_table_data(): Workspace client initialization failed: {e}"
-            )
+            LOGGER.exception("WorkspaceClient init failed")
+            raise ValueError(f"Workspace client initialization failed: {e}")
+
+        # 2) Fetch & parse config.toml to get validation_mapping
         try:
-            config_volume_path = f"/Volumes/staging_sst_01/{databricksify_inst_name(inst_query_result[0][0].name)}_bronze/bronze_volume/config.toml"
-            LOGGER.info(f"Attempting to download from {config_volume_path}")
+            inst_name = inst_query_result[0][0].name
+            inst_id_raw = inst_query_result[0][0].id
+            inst_id = str(inst_id_raw)  # be robust if id is not a string
+            config_volume_path = (
+                f"/Volumes/staging_sst_01/"
+                f"{databricksify_inst_name(inst_name)}_bronze/bronze_volume/config.toml"
+            )
+            LOGGER.info("Attempting to download from %s", config_volume_path)
             response = w.files.download(config_volume_path)
             stream = cast(IO[bytes], response.contents)
             file_bytes = stream.read()
-
             LOGGER.info("Download successful, received %d bytes", len(file_bytes))
         except Exception as e:
-            LOGGER.exception(f"Failed to fetch model card: {e}")
+            LOGGER.exception("Failed to fetch config.toml")
             raise HTTPException(500, detail=f"Failed to fetch config: {e}")
 
         try:
-        # Databricks files are UTF-8; decode then parse
             cfg = tomllib.loads(file_bytes.decode("utf-8"))
-        except Exception as e:
-            LOGGER.exception("Invalid TOML in %s", file_name)
-            raise HTTPException(400, detail=f"Invalid TOML in {file_name}: {e}")
-        # Stream back as FileResponse
-
-        try:
             mapping = cfg["webapp"]["validation_mapping"]
         except KeyError:
             raise HTTPException(404, detail="Missing [webapp].validation_mapping in config.toml")
+        except Exception as e:
+            LOGGER.exception("Invalid TOML")
+            raise HTTPException(400, detail=f"Invalid TOML in {file_name}: {e}")
 
         if not isinstance(mapping, dict):
             raise HTTPException(400, detail="validation_mapping must be a TOML table (dictionary)")
 
-        LOGGER.info("validation_mapping keys: %s", list(mapping.keys()))
-
-        key = self.get_key_for_file(mapping, file_name)
+        key = self.get_key_for_file(mapping, file_name)  # e.g., "student"
         if key is None:
-            raise HTTPException(404, detail=f"{file_name} not found in validation_mapping")
+            raise HTTPException(404, detail=f"{file_name} not found in {inst_name} validation_mapping")
 
-        client = storage.Client()
-        bucket = client.bucket(bucket_name)
-        blob = bucket.blob(f"unvalidated/{file_name}")
+        key_lc = key.lower()
+
+        # 4) If this model already exists in the provided extension for this institution, skip
+        if extension_schema is not None:
+            if not isinstance(extension_schema, dict):
+                raise HTTPException(400, detail="extension_schema must be a dict if provided")
+
+            inst_block = (
+                extension_schema
+                .get("institutions", {})
+                .get(inst_id, {})
+            )
+            data_models = inst_block.get("data_models", {})
+            existing_keys_lc = {str(k).lower() for k in data_models.keys()}
+
+            if key_lc in existing_keys_lc:
+                LOGGER.info("Model '%s' already present for institution '%s' — skipping (return None).", key, inst_id)
+                return None  # <-- sentinel: do not write
+
+
+        # 5) Read the unvalidated CSV from GCS
         try:
-            with blob.open("r") as file:
-                
-        schems: List[str] = []
+            client = storage.Client()
+            bucket = client.bucket(bucket_name)
+            blob = bucket.blob(f"unvalidated/{file_name}")
+            with blob.open("r") as fh:
+                df = pd.read_csv(fh)
+        except Exception as e:
+            LOGGER.exception("Failed to read %s from GCS", file_name)
+            raise HTTPException(500, detail=f"Failed to read {file_name} from GCS: {e}")
+        
+        updated_extension = generate_extensions.generate_extension_schema(
+            df=df,
+            models=key,                      # exactly one model
+            institution_id=inst_id,
+            base_schema=base_schema,         # reference only, not mutated
+            existing_extension=extension_schema,  # may be None
+        )
 
-        return mapping
+        return updated_extension

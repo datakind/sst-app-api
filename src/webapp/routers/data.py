@@ -1070,26 +1070,75 @@ def validate_file_manual_upload(
         raise ValueError(f"Institution {inst_id} not found")
 
     if inst_query_result.pdp_id:  # institution is PDP
-        pass
-    else:
-        existing_schema_extension = (
-                local_session.get()
-                .execute(
-                    select(SchemaRegistryTable.json_doc)
-                    .where(
-                        SchemaRegistryTable.inst_id == inst_id,
-                        SchemaRegistryTable.is_active.is_(True),
-                    )
-                    .limit(1)
-                )
-                .scalar_one_or_none()
+        return validation_helper("MANUAL_UPLOAD", inst_id, file_name, current_user, storage_control, sql_session)
+    
+    base_schema = (
+        local_session.get()
+        .execute(
+            select(SchemaRegistryTable.json_doc)
+            .where(
+                SchemaRegistryTable.doc_type == DocType.base,
+                SchemaRegistryTable.is_active.is_(True),
             )
-        if not existing_schema_extension:
-            schema_status = DatabricksControl.generate_schema_extension(
-                bucket_name=get_external_bucket_name(inst_id),
-                inst_query_result=inst_query_result, 
-                file_name=file_name,
+            .limit(1)
+        )
+        .scalar_one_or_none()
+    )
+
+    if not base_schema:
+        raise HTTPException(500, detail="Active base schema not found")
+
+    existing_schema_extension = (
+            local_session.get()
+            .execute(
+                select(SchemaRegistryTable.json_doc)
+                .where(
+                    SchemaRegistryTable.inst_id == inst_id,
+                    SchemaRegistryTable.is_active.is_(True),
                 )
+                .limit(1)
+            )
+            .scalar_one_or_none()
+        )
+    
+    schema_extension = DatabricksControl.generate_schema_extension(
+        bucket_name=get_external_bucket_name(inst_id),
+        inst_query_result=inst_query_result, 
+        file_name=file_name,
+        base_schema=base_schema,
+        extension_schema=existing_schema_extension
+        )
+
+    if schema_extension is None:
+        logging.info("No-op: extension already contains this model for inst %s", inst_id)
+        return validation_helper("MANUAL_UPLOAD", inst_id, file_name, current_user, storage_control, sql_session)
+
+    try:
+        new_schema_extension_record = SchemaRegistryTable(
+            doc_type=DocType.extension,
+            inst_id=str_to_uuid(inst_id),
+            is_pdp=False,  # type: ignore
+            version_label="1.0.0",
+            extends_schema_id=1,
+            json_doc=schema_extension,
+            is_active=True,
+        )
+        sess = local_session.get()
+        sess.add(new_schema_extension_record)
+        sess.flush()
+        logging.info("Schema record inserted for '%s'", inst_id)
+    except IntegrityError as e:
+        sess = local_session.get()
+        sess.rollback()
+        logging.warning("IntegrityError: %s", e)
+    except Exception as e:
+        sess = local_session.get()
+        sess.rollback()
+        logging.error("Unexpected DB error: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected database error while inserting file record: {e}",
+        )
 
     return validation_helper(
         "MANUAL_UPLOAD", inst_id, file_name, current_user, storage_control, sql_session
