@@ -1,3 +1,4 @@
+"""Validation extension."""
 from typing import Union, List, Dict, Optional, Any
 import pandas as pd
 import tempfile
