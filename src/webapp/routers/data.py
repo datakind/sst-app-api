@@ -942,6 +942,7 @@ def validation_helper(
             )
             .scalar_one_or_none()
         )
+        updated_inst_schema: dict | None = inst_schema
     else:  # custom (or none)
         inst_schema = (
             local_session.get()
