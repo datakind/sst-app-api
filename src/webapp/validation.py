@@ -12,7 +12,7 @@ import logging
 import pandas as pd
 from pandera import Column, Check, DataFrameSchema
 from pandera.errors import SchemaErrors
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 
 def validate_file_reader(
