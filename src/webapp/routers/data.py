@@ -1075,35 +1075,38 @@ def validate_file_manual_upload(
     base_schema = (
         local_session.get()
         .execute(
-            select(SchemaRegistryTable.json_doc)
+            select(SchemaRegistryTable.schema_id, SchemaRegistryTable.json_doc)
             .where(
                 SchemaRegistryTable.doc_type == DocType.base,
                 SchemaRegistryTable.is_active.is_(True),
             )
             .limit(1)
         )
-        .scalar_one_or_none()
+        .first()
     )
 
     if not base_schema:
         raise HTTPException(500, detail="Active base schema not found")
+    
+    base_schema_id, base_schema = base_schema
 
     existing_schema_extension = (
-            local_session.get()
-            .execute(
-                select(SchemaRegistryTable.json_doc)
-                .where(
-                    SchemaRegistryTable.inst_id == inst_id,
-                    SchemaRegistryTable.is_active.is_(True),
-                )
-                .limit(1)
+        local_session.get()
+        .execute(
+            select(SchemaRegistryTable.json_doc)
+            .where(
+                SchemaRegistryTable.inst_id == str_to_uuid(inst_id),   # FIX: compare UUID to UUID
+                SchemaRegistryTable.is_active.is_(True),
+                SchemaRegistryTable.doc_type == DocType.extension,     # be explicit
             )
-            .scalar_one_or_none()
+            .limit(1)
         )
-    
+        .scalar_one_or_none()
+    )
+        
     schema_extension = DatabricksControl.generate_schema_extension(
         bucket_name=get_external_bucket_name(inst_id),
-        inst_query_result=inst_query_result, 
+        inst_query=inst_query_result, 
         file_name=file_name,
         base_schema=base_schema,
         extension_schema=existing_schema_extension
@@ -1119,7 +1122,7 @@ def validate_file_manual_upload(
             inst_id=str_to_uuid(inst_id),
             is_pdp=False,  # type: ignore
             version_label="1.0.0",
-            extends_schema_id=1,
+            extends_schema_id=base_schema_id,
             json_doc=schema_extension,
             is_active=True,
         )
