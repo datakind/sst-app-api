@@ -383,7 +383,7 @@ class DatabricksControl(BaseModel):
     def generate_schema_extension(
         self,
         bucket_name: str,
-        inst_query_result: Any,
+        inst_query: Any,
         file_name: str,
         base_schema: Dict[str, Any],                # pass base schema dict in
         extension_schema: Optional[dict] = None,    # existing extension or None
@@ -401,8 +401,8 @@ class DatabricksControl(BaseModel):
 
         # 2) Fetch & parse config.toml to get validation_mapping
         try:
-            inst_name = inst_query_result[0][0].name
-            inst_id_raw = inst_query_result[0][0].id
+            inst_name = inst_query[0][0].name
+            inst_id_raw = inst_query[0][0].id
             inst_id = str(inst_id_raw)  # be robust if id is not a string
             config_volume_path = (
                 f"/Volumes/staging_sst_01/"
