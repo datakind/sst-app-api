@@ -194,6 +194,7 @@ def session_fixture():
 @pytest.fixture(name="client")
 def client_fixture(session: sqlalchemy.orm.Session, monkeypatch) -> Any:
     """Unit test mocks setup."""
+    monkeypatch.setenv("SST_SKIP_EXT_GEN", "1")
 
     def get_session_override():
         return session
@@ -203,8 +204,6 @@ def client_fixture(session: sqlalchemy.orm.Session, monkeypatch) -> Any:
 
     def storage_control_override():
         return MOCK_STORAGE
-    
-    monkeypatch.setenv("SST_SKIP_EXT_GEN", "1")
 
     app.include_router(router)
     app.dependency_overrides[get_session] = get_session_override
