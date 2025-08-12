@@ -1057,7 +1057,7 @@ def validate_file_manual_upload(
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> Any:
     """Validate a given file. The file_name should be url encoded."""
-    
+
     file_name = decode_url_piece(file_name)
     local_session.set(sql_session)
 
@@ -1070,8 +1070,15 @@ def validate_file_manual_upload(
         raise ValueError(f"Institution {inst_id} not found")
 
     if inst_query_result.pdp_id:  # institution is PDP
-        return validation_helper("MANUAL_UPLOAD", inst_id, file_name, current_user, storage_control, sql_session)
-    
+        return validation_helper(
+            "MANUAL_UPLOAD",
+            inst_id,
+            file_name,
+            current_user,
+            storage_control,
+            sql_session,
+        )
+
     base_schema = (
         local_session.get()
         .execute(
@@ -1087,7 +1094,7 @@ def validate_file_manual_upload(
 
     if not base_schema:
         raise HTTPException(500, detail="Active base schema not found")
-    
+
     base_schema_id, base_schema = base_schema
 
     existing_schema_extension = (
@@ -1095,26 +1102,36 @@ def validate_file_manual_upload(
         .execute(
             select(SchemaRegistryTable.json_doc)
             .where(
-                SchemaRegistryTable.inst_id == str_to_uuid(inst_id),   # FIX: compare UUID to UUID
+                SchemaRegistryTable.inst_id
+                == str_to_uuid(inst_id),  # FIX: compare UUID to UUID
                 SchemaRegistryTable.is_active.is_(True),
-                SchemaRegistryTable.doc_type == DocType.extension,     # be explicit
+                SchemaRegistryTable.doc_type == DocType.extension,  # be explicit
             )
             .limit(1)
         )
         .scalar_one_or_none()
     )
-        
+
     schema_extension = DatabricksControl.generate_schema_extension(
         bucket_name=get_external_bucket_name(inst_id),
-        inst_query=inst_query_result, 
+        inst_query=inst_query_result,
         file_name=file_name,
         base_schema=base_schema,
-        extension_schema=existing_schema_extension
-        )
+        extension_schema=existing_schema_extension,
+    )
 
     if schema_extension is None:
-        logging.info("No-op: extension already contains this model for inst %s", inst_id)
-        return validation_helper("MANUAL_UPLOAD", inst_id, file_name, current_user, storage_control, sql_session)
+        logging.info(
+            "No-op: extension already contains this model for inst %s", inst_id
+        )
+        return validation_helper(
+            "MANUAL_UPLOAD",
+            inst_id,
+            file_name,
+            current_user,
+            storage_control,
+            sql_session,
+        )
 
     try:
         new_schema_extension_record = SchemaRegistryTable(

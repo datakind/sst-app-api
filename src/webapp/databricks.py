@@ -20,6 +20,7 @@ from databricks.sdk.errors import DatabricksError
 from fastapi import HTTPException
 import tomllib  # Python 3.11+
 import pandas as pd
+
 # Setting up logger
 LOGGER = logging.getLogger(__name__)
 
@@ -371,12 +372,16 @@ class DatabricksControl(BaseModel):
         # Combine column names with corresponding row values
         return [dict(zip(column_names, row)) for row in data_rows]
 
-    def get_key_for_file(self, mapping: Dict[str, Any], file_name: str) -> Optional[str]:
+    def get_key_for_file(
+        self, mapping: Dict[str, Any], file_name: str
+    ) -> Optional[str]:
         """Return the first key whose value equals file_name (or contains it if value is a list)."""
         for k, v in mapping.items():
             if isinstance(v, str) and v == file_name:
                 return k
-            if isinstance(v, list) and any(isinstance(x, str) and x == file_name for x in v):
+            if isinstance(v, list) and any(
+                isinstance(x, str) and x == file_name for x in v
+            ):
                 return k
         return None
 
@@ -385,8 +390,8 @@ class DatabricksControl(BaseModel):
         bucket_name: str,
         inst_query: Any,
         file_name: str,
-        base_schema: Dict[str, Any],                # pass base schema dict in
-        extension_schema: Optional[dict] = None,    # existing extension or None
+        base_schema: Dict[str, Any],  # pass base schema dict in
+        extension_schema: Optional[dict] = None,  # existing extension or None
     ) -> Optional[Dict[str, Any]]:
         # 1) Databricks client
         try:
@@ -421,37 +426,44 @@ class DatabricksControl(BaseModel):
             cfg = tomllib.loads(file_bytes.decode("utf-8"))
             mapping = cfg["webapp"]["validation_mapping"]
         except KeyError:
-            raise HTTPException(404, detail="Missing [webapp].validation_mapping in config.toml")
+            raise HTTPException(
+                404, detail="Missing [webapp].validation_mapping in config.toml"
+            )
         except Exception as e:
             LOGGER.exception("Invalid TOML")
             raise HTTPException(400, detail=f"Invalid TOML in {file_name}: {e}")
 
         if not isinstance(mapping, dict):
-            raise HTTPException(400, detail="validation_mapping must be a TOML table (dictionary)")
+            raise HTTPException(
+                400, detail="validation_mapping must be a TOML table (dictionary)"
+            )
 
         key = self.get_key_for_file(mapping, file_name)  # e.g., "student"
         if key is None:
-            raise HTTPException(404, detail=f"{file_name} not found in {inst_name} validation_mapping")
+            raise HTTPException(
+                404, detail=f"{file_name} not found in {inst_name} validation_mapping"
+            )
 
         key_lc = key.lower()
 
         # 4) If this model already exists in the provided extension for this institution, skip
         if extension_schema is not None:
             if not isinstance(extension_schema, dict):
-                raise HTTPException(400, detail="extension_schema must be a dict if provided")
+                raise HTTPException(
+                    400, detail="extension_schema must be a dict if provided"
+                )
 
-            inst_block = (
-                extension_schema
-                .get("institutions", {})
-                .get(inst_id, {})
-            )
+            inst_block = extension_schema.get("institutions", {}).get(inst_id, {})
             data_models = inst_block.get("data_models", {})
             existing_keys_lc = {str(k).lower() for k in data_models.keys()}
 
             if key_lc in existing_keys_lc:
-                LOGGER.info("Model '%s' already present for institution '%s' — skipping (return None).", key, inst_id)
+                LOGGER.info(
+                    "Model '%s' already present for institution '%s' — skipping (return None).",
+                    key,
+                    inst_id,
+                )
                 return None  # <-- sentinel: do not write
-
 
         # 5) Read the unvalidated CSV from GCS
         try:
@@ -463,12 +475,12 @@ class DatabricksControl(BaseModel):
         except Exception as e:
             LOGGER.exception("Failed to read %s from GCS", file_name)
             raise HTTPException(500, detail=f"Failed to read {file_name} from GCS: {e}")
-        
+
         updated_extension = generate_extensions.generate_extension_schema(
             df=df,
-            models=key,                      # exactly one model
+            models=key,  # exactly one model
             institution_id=inst_id,
-            base_schema=base_schema,         # reference only, not mutated
+            base_schema=base_schema,  # reference only, not mutated
             existing_extension=extension_schema,  # may be None
         )
 

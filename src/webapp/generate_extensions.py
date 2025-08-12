@@ -4,17 +4,17 @@ import tempfile
 import os
 import json
 
-from validation import (
-    validate_dataset, normalize_col, HardValidationError
-)
+from validation import validate_dataset, normalize_col, HardValidationError
+
 
 def load_json(path: str) -> dict:
     """Load JSON from a file, returning {} on failure."""
     try:
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
+
 
 def infer_column_schema(series: pd.Series, cate_threshold: int = 10) -> dict:
     """
@@ -64,11 +64,12 @@ def infer_column_schema(series: pd.Series, cate_threshold: int = 10) -> dict:
         "checks": checks,
     }
 
+
 def generate_extension_schema(
     df: Union[pd.DataFrame, str],
     models: Union[str, List[str]],
     institution_id: str,
-    base_schema: Dict,                          # <- reference only, not mutated
+    base_schema: Dict,  # <- reference only, not mutated
     existing_extension: Optional[Dict] = None,  # <- merged into/returned
 ) -> Dict:
     """
@@ -99,7 +100,7 @@ def generate_extension_schema(
         validate_dataset(
             filename=data_path,
             base_schema=base_schema,
-            ext_schema=existing_extension,   # columns already in extension won't be "extra"
+            ext_schema=existing_extension,  # columns already in extension won't be "extra"
             models=models,
             institution_id=institution_id,
         )
@@ -107,16 +108,16 @@ def generate_extension_schema(
         extras = e.extra_columns or []
     finally:
         if tmp_path:
-            try: 
+            try:
                 os.unlink(tmp_path)
-            except OSError: 
+            except OSError:
                 pass
 
     # Nothing new to add
     if not extras:
         return existing_extension or {
             "version": base_schema.get("version", "1.0.0"),
-            "institutions": {institution_id: {"data_models": {}}}
+            "institutions": {institution_id: {"data_models": {}}},
         }
 
     # Keep only extras actually present in the (normalized) DF
@@ -128,12 +129,14 @@ def generate_extension_schema(
     # Start from provided extension (or a fresh skeleton); base_schema is NOT modified
     extension = existing_extension or {
         "version": base_schema.get("version", "1.0.0"),
-        "institutions": {institution_id: {"data_models": {}}}
+        "institutions": {institution_id: {"data_models": {}}},
     }
 
-    inst_block = extension.setdefault("institutions", {}) \
-                          .setdefault(institution_id, {}) \
-                          .setdefault("data_models", {})
+    inst_block = (
+        extension.setdefault("institutions", {})
+        .setdefault(institution_id, {})
+        .setdefault("data_models", {})
+    )
 
     model_list = [models] if isinstance(models, str) else list(models or [])
 
