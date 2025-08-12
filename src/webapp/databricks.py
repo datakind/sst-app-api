@@ -18,10 +18,11 @@ from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict, IO, cast, Optional
 from databricks.sdk.errors import DatabricksError
 from fastapi import HTTPException
+
 try:
     import tomllib as _toml  # Py 3.11+
 except ModuleNotFoundError:
-    import tomli as _toml    # Py ≤ 3.10
+    import tomli as _toml  # Py ≤ 3.10
 import pandas as pd
 import re
 
@@ -376,7 +377,9 @@ class DatabricksControl(BaseModel):
         # Combine column names with corresponding row values
         return [dict(zip(column_names, row)) for row in data_rows]
 
-    def get_key_for_file(self, mapping: Dict[str, Any], file_name: str) -> Optional[str]:
+    def get_key_for_file(
+        self, mapping: Dict[str, Any], file_name: str
+    ) -> Optional[str]:
         """
         Case-insensitive match of file_name against mapping values.
         Values may be:
@@ -392,7 +395,9 @@ class DatabricksControl(BaseModel):
 
         def looks_like_regex(s: str) -> bool:
             s = s.strip()
-            return s.startswith("^") or s.endswith("$") or REGEX_META.search(s) is not None
+            return (
+                s.startswith("^") or s.endswith("$") or REGEX_META.search(s) is not None
+            )
 
         def matches_one(pat: Any) -> bool:
             # compiled regex
