@@ -394,6 +394,9 @@ class DatabricksControl(BaseModel):
         extension_schema: Optional[dict] = None,  # existing extension or None
     ) -> Any:
         # 1) Databricks client
+        if os.getenv("SST_SKIP_EXT_GEN") == "1":
+            LOGGER.info("SST_SKIP_EXT_GEN=1; skipping Databricks extension generation.")
+            return None
         try:
             w = WorkspaceClient(
                 host=databricks_vars["DATABRICKS_HOST_URL"],
