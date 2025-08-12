@@ -18,7 +18,7 @@ from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict, IO, cast, Optional
 from databricks.sdk.errors import DatabricksError
 from fastapi import HTTPException
-import toml  # Python 3.11+
+import tomli  # Python 3.11+
 import pandas as pd
 import re
 
@@ -437,10 +437,13 @@ class DatabricksControl(BaseModel):
         base_schema: Dict[str, Any],  # pass base schema dict in
         extension_schema: Optional[dict] = None,  # existing extension or None
     ) -> Any:
-        # 1) Databricks client
-        if os.getenv("SST_SKIP_EXT_GEN") == "1":
+        if (
+            os.getenv("SST_SKIP_EXT_GEN") == "1"
+        ):  # skip using workspace client for tests
             LOGGER.info("SST_SKIP_EXT_GEN=1; skipping Databricks extension generation.")
             return None
+
+        # 1) Databricks client
         try:
             w = WorkspaceClient(
                 host=databricks_vars["DATABRICKS_HOST_URL"],
@@ -470,7 +473,7 @@ class DatabricksControl(BaseModel):
             raise HTTPException(500, detail=f"Failed to fetch config: {e}")
 
         try:
-            cfg = toml.loads(file_bytes.decode("utf-8"))
+            cfg = tomli.loads(file_bytes.decode("utf-8"))
             mapping = cfg["webapp"]["validation_mapping"]
         except KeyError:
             raise HTTPException(

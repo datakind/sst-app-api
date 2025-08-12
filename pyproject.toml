@@ -31,7 +31,7 @@ dependencies = [
     "databricks-sql-connector",
     "pandera~=0.13",
     "mlflow",
-    "toml"
+    "tomli~=2.0"
 ]
 
 [project.urls]
