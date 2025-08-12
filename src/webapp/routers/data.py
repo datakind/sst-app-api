@@ -1063,7 +1063,7 @@ def validate_file_manual_upload(
 
     inst_query_result = (
         local_session.get()
-        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
+        .execute(select(InstTable).where(InstTable.id == inst_id))
         .scalar_one_or_none()
     )
     if inst_query_result is None:
