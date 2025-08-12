@@ -26,6 +26,8 @@ def infer_column_schema(series: pd.Series, cate_threshold: int = 10) -> dict:
     has_nulls = bool(series.isna().any())
     uniques = non_null.unique().tolist()
 
+    checks: List[Dict[str, Any]] = []
+    
     # candidate for categorical, but relaxed (no fixed categories)
     if 1 < len(uniques) <= cate_threshold:
         return {
