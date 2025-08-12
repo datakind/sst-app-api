@@ -5,7 +5,7 @@ import tempfile
 import os
 import json
 
-from validation import validate_dataset, normalize_col, HardValidationError
+from .validation import validate_dataset, normalize_col, HardValidationError
 
 
 def load_json(path: str) -> Any:
