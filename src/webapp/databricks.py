@@ -18,7 +18,10 @@ from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict, IO, cast, Optional
 from databricks.sdk.errors import DatabricksError
 from fastapi import HTTPException
-import tomli  # Python 3.11+
+try:
+    import tomllib as _toml  # Py 3.11+
+except ModuleNotFoundError:
+    import tomli as _toml    # Py ≤ 3.10
 import pandas as pd
 import re
 
@@ -373,60 +376,70 @@ class DatabricksControl(BaseModel):
         # Combine column names with corresponding row values
         return [dict(zip(column_names, row)) for row in data_rows]
 
-    def get_key_for_file(
-        self, mapping: Dict[str, Any], file_name: str
-    ) -> Optional[str]:
+    def get_key_for_file(self, mapping: Dict[str, Any], file_name: str) -> Optional[str]:
         """
         Case-insensitive match of file_name against mapping values.
-        - Value may be a string or a list of strings.
-        - Each string can be:
-            * literal filename (e.g., "student.csv"): allow optional base suffixes
-            like "_20240101" before the extension; also allow optional extension
-            if the literal has none.
-            * regex pattern: matched with re.IGNORECASE against the whole filename.
+        Values may be:
+        - str literal (e.g., "student.csv") → allow optional base suffixes before the ext.
+        - str regex (e.g., r"^course_.*\.csv$") → re.IGNORECASE fullmatch.
+        - compiled regex (re.Pattern) → fullmatch, adding IGNORECASE if missing.
+        - list of any of the above.
         """
-        name = os.path.basename(file_name)
-        _REGEX_HINT = re.compile(r"[()\[\]\{\}\|\?\+\*\\]|^\^|$")
+        # normalize filename (handles windows paths + stray whitespace)
+        name = os.path.basename(file_name.replace("\\", "/")).strip()
+
+        REGEX_META = re.compile(r"[()\[\]\{\}\|\?\+\*\\]")
 
         def looks_like_regex(s: str) -> bool:
-            return bool(_REGEX_HINT.search(s))
+            s = s.strip()
+            return s.startswith("^") or s.endswith("$") or REGEX_META.search(s) is not None
 
-        for key, val in mapping.items():
-            candidates = val if isinstance(val, list) else [val]
-            for pat in candidates:
-                if not isinstance(pat, str):
-                    continue
+        def matches_one(pat: Any) -> bool:
+            # compiled regex
+            if isinstance(pat, re.Pattern):
+                # ensure case-insensitive
+                flags = pat.flags | re.IGNORECASE
+                return re.fullmatch(re.compile(pat.pattern, flags), name) is not None
+
+            # string literal / regex
+            if isinstance(pat, str):
                 p = pat.strip()
 
-                # Fast path: exact literal, case-insensitive
+                # exact literal (case-insensitive)
                 if name.casefold() == p.casefold():
-                    return key
+                    return True
 
                 if looks_like_regex(p):
-                    # Respect user’s regex; apply IGNORECASE instead of lowercasing
                     try:
-                        if re.fullmatch(p, name, flags=re.IGNORECASE):
-                            return key
+                        return re.fullmatch(p, name, flags=re.IGNORECASE) is not None
                     except re.error:
-                        # bad regex in config: skip
-                        continue
+                        return False
+
+                # literal with suffix tolerance
+                p_base, p_ext = os.path.splitext(p)
+                if p_ext:
+                    # ^base(?:[._-].+)?ext$
+                    rx = re.compile(
+                        rf"^{re.escape(p_base)}(?:[._-].+)?{re.escape(p_ext)}$",
+                        re.IGNORECASE,
+                    )
                 else:
-                    # Literal with suffix tolerance (case-insensitive)
-                    p_base, p_ext = os.path.splitext(p)
-                    if p_ext:
-                        # e.g., ^student(?:[._-].+)?\.csv$
-                        rx = re.compile(
-                            rf"^{re.escape(p_base)}(?:[._-].+)?{re.escape(p_ext)}$",
-                            re.IGNORECASE,
-                        )
-                    else:
-                        # e.g., ^student(?:[._-].+)?(?:\..+)?$
-                        rx = re.compile(
-                            rf"^{re.escape(p)}(?:[._-].+)?(?:\..+)?$",
-                            re.IGNORECASE,
-                        )
-                    if rx.fullmatch(name):
-                        return key
+                    # ^literal(?:[._-].+)?(?:\..+)?$
+                    rx = re.compile(
+                        rf"^{re.escape(p)}(?:[._-].+)?(?:\..+)?$",
+                        re.IGNORECASE,
+                    )
+                return rx.fullmatch(name) is not None
+
+            # unsupported type
+            return False
+
+        for key, val in mapping.items():
+            items = val if isinstance(val, list) else [val]
+            for pat in items:
+                if matches_one(pat):
+                    return key
+
         return None
 
     def generate_schema_extension(
@@ -473,7 +486,7 @@ class DatabricksControl(BaseModel):
             raise HTTPException(500, detail=f"Failed to fetch config: {e}")
 
         try:
-            cfg = tomli.loads(file_bytes.decode("utf-8"))
+            cfg = _toml.loads(file_bytes.decode("utf-8"))
             mapping = cfg["webapp"]["validation_mapping"]
         except KeyError:
             raise HTTPException(

@@ -24,14 +24,14 @@ dependencies = [
     "requests>=2.0.0",
     "types-requests",
     "types-paramiko",
-    "pandas",
+    "pandas==1.5.3",
     "six",
     "types-six",
     "fuzzywuzzy",
     "databricks-sql-connector",
-    "pandera~=0.13",
-    "mlflow",
-    "tomli~=2.0"
+    "pandera==0.13.4",
+    "mlflow~=2.13",
+    "numpy==1.23.5",
 ]
 
 [project.urls]
