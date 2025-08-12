@@ -1,6 +1,7 @@
 from typing import Union, List, Dict, Optional
 import pandas as pd
-import tempfile, os
+import tempfile
+import os
 import json
 
 from validation import (
@@ -20,7 +21,6 @@ def infer_column_schema(series: pd.Series, cate_threshold: int = 10) -> dict:
     Infer a minimal Pandera-style schema for a pandas Series.
     Categorical-like columns are marked as 'category' but NOT constrained to a fixed set of values.
     """
-    import numpy as np
 
     non_null = series.dropna()
     has_nulls = bool(series.isna().any())
@@ -107,8 +107,10 @@ def generate_extension_schema(
         extras = e.extra_columns or []
     finally:
         if tmp_path:
-            try: os.unlink(tmp_path)
-            except OSError: pass
+            try: 
+                os.unlink(tmp_path)
+            except OSError: 
+                pass
 
     # Nothing new to add
     if not extras:
