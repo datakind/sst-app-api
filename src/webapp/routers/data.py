@@ -710,10 +710,13 @@ def delete_batch(
         )
 
     # 2) Gather filenames to delete
+
     batch_files: list[str] = list(
         sess.execute(
-            select(FileTable.name).where(
-                FileTable.id == str_to_uuid(batch_id),
+            select(FileTable.name)
+            .join(FileTable.batches)  # many-to-many via association_table
+            .where(
+                BatchTable.id == str_to_uuid(batch_id),
                 FileTable.inst_id == str_to_uuid(inst_id),
             )
         )
@@ -755,9 +758,11 @@ def delete_batch(
         try:
             rows = (
                 sess.execute(
-                    select(FileTable).where(
+                    select(FileTable)
+                    .join(FileTable.batches)
+                    .where(
+                        BatchTable.id == str_to_uuid(batch_id),
                         FileTable.inst_id == str_to_uuid(inst_id),
-                        FileTable.id == str_to_uuid(batch_id),
                         FileTable.name.in_(target_names),
                     )
                 )
