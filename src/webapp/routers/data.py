@@ -689,6 +689,7 @@ def delete_batch(
     batch_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
+    storage_control: Annotated[StorageControl, Depends(StorageControl)],
 ) -> Any:
     has_access_to_inst_or_err(inst_id, current_user)
     model_owner_and_higher_or_err(current_user, "modify batch")
@@ -734,8 +735,7 @@ def delete_batch(
             "message": "No files associated with this batch id.",
         }
 
-    dbc = DatabricksControl()
-    gcs_result = dbc.delete_batch_files(
+    gcs_result = storage_control.delete_batch_files(
         bucket_name= get_external_bucket_name(inst_id),
         batch_files= batch_files
     )
