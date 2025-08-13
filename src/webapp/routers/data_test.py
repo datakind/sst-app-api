@@ -192,8 +192,9 @@ def session_fixture():
 
 
 @pytest.fixture(name="client")
-def client_fixture(session: sqlalchemy.orm.Session) -> Any:
+def client_fixture(session: sqlalchemy.orm.Session, monkeypatch: Any) -> Any:
     """Unit test mocks setup."""
+    monkeypatch.setenv("SST_SKIP_EXT_GEN", "1")
 
     def get_session_override():
         return session

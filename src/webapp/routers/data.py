@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime, date
 from databricks.sdk import WorkspaceClient
-from typing import Annotated, Any, Dict, List, cast, IO
-from pydantic import BaseModel
+from typing import Annotated, Any, Dict, List, cast, IO, Optional
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.responses import FileResponse
 from sqlalchemy import and_, or_
@@ -99,6 +99,33 @@ class BatchInfo(BaseModel):
     updated_at: datetime | None = None
     # The following is the user who last updated this batch.
     updated_by: str | None = None
+
+
+class DeletedFile(BaseModel):
+    file: str = Field(..., description="Basename of the deleted file")
+    path: str = Field(..., description="Bucket object path, e.g. 'validated/<name>'")
+    deleted_at: datetime = Field(
+        ..., description="UTC timestamp when deletion occurred"
+    )
+
+
+class DeleteBatchResponse(BaseModel):
+    inst_id: str
+    batch_id: str
+    deleted: List[DeletedFile] = Field(
+        default_factory=list, description="Files deleted in storage"
+    )
+    not_found: List[str] = Field(
+        default_factory=list, description="Files not found in storage"
+    )
+    errors: List[str] = Field(
+        default_factory=list, description="Errors encountered during delete"
+    )
+    db_deleted_rows: int = Field(..., description="Number of FileTable rows deleted")
+    batch_deleted: bool = Field(
+        ..., description="Whether the BatchTable row was deleted"
+    )
+    message: Optional[str] = Field(None, description="Optional info message")
 
 
 class DataInfo(BaseModel):
@@ -684,6 +711,119 @@ def update_batch(
     }
 
 
+@router.patch("/{inst_id}/delete-batch/{batch_id}", response_model=DeleteBatchResponse)
+def delete_batch(
+    inst_id: str,
+    batch_id: str,
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    sql_session: Annotated[Session, Depends(get_session)],
+    storage_control: Annotated[StorageControl, Depends(StorageControl)],
+) -> Any:
+    has_access_to_inst_or_err(inst_id, current_user)
+    model_owner_and_higher_or_err(current_user, "modify batch")
+
+    local_session.set(sql_session)
+    sess = local_session.get()
+
+    batch = sess.execute(
+        select(BatchTable).where(
+            BatchTable.id == str_to_uuid(batch_id),
+            BatchTable.inst_id == str_to_uuid(inst_id),
+        )
+    ).scalar_one_or_none()
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found."
+        )
+
+    # 2) Gather filenames to delete
+
+    batch_files: list[str] = list(
+        sess.execute(
+            select(FileTable.name)
+            .join(FileTable.batches)  # many-to-many via association_table
+            .where(
+                BatchTable.id == str_to_uuid(batch_id),
+                FileTable.inst_id == str_to_uuid(inst_id),
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    if not batch_files:
+        sess.delete(batch)
+        sess.flush()
+        return {
+            "inst_id": inst_id,
+            "batch_id": batch_id,
+            "deleted": [],
+            "not_found": [],
+            "errors": [],
+            "db_deleted_rows": 0,
+            "batch_deleted": True,
+            "message": "No files associated with this batch id.",
+        }
+
+    gcs_result = storage_control.delete_batch_files(
+        bucket_name=get_external_bucket_name(inst_id), batch_files=batch_files
+    )
+
+    if gcs_result.get("errors"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to delete files {gcs_result['errors']}.",
+        )
+
+    # 4) Delete DB rows only for blobs that were actually deleted
+    deleted_names = {d["file"] for d in gcs_result.get("deleted", [])}
+    not_found_names = set(gcs_result.get("not_found", []))
+    target_names = {n for n in (deleted_names | not_found_names) if n}
+
+    db_deleted_rows = 0
+    if target_names:
+        try:
+            rows = (
+                sess.execute(
+                    select(FileTable)
+                    .join(FileTable.batches)
+                    .where(
+                        BatchTable.id == str_to_uuid(batch_id),
+                        FileTable.inst_id == str_to_uuid(inst_id),
+                        FileTable.name.in_(target_names),
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for r in rows:
+                sess.delete(r)
+            db_deleted_rows = len(rows)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Deleted in storage, but DB file-row cleanup failed: {e}",
+            )
+    try:
+        sess.delete(batch)
+        sess.commit()
+    except Exception as e:
+        sess.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"DB batch delete failed after file cleanup: {e}"
+        )
+
+    return {
+        "inst_id": inst_id,
+        "batch_id": batch_id,
+        "deleted": gcs_result.get("deleted", []),  # [{file, path, deleted_at}, ...]
+        "not_found": sorted(not_found_names),
+        "errors": gcs_result.get("errors", []),
+        "db_deleted_rows": db_deleted_rows,
+        "batch_deleted": True,
+    }
+
+
 @router.get("/{inst_id}/file-id/{file_id}", response_model=DataInfo)
 def read_file_id_info(
     inst_id: str,
@@ -907,18 +1047,19 @@ def validation_helper(
     base_schema = (
         local_session.get()
         .execute(
-            select(SchemaRegistryTable.json_doc)
+            select(SchemaRegistryTable.schema_id, SchemaRegistryTable.json_doc)
             .where(
                 SchemaRegistryTable.doc_type == DocType.base,
                 SchemaRegistryTable.is_active.is_(True),
             )
             .limit(1)
         )
-        .scalar_one_or_none()
+        .first()
     )
     if base_schema is None:
         raise RuntimeError("No active base schema found")
 
+    base_schema_id, base_schema = base_schema
     # ----------------------- Fetch inst specific extension schema from DB ---------------------
     inst = (
         local_session.get()
@@ -941,6 +1082,7 @@ def validation_helper(
             )
             .scalar_one_or_none()
         )
+        updated_inst_schema: dict | None = inst_schema
     else:  # custom (or none)
         inst_schema = (
             local_session.get()
@@ -949,11 +1091,55 @@ def validation_helper(
                 .where(
                     SchemaRegistryTable.inst_id == inst.id,
                     SchemaRegistryTable.is_active.is_(True),
+                    SchemaRegistryTable.doc_type == DocType.extension,  # be explicit
                 )
                 .limit(1)
             )
             .scalar_one_or_none()
         )
+
+        dbc = DatabricksControl()
+        schema_extension = dbc.create_custom_schema_extension(
+            bucket_name=get_external_bucket_name(inst_id),
+            inst_query=inst,
+            file_name=file_name,
+            base_schema=base_schema,
+            extension_schema=inst_schema,
+        )
+
+        if schema_extension is not None:
+            updated_inst_schema = schema_extension
+            try:
+                new_schema_extension_record = SchemaRegistryTable(
+                    doc_type=DocType.extension,
+                    inst_id=str_to_uuid(inst_id),
+                    is_pdp=False,  # type: ignore
+                    version_label="1.0.0",
+                    extends_schema_id=base_schema_id,
+                    json_doc=schema_extension,
+                    is_active=True,
+                )
+                sess = local_session.get()
+                sess.add(new_schema_extension_record)
+                sess.flush()
+                logging.info("Schema record inserted for '%s'", inst_id)
+            except IntegrityError as e:
+                sess = local_session.get()
+                sess.rollback()
+                logging.warning("IntegrityError: %s", e)
+            except Exception as e:
+                sess = local_session.get()
+                sess.rollback()
+                logging.error("Unexpected DB error: %s", e)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Unexpected database error while inserting file record: {e}",
+                )
+        else:
+            logging.info(
+                "No-op: extension already contains this model for inst %s", inst_id
+            )
+            updated_inst_schema = inst_schema
 
     # ----------------------- File validation logic logic --------------------------------------
     try:
@@ -962,7 +1148,7 @@ def validation_helper(
             file_name,
             allowed_schemas,
             base_schema,
-            inst_schema,
+            updated_inst_schema,
         )
         logging.debug(
             f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
@@ -1057,7 +1243,9 @@ def validate_file_manual_upload(
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> Any:
     """Validate a given file. The file_name should be url encoded."""
+
     file_name = decode_url_piece(file_name)
+
     return validation_helper(
         "MANUAL_UPLOAD", inst_id, file_name, current_user, storage_control, sql_session
     )
