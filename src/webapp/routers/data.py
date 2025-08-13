@@ -711,7 +711,7 @@ def update_batch(
     }
 
 
-@router.patch("/{inst_id}/delete-batch/{batch_id}", response_model=DeleteBatchResponse)
+@router.delete("/{inst_id}/batch/{batch_id}", response_model=DeleteBatchResponse)
 def delete_batch(
     inst_id: str,
     batch_id: str,
