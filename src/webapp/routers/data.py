@@ -683,6 +683,7 @@ def update_batch(
         "updated_at": query_result[0][0].updated_at,
     }
 
+
 @router.patch("/{inst_id}/delete-batch/{batch_id}", response_model=BatchInfo)
 def delete_batch(
     inst_id: str,
@@ -697,26 +698,25 @@ def delete_batch(
     local_session.set(sql_session)
     sess = local_session.get()
 
-    batch = (
-        sess.execute(
-            select(BatchTable).where(
-                BatchTable.id == str_to_uuid(batch_id),
-                BatchTable.inst_id == str_to_uuid(inst_id),
-            )
+    batch = sess.execute(
+        select(BatchTable).where(
+            BatchTable.id == str_to_uuid(batch_id),
+            BatchTable.inst_id == str_to_uuid(inst_id),
         )
-        .scalar_one_or_none()
-    )
+    ).scalar_one_or_none()
     if batch is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found."
+        )
 
     # 2) Gather filenames to delete
     batch_files: list[str] = (
         sess.execute(
             select(FileTable.name).where(
-                    FileTable.id == str_to_uuid(batch_id),
-                    FileTable.inst_id == str_to_uuid(inst_id),
-                )
+                FileTable.id == str_to_uuid(batch_id),
+                FileTable.inst_id == str_to_uuid(inst_id),
             )
+        )
         .scalars()
         .all()
     )
@@ -736,8 +736,7 @@ def delete_batch(
         }
 
     gcs_result = storage_control.delete_batch_files(
-        bucket_name= get_external_bucket_name(inst_id),
-        batch_files= batch_files
+        bucket_name=get_external_bucket_name(inst_id), batch_files=batch_files
     )
 
     if gcs_result.get("errors"):
@@ -745,7 +744,7 @@ def delete_batch(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unable to delete files {gcs_result['errors']}.",
         )
-    
+
     # 4) Delete DB rows only for blobs that were actually deleted
     deleted_names = {d["file"] for d in gcs_result.get("deleted", [])}
     not_found_names = set(gcs_result.get("not_found", []))
@@ -781,16 +780,17 @@ def delete_batch(
         raise HTTPException(
             status_code=500, detail=f"DB batch delete failed after file cleanup: {e}"
         )
-    
+
     return {
         "inst_id": inst_id,
         "batch_id": batch_id,
-        "deleted": gcs_result.get("deleted", []),                 # [{file, path, deleted_at}, ...]
+        "deleted": gcs_result.get("deleted", []),  # [{file, path, deleted_at}, ...]
         "not_found": sorted(not_found_names),
         "errors": gcs_result.get("errors", []),
         "db_deleted_rows": db_deleted_rows,
         "batch_deleted": True,
     }
+
 
 @router.get("/{inst_id}/file-id/{file_id}", response_model=DataInfo)
 def read_file_id_info(
