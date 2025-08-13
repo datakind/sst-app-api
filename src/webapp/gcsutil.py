@@ -267,6 +267,55 @@ class StorageControl(BaseModel):
             raise ValueError(file_name + ": File not found.")
         blob.delete()
 
+    def delete_batch_files(
+        self,
+        bucket_name: str,
+        batch_files: list[str],
+    ) -> Any:
+        prefix = "validated/"
+
+        now_iso = datetime.datetime.now()
+        deleted: List[Dict[str, str]] = []
+        not_found: List[str] = []
+        errors: List[Dict[str, str]] = []
+
+        for fname in batch_files:
+            if not isinstance(fname, str) or not fname.strip():
+                errors.append(
+                    {
+                        "file": str(fname),
+                        "path": f"{prefix}{fname}",
+                        "error": "invalid filename",
+                    }
+                )
+                continue
+
+            blob_path = f"{prefix}{fname}"
+            try:
+                logger.info("Attempting to delete gs://%s/%s", bucket_name, blob_path)
+                # One-liner delete; raises NotFound if missing
+                self.delete_file(bucket_name=bucket_name, file_name=blob_path)
+                logger.info("Delete successful: gs://%s/%s", bucket_name, blob_path)
+                deleted.append(
+                    {"file": fname, "path": blob_path, "deleted_at": str(now_iso)}
+                )
+            except ValueError:
+                logger.warning(
+                    "Blob or bucket not found: gs://%s/%s", bucket_name, blob_path
+                )
+                not_found.append(fname)
+            except Exception as e:  # network/other unexpected errors
+                logger.exception(
+                    "Unexpected error deleting gs://%s/%s", bucket_name, blob_path
+                )
+                errors.append({"file": fname, "path": blob_path, "error": str(e)})
+
+        return {
+            "deleted": deleted,
+            "not_found": not_found,
+            "errors": errors,
+        }
+
     def validate_file(
         self,
         bucket_name: str,

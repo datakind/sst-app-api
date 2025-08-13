@@ -684,6 +684,114 @@ def update_batch(
     }
 
 
+@router.patch("/{inst_id}/delete-batch/{batch_id}", response_model=BatchInfo)
+def delete_batch(
+    inst_id: str,
+    batch_id: str,
+    current_user: Annotated[BaseUser, Depends(get_current_active_user)],
+    sql_session: Annotated[Session, Depends(get_session)],
+    storage_control: Annotated[StorageControl, Depends(StorageControl)],
+) -> Any:
+    has_access_to_inst_or_err(inst_id, current_user)
+    model_owner_and_higher_or_err(current_user, "modify batch")
+
+    local_session.set(sql_session)
+    sess = local_session.get()
+
+    batch = sess.execute(
+        select(BatchTable).where(
+            BatchTable.id == str_to_uuid(batch_id),
+            BatchTable.inst_id == str_to_uuid(inst_id),
+        )
+    ).scalar_one_or_none()
+    if batch is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found."
+        )
+
+    # 2) Gather filenames to delete
+    batch_files: list[str] = list(
+        sess.execute(
+            select(FileTable.name).where(
+                FileTable.id == str_to_uuid(batch_id),
+                FileTable.inst_id == str_to_uuid(inst_id),
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    if not batch_files:
+        sess.delete(batch)
+        sess.flush()
+        return {
+            "inst_id": inst_id,
+            "batch_id": batch_id,
+            "deleted": [],
+            "not_found": [],
+            "errors": [],
+            "db_deleted_rows": 0,
+            "batch_deleted": True,
+            "message": "No files associated with this batch id.",
+        }
+
+    gcs_result = storage_control.delete_batch_files(
+        bucket_name=get_external_bucket_name(inst_id), batch_files=batch_files
+    )
+
+    if gcs_result.get("errors"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to delete files {gcs_result['errors']}.",
+        )
+
+    # 4) Delete DB rows only for blobs that were actually deleted
+    deleted_names = {d["file"] for d in gcs_result.get("deleted", [])}
+    not_found_names = set(gcs_result.get("not_found", []))
+    target_names = {n for n in (deleted_names | not_found_names) if n}
+
+    db_deleted_rows = 0
+    if target_names:
+        try:
+            rows = (
+                sess.execute(
+                    select(FileTable).where(
+                        FileTable.inst_id == str_to_uuid(inst_id),
+                        FileTable.id == str_to_uuid(batch_id),
+                        FileTable.name.in_(target_names),
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for r in rows:
+                sess.delete(r)
+            db_deleted_rows = len(rows)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Deleted in storage, but DB file-row cleanup failed: {e}",
+            )
+    try:
+        sess.delete(batch)
+        sess.commit()
+    except Exception as e:
+        sess.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"DB batch delete failed after file cleanup: {e}"
+        )
+
+    return {
+        "inst_id": inst_id,
+        "batch_id": batch_id,
+        "deleted": gcs_result.get("deleted", []),  # [{file, path, deleted_at}, ...]
+        "not_found": sorted(not_found_names),
+        "errors": gcs_result.get("errors", []),
+        "db_deleted_rows": db_deleted_rows,
+        "batch_deleted": True,
+    }
+
+
 @router.get("/{inst_id}/file-id/{file_id}", response_model=DataInfo)
 def read_file_id_info(
     inst_id: str,
