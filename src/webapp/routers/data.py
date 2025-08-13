@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime, date
 from databricks.sdk import WorkspaceClient
-from typing import Annotated, Any, Dict, List, cast, IO
-from pydantic import BaseModel
+from typing import Annotated, Any, Dict, List, cast, IO, Optional
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.responses import FileResponse
 from sqlalchemy import and_, or_
@@ -99,7 +99,20 @@ class BatchInfo(BaseModel):
     updated_at: datetime | None = None
     # The following is the user who last updated this batch.
     updated_by: str | None = None
+class DeletedFile(BaseModel):
+    file: str = Field(..., description="Basename of the deleted file")
+    path: str = Field(..., description="Bucket object path, e.g. 'validated/<name>'")
+    deleted_at: datetime = Field(..., description="UTC timestamp when deletion occurred")
 
+class DeleteBatchResponse(BaseModel):
+    inst_id: str = None
+    batch_id: str = None
+    deleted: List[DeletedFile] = Field(default_factory=list, description="Files deleted in storage")
+    not_found: List[str] = Field(default_factory=list, description="Files not found in storage")
+    errors: List[str] = Field(default_factory=list, description="Errors encountered during delete")
+    db_deleted_rows: int = Field(..., description="Number of FileTable rows deleted")
+    batch_deleted: bool = Field(..., description="Whether the BatchTable row was deleted")
+    message: Optional[str] = Field(None, description="Optional info message")
 
 class DataInfo(BaseModel):
     """The Data object that's returned. Generally maps to a file, but technically maps to a GCS blob."""
@@ -684,7 +697,7 @@ def update_batch(
     }
 
 
-@router.patch("/{inst_id}/delete-batch/{batch_id}")
+@router.patch("/{inst_id}/delete-batch/{batch_id}", response_model=DeleteBatchResponse)
 def delete_batch(
     inst_id: str,
     batch_id: str,
