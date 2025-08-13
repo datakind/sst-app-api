@@ -10,7 +10,6 @@ from .config import gcs_vars, databricks_vars
 from .validation import validate_file_reader
 from typing import Any, List, Optional, Dict
 import logging
-from datetime import datetime, timezone
 
 # Set the logging
 logging.basicConfig(format="%(asctime)s [%(levelname)s]: %(message)s")
@@ -276,7 +275,7 @@ class StorageControl(BaseModel):
 
         prefix = "validated/"
 
-        now_iso = lambda: datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.datetime.now()
         deleted: List[Dict[str, str]] = []
         not_found: List[str] = []
         errors: List[Dict[str, str]] = []
@@ -293,8 +292,8 @@ class StorageControl(BaseModel):
                 self.delete_file(bucket_name=bucket_name, file_name=blob_path)
                 logger.info("Delete successful: gs://%s/%s", bucket_name, blob_path)
                 deleted.append({"file": fname, "path": blob_path, "deleted_at": now_iso()})
-            except Exception as e:
-                logger.warning("Blob not found: gs://%s/%s", bucket_name, blob_path)
+            except ValueError:
+                logger.warning("Blob or bucket not found: gs://%s/%s", bucket_name, blob_path)
                 not_found.append(fname)
             except Exception as e:  # network/other unexpected errors
                 logger.exception("Unexpected error deleting gs://%s/%s", bucket_name, blob_path)
