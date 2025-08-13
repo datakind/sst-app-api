@@ -18,6 +18,7 @@ from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict, IO, cast, Optional
 from databricks.sdk.errors import DatabricksError
 from fastapi import HTTPException
+from datetime import datetime, timezone
 
 try:
     import tomllib as _toml  # Py 3.11+
@@ -553,3 +554,52 @@ class DatabricksControl(BaseModel):
         )
 
         return updated_extension
+
+    def delete_batch_files(
+        self,
+        bucket_name: str,
+        batch_files: list[str],
+    ) -> Any:
+        try:
+            w = WorkspaceClient(
+                host=databricks_vars["DATABRICKS_HOST_URL"],
+                google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
+            LOGGER.info("Successfully created Databricks WorkspaceClient.")
+        except Exception as e:
+            LOGGER.exception("WorkspaceClient init failed")
+            raise ValueError(f"Workspace client initialization failed: {e}")
+
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        prefix = "validated/"
+
+        now_iso = lambda: datetime.now(timezone.utc).isoformat()
+        deleted: List[Dict[str, str]] = []
+        not_found: List[str] = []
+        errors: List[Dict[str, str]] = []
+
+        for fname in batch_files:
+            if not isinstance(fname, str) or not fname.strip():
+                errors.append({"file": str(fname), "path": f"{prefix}{fname}", "error": "invalid filename"})
+                continue
+
+            blob_path = f"{prefix}{fname}"
+            try:
+                LOGGER.info("Attempting to delete gs://%s/%s", bucket_name, blob_path)
+                # One-liner delete; raises NotFound if missing
+                bucket.delete_blob(blob_path)
+                LOGGER.info("Delete successful: gs://%s/%s", bucket_name, blob_path)
+                deleted.append({"file": fname, "path": blob_path, "deleted_at": now_iso()})
+            except Exception as e:
+                LOGGER.warning("Blob not found: gs://%s/%s", bucket_name, blob_path)
+                not_found.append(fname)
+            except Exception as e:  # network/other unexpected errors
+                LOGGER.exception("Unexpected error deleting gs://%s/%s", bucket_name, blob_path)
+                errors.append({"file": fname, "path": blob_path, "error": str(e)})
+
+        return {
+            "deleted": deleted,
+            "not_found": not_found,
+            "errors": errors,
+        }
