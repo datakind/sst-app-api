@@ -710,7 +710,7 @@ def delete_batch(
         )
 
     # 2) Gather filenames to delete
-    batch_files: list[str] = (
+    batch_files: list[str] = list(
         sess.execute(
             select(FileTable.name).where(
                 FileTable.id == str_to_uuid(batch_id),

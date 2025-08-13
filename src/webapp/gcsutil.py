@@ -297,7 +297,7 @@ class StorageControl(BaseModel):
                 self.delete_file(bucket_name=bucket_name, file_name=blob_path)
                 logger.info("Delete successful: gs://%s/%s", bucket_name, blob_path)
                 deleted.append(
-                    {"file": fname, "path": blob_path, "deleted_at": now_iso}
+                    {"file": fname, "path": blob_path, "deleted_at": str(now_iso)}
                 )
             except ValueError:
                 logger.warning(
