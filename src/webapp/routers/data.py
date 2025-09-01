@@ -1317,6 +1317,7 @@ def get_inference_top_features(
         # Return a 400 error with the specific message from ValueError
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
+
 # Get Box plot values
 @router.get("/{inst_id}/inference/features-boxplot-stat/{run_id}")
 def get_inference_feature_boxstats(
@@ -1324,7 +1325,9 @@ def get_inference_feature_boxstats(
     run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
-    feature_name: Optional[str] = Query(None, description="If provided, filter by this feature name"),
+    feature_name: Optional[str] = Query(
+        None, description="If provided, filter by this feature name"
+    ),
 ) -> List[dict[str, Any]]:
     """Returns box-plot stats for an institution/run. If `feature_name` is supplied,
     only rows for that feature are returned."""
@@ -1357,7 +1360,7 @@ def get_inference_feature_boxstats(
         )
         if not feature_name:
             return rows
-        
+
         # Helper: extract feature_name from various shapes (top-level or JSON column)
         def row_feature_name(row: dict[str, Any]) -> Optional[str]:
             # common case: it's a top-level column
@@ -1365,7 +1368,11 @@ def get_inference_feature_boxstats(
                 return str(row["feature_name"])
             # fallback: search any dict-valued column for a 'feature_name' key
             for v in row.values():
-                if isinstance(v, dict) and "feature_name" in v and v["feature_name"] is not None:
+                if (
+                    isinstance(v, dict)
+                    and "feature_name" in v
+                    and v["feature_name"] is not None
+                ):
                     return str(v["feature_name"])
             return None
 
