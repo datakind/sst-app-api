@@ -1322,9 +1322,9 @@ def get_inference_top_features(
 def get_inference_feature_boxstats(
     inst_id: str,
     run_id: str,
-    feature_name: Optional[str] = Query(None, description="If provided, filter by this feature name"),
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
+    feature_name: Optional[str] = Query(None, description="If provided, filter by this feature name"),
 ) -> List[dict[str, Any]]:
     """Returns box-plot stats for an institution/run. If `feature_name` is supplied,
     only rows for that feature are returned."""
