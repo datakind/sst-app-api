@@ -35,6 +35,7 @@ MEDALLION_LEVELS = ["silver", "gold", "bronze"]
 
 # The name of the deployed pipeline in Databricks. Must match directly.
 PDP_INFERENCE_JOB_NAME = "github_sourced_pdp_inference_pipeline"
+PDP_H2O_INFERENCE_JOB_NAME = "github_sourced_pdp_h2o_inference_pipeline"
 
 
 class DatabricksInferenceRunRequest(BaseModel):
@@ -192,16 +193,23 @@ class DatabricksControl(BaseModel):
 
         db_inst_name = databricksify_inst_name(req.inst_name)
 
+        if db_inst_name in ["synthetic_2", "synthetic_uni_2"]:
+            db_job_name = PDP_H2O_INFERENCE_JOB_NAME
+        else:
+            db_job_name = PDP_INFERENCE_JOB_NAME
+
         try:
-            job = next(w.jobs.list(name=PDP_INFERENCE_JOB_NAME), None)
+            job = next(w.jobs.list(name=db_job_name), None)
             if not job or job.job_id is None:
                 raise ValueError(
-                    f"run_pdp_inference(): Job '{PDP_INFERENCE_JOB_NAME}' was not found or has no job_id."
+                    f"run_pdp_inference(): Job '{db_job_name}' was not found or has no job_id."
                 )
             job_id = job.job_id
-            LOGGER.info(f"Resolved job ID for '{PDP_INFERENCE_JOB_NAME}': {job_id}")
+            LOGGER.info(f"Resolved job ID for '{db_job_name}': {job_id}")
         except Exception as e:
-            LOGGER.exception(f"Job lookup failed for '{PDP_INFERENCE_JOB_NAME}'.")
+            LOGGER.exception(
+                f"Job lookup failed for '{db_job_name}' and '{db_inst_name}."
+            )
             raise ValueError(f"run_pdp_inference(): Failed to find job: {e}")
 
         try:
