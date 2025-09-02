@@ -207,7 +207,9 @@ class DatabricksControl(BaseModel):
             job_id = job.job_id
             LOGGER.info(f"Resolved job ID for '{db_job_name}': {job_id}")
         except Exception as e:
-            LOGGER.exception(f"Job lookup failed for '{db_job_name}' and '{db_inst_name}.")
+            LOGGER.exception(
+                f"Job lookup failed for '{db_job_name}' and '{db_inst_name}."
+            )
             raise ValueError(f"run_pdp_inference(): Failed to find job: {e}")
 
         try:
