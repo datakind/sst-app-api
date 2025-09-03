@@ -171,7 +171,7 @@ def validate_dataset(
             read_errs.append(f"{enc}: {ex}")
     else:
         raise HardValidationError(schema_errors="decode_error", failure_cases=read_errs)
-    
+
     df = df.rename(columns={c: normalize_col(c) for c in df.columns})
     incoming = set(df.columns)
 
