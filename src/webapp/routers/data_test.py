@@ -586,11 +586,11 @@ def test_validate_success_batch(client: TestClient) -> None:
     response_upload = client.post(
         "/institutions/"
         + uuid_to_str(USER_VALID_INST_UUID)
-        + "/input/validate-upload/file_name.csv",
+        + "/input/validate-upload/pdp_course_deidentified.csv",
     )
     assert response_upload.status_code == 200
-    assert response_upload.json()["name"] == "file_name.csv"
-    assert response_upload.json()["file_types"] == ["UNKNOWN"]
+    assert response_upload.json()["name"] == "pdp_course_deidentified.csv"
+    assert response_upload.json()["file_types"] == ["COURSE"]
     assert response_upload.json()["inst_id"] == uuid_to_str(USER_VALID_INST_UUID)
     assert response_upload.json()["source"] == "MANUAL_UPLOAD"
 
@@ -598,7 +598,7 @@ def test_validate_success_batch(client: TestClient) -> None:
     response_sftp = client.post(
         "/institutions/"
         + uuid_to_str(UUID_INVALID)
-        + "/input/validate-sftp/file_name.csv",
+        + "/input/validate-sftp/pdp_ar_deidentified.csv",
     )
     assert str(response_sftp) == "<Response [401 Unauthorized]>"
     assert (
@@ -609,11 +609,11 @@ def test_validate_success_batch(client: TestClient) -> None:
     response_sftp = client.post(
         "/institutions/"
         + uuid_to_str(USER_VALID_INST_UUID)
-        + "/input/validate-sftp/file_name.csv",
+        + "/input/validate-sftp/pdp_ar_deidentified.csv",
     )
     assert response_sftp.status_code == 200
-    assert response_sftp.json()["name"] == "file_name.csv"
-    assert response_sftp.json()["file_types"] == ["UNKNOWN"]
+    assert response_sftp.json()["name"] == "pdp_ar_deidentified.csv"
+    assert response_sftp.json()["file_types"] == ["STUDENT"]
     assert response_sftp.json()["inst_id"] == uuid_to_str(USER_VALID_INST_UUID)
     assert response_sftp.json()["source"] == "PDP_SFTP"
 
