@@ -17,7 +17,7 @@ from ..config import databricks_vars, env_vars, gcs_vars
 import tempfile
 import pathlib
 import re
-from validation import HardValidationError
+from ..validation import HardValidationError
 
 from ..utilities import (
     has_access_to_inst_or_err,
