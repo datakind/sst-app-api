@@ -996,7 +996,9 @@ def download_url_inst_file(
     )
 
 
-_AR_WORD = re.compile(r'(?<![A-Za-z0-9])ar(?![A-Za-z0-9])', re.IGNORECASE)
+_AR_WORD = re.compile(r"(?<![A-Za-z0-9])ar(?![A-Za-z0-9])", re.IGNORECASE)
+
+
 def infer_models_from_filename(file_path: str) -> List[str]:
     name = os.path.basename(file_path).lower()
 
