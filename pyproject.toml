@@ -28,7 +28,7 @@ dependencies = [
     "thefuzz[speedup]~=0.22.1",
     "databricks-sql-connector~=3.5.0",
     "pandera~=0.13",
-    "mlflow~=2.15.0",
+    "mlflow~=2.15.0"
 ]
 
 [project.urls]
