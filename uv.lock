@@ -2464,11 +2464,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/a4/ab6b7589382ca3df236e03faa71deac88cae040af60c071a78d254a62172/passlib-1.7.4-py2.py3-none-any.whl", hash = "sha256:aa6bca462b8d8bda89c70b382f0c298a20b5560af6cbfa2dce410c0a2fb669f1", size = 525554, upload-time = "2020-10-08T19:00:49.856Z" },
 ]
 
-[package.optional-dependencies]
-bcrypt = [
-    { name = "bcrypt" },
-]
-
 [[package]]
 name = "pathspec"
 version = "0.12.1"
@@ -3723,7 +3718,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pandera" },
     { name = "paramiko" },
-    { name = "passlib", extra = ["bcrypt"] },
+    { name = "passlib" },
     { name = "pycryptodome" },
     { name = "pydantic" },
     { name = "pyjwt" },
@@ -3752,7 +3747,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bcrypt", specifier = ">=4.0.1,<5" },
+    { name = "bcrypt", specifier = "~=4.2.0" },
     { name = "cloud-sql-python-connector", extras = ["pymysql"], specifier = "~=1.14.0" },
     { name = "databricks-sdk", specifier = "~=0.38.0" },
     { name = "databricks-sql-connector", specifier = "~=3.5.0" },
@@ -3763,7 +3758,7 @@ requires-dist = [
     { name = "pandas", specifier = "~=2.0" },
     { name = "pandera", specifier = "~=0.13" },
     { name = "paramiko", specifier = "~=3.5.0" },
-    { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4,<1.8" },
+    { name = "passlib", specifier = "~=1.7.4" },
     { name = "pycryptodome", specifier = "~=3.20.0" },
     { name = "pydantic", specifier = "~=2.10" },
     { name = "pyjwt", specifier = "~=2.10.1" },
