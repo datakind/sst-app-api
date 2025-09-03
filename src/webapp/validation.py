@@ -225,9 +225,7 @@ def validate_dataset(
             logging.error(
                 f"Missing required or extra columns detected, missing_required = {missing_required}, extra_columns = {extra_columns}"
             )
-        raise HardValidationError(
-            missing_required=missing_required
-        )
+        raise HardValidationError(missing_required=missing_required)
     unknown_extra = extra_columns
 
     # 5) build Pandera schema & validate (hard-fail on any error)
@@ -274,7 +272,9 @@ def validate_dataset(
     # 6) success (with possible soft misses)
     return {
         "validation_status": (
-            "passed_with_soft_errors" if (missing_optional or unknown_extra) else "passed"
+            "passed_with_soft_errors"
+            if (missing_optional or unknown_extra)
+            else "passed"
         ),
         "schemas": model_list,
         "missing_optional": missing_optional,
