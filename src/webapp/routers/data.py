@@ -1154,8 +1154,9 @@ def validation_helper(
             updated_inst_schema,
         )
         logging.debug(
-            f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
+            "!!!!!!!!!!Inferred Schemas was successful %s", list(inferred_schemas)
         )
+
     except HardValidationError as e:
         logging.debug("!!!!!!!!!!Inferred Schemas FAILED (hard) %s", e)
         raise HTTPException(
