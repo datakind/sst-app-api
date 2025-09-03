@@ -997,7 +997,7 @@ def download_url_inst_file(
 
 
 _AR_WORD = re.compile(r'(?<![A-Za-z0-9])ar(?![A-Za-z0-9])', re.IGNORECASE)
-def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]:
+def infer_models_from_filename(file_path: str) -> List[str]:
     name = os.path.basename(file_path).lower()
 
     inferred = set()
@@ -1040,7 +1040,7 @@ def validation_helper(
 
     allowed_schemas = None
     if not allowed_schemas:
-        allowed_schemas = infer_models_from_filename(file_name, "pdp")
+        allowed_schemas = infer_models_from_filename(file_name)
 
     inferred_schemas: list[str] = []
     # ----------------------- Fetch base schema from DB -------------------------------
