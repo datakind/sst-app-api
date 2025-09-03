@@ -1486,7 +1486,7 @@ def get_training_feature_importance(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns training feature importance table for a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1528,7 +1528,7 @@ def get_training_confusion_matrix(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns training confusion matrix table for a specific instituion."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1570,7 +1570,7 @@ def get_training_roc_curve(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns training roc curve table for a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1612,7 +1612,7 @@ def get_training_support_overview(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns training support overview table for a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
