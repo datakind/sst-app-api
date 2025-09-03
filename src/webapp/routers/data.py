@@ -17,6 +17,7 @@ from ..config import databricks_vars, env_vars, gcs_vars
 import tempfile
 import pathlib
 import re
+from validation import HardValidationError
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -1155,13 +1156,28 @@ def validation_helper(
         logging.debug(
             f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
         )
+    except HardValidationError as e:
+        logging.debug("!!!!!!!!!!Inferred Schemas FAILED (hard) %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "VALIDATION_FAILED",
+                "message": "Schema validation failed.",
+                "missing_required": e.missing_required,
+                "extra_columns": e.extra_columns,
+                "schema_errors": e.schema_errors,
+                "failure_cases": e.failure_cases,
+            },
+        )
     except Exception as e:
         logging.debug(f"!!!!!!!!!!Inferred Schemas FAILED {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File type is not valid and/or not accepted by this institution: "
-            + str(e),
-        ) from e
+            detail={
+                "code": "VALIDATION_ERROR",
+                "message": str(e),
+            },
+        )
 
     existing_file = (
         local_session.get()
