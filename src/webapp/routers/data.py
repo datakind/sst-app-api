@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from ..config import databricks_vars, env_vars, gcs_vars
 import tempfile
 import pathlib
+import re
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -995,7 +996,10 @@ def download_url_inst_file(
     )
 
 
-def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]:
+_AR_WORD = re.compile(r"(?<![A-Za-z0-9])ar(?![A-Za-z0-9])", re.IGNORECASE)
+
+
+def infer_models_from_filename(file_path: str) -> List[str]:
     name = os.path.basename(file_path).lower()
 
     inferred = set()
@@ -1007,16 +1011,14 @@ def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]
         inferred.add("SEMESTER")
     if "cohort" in name:
         inferred.add("STUDENT")
-    if "course" not in name and ("ar" in name or "deidentified" in name):
+    if "course" not in name and (_AR_WORD.search(name) or "deidentified" in name):
         inferred.add("STUDENT")
 
     if not inferred:
-        logging.error(
-            ValueError(
-                f"Could not infer model(s) from file name: {name}, filenames sould be descriptive of the kind of data it contains e.g. course, cohort"
-            )
+        raise ValueError(
+            f"Could not infer model(s) from file name: {name}. "
+            "Filenames should be descriptive (e.g., include 'course', 'cohort', 'student', or 'semester')."
         )
-        inferred.add("UNKNOWN")
 
     return sorted(inferred)
 
@@ -1040,7 +1042,7 @@ def validation_helper(
 
     allowed_schemas = None
     if not allowed_schemas:
-        allowed_schemas = infer_models_from_filename(file_name, "pdp")
+        allowed_schemas = infer_models_from_filename(file_name)
 
     inferred_schemas: list[str] = []
     # ----------------------- Fetch base schema from DB -------------------------------
@@ -1283,7 +1285,7 @@ def get_inference_top_features(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns data for a specific institution."""
+    """Returns top n features table for a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1399,7 +1401,7 @@ def get_inference_support_overview(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns support score distribution table for a  specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1441,7 +1443,7 @@ def get_inference_feature_importance(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns feature importance table for a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1486,7 +1488,7 @@ def get_training_feature_importance(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns training feature importance table for a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1528,7 +1530,7 @@ def get_training_confusion_matrix(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns training confusion matrix table for a specific instituion."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1570,7 +1572,7 @@ def get_training_roc_curve(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns training roc curve table for a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
@@ -1612,7 +1614,7 @@ def get_training_support_overview(
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
-    """Returns a signed URL for uploading data to a specific institution."""
+    """Returns training support overview table for a specific institution."""
     # raise error at this level instead bc otherwise it's getting wrapped as a 200
     has_access_to_inst_or_err(inst_id, current_user)
     local_session.set(sql_session)
