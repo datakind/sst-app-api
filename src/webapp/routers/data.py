@@ -1159,25 +1159,35 @@ def validation_helper(
 
     except HardValidationError as e:
         logging.debug("!!!!!!!!!!Inferred Schemas FAILED (hard) %s", e)
+        # Build a single string - frontend can render this reliably
+        msg_parts = ["VALIDATION_FAILED"]
+        if e.missing_required:
+            msg_parts.append(f"missing_required={e.missing_required}")
+        if e.extra_columns:
+            msg_parts.append(f"extra_columns={e.extra_columns}")
+        if e.schema_errors is not None:
+            msg_parts.append(f"schema_errors={e.schema_errors}")
+        if e.failure_cases is not None:
+            # keep short; avoid dumping huge tables
+            try:
+                sample = (
+                    e.failure_cases[:5]
+                    if isinstance(e.failure_cases, list)
+                    else str(e.failure_cases)[:500]
+                )
+            except Exception:
+                sample = "see server logs"
+            msg_parts.append(f"failure_cases_sample={sample}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "VALIDATION_FAILED",
-                "message": "Schema validation failed.",
-                "missing_required": e.missing_required,
-                "extra_columns": e.extra_columns,
-                "schema_errors": e.schema_errors,
-                "failure_cases": e.failure_cases,
-            },
+            detail="; ".join(msg_parts),
         )
+
     except Exception as e:
-        logging.debug(f"!!!!!!!!!!Inferred Schemas FAILED {e}")
+        logging.debug("!!!!!!!!!!Inferred Schemas FAILED (other) %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "VALIDATION_ERROR",
-                "message": str(e),
-            },
+            detail=f"VALIDATION_ERROR: {type(e).__name__}: {e}",
         )
 
     existing_file = (
