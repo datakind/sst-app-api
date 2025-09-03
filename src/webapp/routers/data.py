@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from ..config import databricks_vars, env_vars, gcs_vars
 import tempfile
 import pathlib
+import re
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -995,6 +996,7 @@ def download_url_inst_file(
     )
 
 
+_AR_WORD = re.compile(r'(?<![A-Za-z0-9])ar(?![A-Za-z0-9])', re.IGNORECASE)
 def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]:
     name = os.path.basename(file_path).lower()
 
@@ -1007,16 +1009,14 @@ def infer_models_from_filename(file_path: str, institution_id: str) -> List[str]
         inferred.add("SEMESTER")
     if "cohort" in name:
         inferred.add("STUDENT")
-    if "course" not in name and ("ar" in name or "deidentified" in name):
+    if "course" not in name and (_AR_WORD.search(name) or "deidentified" in name):
         inferred.add("STUDENT")
 
     if not inferred:
-        logging.error(
-            ValueError(
-                f"Could not infer model(s) from file name: {name}, filenames sould be descriptive of the kind of data it contains e.g. course, cohort"
-            )
+        raise ValueError(
+            f"Could not infer model(s) from file name: {name}. "
+            "Filenames should be descriptive (e.g., include 'course', 'cohort', 'student', or 'semester')."
         )
-        inferred.add("UNKNOWN")
 
     return sorted(inferred)
 
