@@ -17,6 +17,7 @@ from ..config import databricks_vars, env_vars, gcs_vars
 import tempfile
 import pathlib
 import re
+from ..validation import HardValidationError
 
 from ..utilities import (
     has_access_to_inst_or_err,
@@ -1155,13 +1156,28 @@ def validation_helper(
         logging.debug(
             f"!!!!!!!!!!Inferred Schemas was successful {list(inferred_schemas)}"
         )
+    except HardValidationError as e:
+        logging.debug("!!!!!!!!!!Inferred Schemas FAILED (hard) %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "VALIDATION_FAILED",
+                "message": "Schema validation failed.",
+                "missing_required": e.missing_required,
+                "extra_columns": e.extra_columns,
+                "schema_errors": e.schema_errors,
+                "failure_cases": e.failure_cases,
+            },
+        )
     except Exception as e:
         logging.debug(f"!!!!!!!!!!Inferred Schemas FAILED {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File type is not valid and/or not accepted by this institution: "
-            + str(e),
-        ) from e
+            detail={
+                "code": "VALIDATION_ERROR",
+                "message": str(e),
+            },
+        )
 
     existing_file = (
         local_session.get()
@@ -1278,10 +1294,10 @@ def get_upload_url(
 
 
 # Get SHAP Values for Inference
-@router.get("/{inst_id}/inference/top-features/{run_id}")
+@router.get("/{inst_id}/inference/top-features/{job_run_id}")
 def get_inference_top_features(
     inst_id: str,
-    run_id: str,
+    job_run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
@@ -1310,7 +1326,7 @@ def get_inference_top_features(
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
-            table_name=f"inference_{run_id}_features_with_most_impact",
+            table_name=f"inference_{job_run_id}_features_with_most_impact",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
@@ -1321,10 +1337,10 @@ def get_inference_top_features(
 
 
 # Get Box plot values
-@router.get("/{inst_id}/inference/features-boxplot-stat/{run_id}")
+@router.get("/{inst_id}/inference/features-boxplot-stat/{job_run_id}")
 def get_inference_feature_boxstats(
     inst_id: str,
-    run_id: str,
+    job_run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
     feature_name: Optional[str] = Query(
@@ -1357,7 +1373,7 @@ def get_inference_feature_boxstats(
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
-            table_name=f"inference_{run_id}_box_plot_table",
+            table_name=f"inference_{job_run_id}_box_plot_table",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
         if not feature_name:
@@ -1383,7 +1399,7 @@ def get_inference_feature_boxstats(
         if not filtered:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Feature '{feature_name}' not found for run_id '{run_id}'.",
+                detail=f"Feature '{feature_name}' not found for run_id '{job_run_id}'.",
             )
 
         return filtered
@@ -1394,10 +1410,10 @@ def get_inference_feature_boxstats(
 
 
 # Get SHAP Values for Inference
-@router.get("/{inst_id}/inference/support-overview/{run_id}")
+@router.get("/{inst_id}/inference/support-overview/{job_run_id}")
 def get_inference_support_overview(
     inst_id: str,
-    run_id: str,
+    job_run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
@@ -1426,7 +1442,7 @@ def get_inference_support_overview(
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
-            table_name=f"inference_{run_id}_support_overview",
+            table_name=f"inference_{job_run_id}_support_overview",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
@@ -1436,10 +1452,10 @@ def get_inference_support_overview(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/inference/feature_importance/{run_id}")
+@router.get("/{inst_id}/inference/feature_importance/{job_run_id}")
 def get_inference_feature_importance(
     inst_id: str,
-    run_id: str,
+    job_run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
@@ -1468,7 +1484,7 @@ def get_inference_feature_importance(
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
-            table_name=f"inference_{run_id}_shap_feature_importance",
+            table_name=f"inference_{job_run_id}_shap_feature_importance",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
@@ -1481,10 +1497,10 @@ def get_inference_feature_importance(
 ## FE Training Tables
 
 
-@router.get("/{inst_id}/training/feature_importance/{run_id}")
+@router.get("/{inst_id}/training/feature_importance/{experiment_run_id}")
 def get_training_feature_importance(
     inst_id: str,
-    run_id: str,
+    experiment_run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
@@ -1513,7 +1529,7 @@ def get_training_feature_importance(
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
-            table_name=f"training_{run_id}_shap_feature_importance",
+            table_name=f"training_{experiment_run_id}_shap_feature_importance",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
@@ -1523,10 +1539,10 @@ def get_training_feature_importance(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/confusion_matrix/{run_id}")
+@router.get("/{inst_id}/training/confusion_matrix/{experiment_run_id}")
 def get_training_confusion_matrix(
     inst_id: str,
-    run_id: str,
+    experiment_run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
@@ -1555,7 +1571,7 @@ def get_training_confusion_matrix(
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
-            table_name=f"training_{run_id}_confusion_matrix",
+            table_name=f"training_{experiment_run_id}_confusion_matrix",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
@@ -1565,10 +1581,10 @@ def get_training_confusion_matrix(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/roc_curve/{run_id}")
+@router.get("/{inst_id}/training/roc_curve/{experiment_run_id}")
 def get_training_roc_curve(
     inst_id: str,
-    run_id: str,
+    experiment_run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
@@ -1597,7 +1613,7 @@ def get_training_roc_curve(
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
-            table_name=f"training_{run_id}_roc_curve",
+            table_name=f"training_{experiment_run_id}_roc_curve",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
@@ -1607,10 +1623,10 @@ def get_training_roc_curve(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 
-@router.get("/{inst_id}/training/support-overview/{run_id}")
+@router.get("/{inst_id}/training/support-overview/{experiment_run_id}")
 def get_training_support_overview(
     inst_id: str,
-    run_id: str,
+    experiment_run_id: str,
     current_user: Annotated[BaseUser, Depends(get_current_active_user)],
     sql_session: Annotated[Session, Depends(get_session)],
 ) -> List[dict[str, Any]]:
@@ -1639,7 +1655,7 @@ def get_training_support_overview(
         rows = dbc.fetch_table_data(
             catalog_name=env_vars["CATALOG_NAME"],  # type: ignore
             inst_name=f"{query_result[0][0].name}",
-            table_name=f"training_{run_id}_support_overview",
+            table_name=f"training_{experiment_run_id}_support_overview",
             warehouse_id=env_vars["SQL_WAREHOUSE_ID"],  # type: ignore
         )
 
