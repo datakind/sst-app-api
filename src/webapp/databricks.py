@@ -203,7 +203,11 @@ class DatabricksControl(BaseModel):
             # Helpful diagnostics about where we are and who we are
             try:
                 me = w.current_user.me()
-                LOGGER.info("Databricks caller: user_name=%s, user_id=%s", getattr(me, "user_name", None), getattr(me, "id", None))
+                LOGGER.info(
+                    "Databricks caller: user_name=%s, user_id=%s",
+                    getattr(me, "user_name", None),
+                    getattr(me, "id", None),
+                )
             except Exception:
                 LOGGER.info("Could not resolve current user; continuing.")
 
@@ -220,25 +224,36 @@ class DatabricksControl(BaseModel):
                 jname = getattr(getattr(j, "settings", None), "name", None)
                 jid = getattr(j, "job_id", None)
                 log_preview.append(f"{jid}:{jname}")
-            LOGGER.info("First up-to-25 visible jobs (id:name): %s", "; ".join(log_preview) if log_preview else "(none)")
+            LOGGER.info(
+                "First up-to-25 visible jobs (id:name): %s",
+                "; ".join(log_preview) if log_preview else "(none)",
+            )
 
             # Try to find by name (exact, then case-insensitive, then prefix/close match)
-            def job_name(j) -> str:
-                return (getattr(getattr(j, "settings", None), "name", None) or "").strip()
+            def job_name(j: Any) -> str:
+                return (
+                    getattr(getattr(j, "settings", None), "name", None) or ""
+                ).strip()
 
             target = db_job_name.strip()
             candidates = [j for j in visible_jobs if job_name(j) == target]
 
             if not candidates:
                 # Case-insensitive exact
-                candidates = [j for j in visible_jobs if job_name(j).lower() == target.lower()]
+                candidates = [
+                    j for j in visible_jobs if job_name(j).lower() == target.lower()
+                ]
 
             if not candidates:
                 # Prefix or contains
                 lowered = target.lower()
-                candidates = [j for j in visible_jobs if job_name(j).lower().startswith(lowered)]
+                candidates = [
+                    j for j in visible_jobs if job_name(j).lower().startswith(lowered)
+                ]
                 if not candidates:
-                    candidates = [j for j in visible_jobs if lowered in job_name(j).lower()]
+                    candidates = [
+                        j for j in visible_jobs if lowered in job_name(j).lower()
+                    ]
 
             # If multiple, prefer exact case-insensitive match first; else first candidate
             job_obj = candidates[0] if candidates else None
@@ -246,6 +261,7 @@ class DatabricksControl(BaseModel):
             # If still not found, compute close matches to guide debugging
             if not job_obj:
                 import difflib
+
                 names = [job_name(j) for j in visible_jobs]
                 close = difflib.get_close_matches(target, names, n=5, cutoff=0.6)
                 raise ValueError(
@@ -264,9 +280,10 @@ class DatabricksControl(BaseModel):
             LOGGER.info("Resolved job: id=%s, name=%s", job_id, job_name(job_obj))
 
         except Exception as e:
-            LOGGER.exception("Job lookup failed for '%s' in '%s'.", db_job_name, db_inst_name)
+            LOGGER.exception(
+                "Job lookup failed for '%s' in '%s'.", db_job_name, db_inst_name
+            )
             raise ValueError(f"run_pdp_inference(): Failed to find job: {e}")
-
 
         try:
             run_job: Any = w.jobs.run_now(
