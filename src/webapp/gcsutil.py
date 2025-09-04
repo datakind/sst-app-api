@@ -341,7 +341,6 @@ class StorageControl(BaseModel):
                 )
         except Exception as e:
             logging.exception("Validation failed for %s: %s", file_name, e)
-            blob.delete()
             raise
 
         new_blob = bucket.blob(new_blob_name)
