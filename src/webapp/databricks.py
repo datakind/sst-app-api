@@ -230,7 +230,7 @@ class DatabricksControl(BaseModel):
             )
 
             # Try to find by name (exact, then case-insensitive, then prefix/close match)
-            def job_name(j) -> str:
+            def job_name(j: Any) -> str:
                 return (
                     getattr(getattr(j, "settings", None), "name", None) or ""
                 ).strip()
