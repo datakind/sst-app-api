@@ -44,10 +44,10 @@ class DatabricksInferenceRunRequest(BaseModel):
     # Note that the following should be the filepath.
     filepath_to_type: dict[str, list[SchemaType]]
     model_name: str
+    model_type: str
     # The email where notifications will get sent.
     email: str
     gcp_external_bucket_name: str
-    framework: str
 
 
 class DatabricksInferenceRunResponse(BaseModel):
@@ -204,12 +204,12 @@ class DatabricksControl(BaseModel):
             job = next(w.jobs.list(name=pipeline_type), None)
             if not job or job.job_id is None:
                 raise ValueError(
-                    f"run_pdp_inference(): Job '{PDP_INFERENCE_JOB_NAME}' was not found or has no job_id."
+                    f"run_pdp_inference(): Job '{pipeline_type}' was not found or has no job_id."
                 )
             job_id = job.job_id
-            LOGGER.info(f"Resolved job ID for '{PDP_INFERENCE_JOB_NAME}': {job_id}")
+            LOGGER.info(f"Resolved job ID for '{pipeline_type}': {job_id}")
         except Exception as e:
-            LOGGER.exception(f"Job lookup failed for '{PDP_INFERENCE_JOB_NAME}'.")
+            LOGGER.exception(f"Job lookup failed for '{pipeline_type}'.")
             raise ValueError(f"run_pdp_inference(): Failed to find job: {e}")
 
         try:
@@ -228,8 +228,8 @@ class DatabricksControl(BaseModel):
                     ],  # is this value the same PER environ? dev/staging/prod
                     "gcp_bucket_name": req.gcp_external_bucket_name,
                     "model_name": req.model_name,
+                    "model_type": req.framework,
                     "notification_email": req.email,
-                    "framework": req.framework,
                 },
             )
             LOGGER.info(
