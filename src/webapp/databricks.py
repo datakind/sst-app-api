@@ -37,6 +37,7 @@ MEDALLION_LEVELS = ["silver", "gold", "bronze"]
 PDP_INFERENCE_JOB_NAME = "github_sourced_pdp_inference_pipeline"
 PDP_H2O_INFERENCE_JOB_NAME = "github_sourced_pdp_h2o_inference_pipeline"
 
+
 class DatabricksInferenceRunRequest(BaseModel):
     """Databricks parameters for an inference run."""
 
@@ -197,9 +198,7 @@ class DatabricksControl(BaseModel):
         elif req.model_type == "h2o":
             pipeline_type = PDP_H2O_INFERENCE_JOB_NAME
         else:
-            raise ValueError(
-                "Invalid model framework assigned to institution model"
-            )
+            raise ValueError("Invalid model framework assigned to institution model")
         try:
             job = next(w.jobs.list(name=pipeline_type), None)
             if not job or job.job_id is None:
