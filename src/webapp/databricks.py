@@ -44,10 +44,10 @@ class DatabricksInferenceRunRequest(BaseModel):
     # Note that the following should be the filepath.
     filepath_to_type: dict[str, list[SchemaType]]
     model_name: str
-    model_type: str = "sklearn"
     # The email where notifications will get sent.
     email: str
     gcp_external_bucket_name: str
+    framework: str
 
 
 class DatabricksInferenceRunResponse(BaseModel):
@@ -220,8 +220,8 @@ class DatabricksControl(BaseModel):
                     ],  # is this value the same PER environ? dev/staging/prod
                     "gcp_bucket_name": req.gcp_external_bucket_name,
                     "model_name": req.model_name,
-                    "model_type": req.model_type,
                     "notification_email": req.email,
+                    "framework": req.framework,
                 },
             )
             LOGGER.info(

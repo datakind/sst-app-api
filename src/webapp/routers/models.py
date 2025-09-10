@@ -301,6 +301,7 @@ def read_inst_model(
         "created_by": uuid_to_str(query_result[0][0].created_by),
         "deleted": query_result[0][0].deleted,
         "valid": query_result[0][0].valid,
+        "framework": query_result[0][0].framework,
     }
 
 
@@ -549,6 +550,7 @@ def trigger_inference_run(
         gcp_external_bucket_name=get_external_bucket_name(inst_id),
         # The institution email to which pipeline success/failure notifications will get sent.
         email=current_user.email,
+        framework=query_result[0][0].framework,
     )
     try:
         res = databricks_control.run_pdp_inference(db_req)
