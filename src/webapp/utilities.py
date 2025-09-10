@@ -163,7 +163,7 @@ class BaseUser(BaseModel):
     disabled: bool | None = None
 
     # Constructor
-    def __init__(self, usr: str | None, inst: str, access: str, email: str) -> None:
+    def __init__(self, usr: str | None, inst: str | None, access: str | None, email: str | None) -> None:
         super().__init__(user_id=usr, institution=inst, access_type=access, email=email)
 
     def is_datakinder(self) -> Any:
@@ -182,7 +182,7 @@ class BaseUser(BaseModel):
         """Whether a given user is a viewer."""
         return self.access_type and self.access_type == AccessType.VIEWER
 
-    def has_access_to_inst(self, inst: str) -> Any:
+    def has_access_to_inst(self, inst: str | None) -> Any:
         """Whether a given user has access to a given institution."""
         return self.access_type and (
             self.access_type == AccessType.DATAKINDER or self.institution == inst
@@ -219,7 +219,7 @@ def get_user(sess: Session, username: str) -> BaseUser:
     """Get user from a given username."""
     if username == "api_key_initial":
         return BaseUser(
-            usr=env_vars["INITIAL_API_KEY_ID"],
+            usr=str(env_vars["INITIAL_API_KEY_ID"]),
             inst=None,
             access="DATAKINDER",
             email="api_key_initial",
@@ -260,7 +260,7 @@ def authenticate_api_key(api_key_enduser_tuple: str, sess: Session) -> BaseUser:
     # Check if it's the initial API key. This doesn't have enduser or inst.
     if key == env_vars["INITIAL_API_KEY"]:
         return BaseUser(
-            usr=env_vars["INITIAL_API_KEY_ID"],
+            usr=str(env_vars["INITIAL_API_KEY_ID"]),
             inst=None,
             access="DATAKINDER",
             email="api_key_initial",
