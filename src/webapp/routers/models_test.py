@@ -152,6 +152,7 @@ def session_fixture():
             ]
         ),
         valid=True,
+        framework="sklearn",
     )
     run_1 = JobTable(
         id=RUN_ID,
@@ -161,6 +162,7 @@ def session_fixture():
         completed=True,
         output_filename="file_output_one",
         created_by=created_by_UUID,
+        framework="sklearn",
     )
     try:
         with sqlalchemy.orm.Session(engine) as session:

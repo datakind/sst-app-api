@@ -198,7 +198,7 @@ class DatabricksControl(BaseModel):
             pipeline_type = PDP_H2O_INFERENCE_JOB_NAME
         else:
             raise ValueError(
-                f"Invalid model framework assigned to institution model"
+                "Invalid model framework assigned to institution model"
             )
         try:
             job = next(w.jobs.list(name=pipeline_type), None)
