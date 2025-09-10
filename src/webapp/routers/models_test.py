@@ -325,7 +325,6 @@ def test_read_inst_model_output(client: TestClient) -> None:
             output_valid=False,
             run_id=123,
             triggered_at=response_model.triggered_at,  # copy from response
-            completed=response_model.completed
         )
     assert same_run_info_orderless(response_model, expected_model)
 
