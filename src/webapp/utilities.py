@@ -163,7 +163,9 @@ class BaseUser(BaseModel):
     disabled: bool | None = None
 
     # Constructor
-    def __init__(self, usr: str | None, inst: str | None, access: str | None, email: str | None) -> None:
+    def __init__(
+        self, usr: str | None, inst: str | None, access: str | None, email: str | None
+    ) -> None:
         super().__init__(user_id=usr, institution=inst, access_type=access, email=email)
 
     def is_datakinder(self) -> Any:
@@ -254,7 +256,9 @@ def get_user(sess: Session, username: str) -> Optional[BaseUser]:
     )
 
 
-def authenticate_api_key(api_key_enduser_tuple: Tuple[str, Optional[str], Optional[str]], sess: Session) -> Union[BaseUser, bool]:
+def authenticate_api_key(
+    api_key_enduser_tuple: Tuple[str, Optional[str], Optional[str]], sess: Session
+) -> Union[BaseUser, bool]:
     """Authenticate an API key."""
     (key, inst, enduser) = api_key_enduser_tuple
     # Check if it's the initial API key. This doesn't have enduser or inst.
@@ -330,7 +334,9 @@ async def get_current_user(
         if not token_from_key:
             raise credentials_exception
         payload = jwt.decode(
-            token_from_key, str(env_vars["SECRET_KEY"]), algorithms=env_vars["ALGORITHM"]
+            token_from_key,
+            str(env_vars["SECRET_KEY"]),
+            algorithms=env_vars["ALGORITHM"],
         )
         usrname = payload.get("sub")
         if usrname is None:

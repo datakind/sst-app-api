@@ -60,7 +60,7 @@ def check_file_types_valid_schema_configs(
     """Check that a list of files are valid for a given schema configuration."""
     for config in valid_schema_configs:
         found = True
-        map_file_to_schema_config_obj: dict= {}
+        map_file_to_schema_config_obj: dict = {}
         for idx, s in enumerate(file_types):
             for c in config:
                 if c.schema_type in s:

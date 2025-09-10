@@ -236,10 +236,10 @@ def test_read_inst_models(client: TestClient) -> None:
         ModelInfo(**response.json()[0]),
         ModelInfo(
             m_id="e4862c62829440d8ab4c9c298f02f619",
-            name= "sample_model_for_school_1",
-            inst_id= "1d7c75c33eda42949c6675ea8af97b55",
-            deleted= None,
-            valid= True,
+            name="sample_model_for_school_1",
+            inst_id="1d7c75c33eda42949c6675ea8af97b55",
+            deleted=None,
+            valid=True,
         ),
     )
 
@@ -297,10 +297,9 @@ def test_read_inst_model_outputs(client: TestClient) -> None:
         output_valid=False,
         run_id=123,
         triggered_at=response_model.triggered_at,  # copy from response
-        completed=response_model.completed
+        completed=response_model.completed,
     )
     assert same_run_info_orderless(response_model, expected_model)
-
 
 
 def test_read_inst_model_output(client: TestClient) -> None:
@@ -315,17 +314,17 @@ def test_read_inst_model_output(client: TestClient) -> None:
     assert response.status_code == 200
     response_model = RunInfo(**response.json())
     expected_model = RunInfo(
-            batch_name="batch_foo",
-            completed=True,
-            created_by="0ad8b77c49fb459a84b18d2c05722c4a",
-            err_msg=None,
-            inst_id="1d7c75c33eda42949c6675ea8af97b55",
-            m_name="sample_model_for_school_1",
-            output_filename="file_output_one",
-            output_valid=False,
-            run_id=123,
-            triggered_at=response_model.triggered_at,  # copy from response
-        )
+        batch_name="batch_foo",
+        completed=True,
+        created_by="0ad8b77c49fb459a84b18d2c05722c4a",
+        err_msg=None,
+        inst_id="1d7c75c33eda42949c6675ea8af97b55",
+        m_name="sample_model_for_school_1",
+        output_filename="file_output_one",
+        output_valid=False,
+        run_id=123,
+        triggered_at=response_model.triggered_at,  # copy from response
+    )
     assert same_run_info_orderless(response_model, expected_model)
 
 
