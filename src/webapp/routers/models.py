@@ -551,7 +551,7 @@ def trigger_inference_run(
         gcp_external_bucket_name=get_external_bucket_name(inst_id),
         # The institution email to which pipeline success/failure notifications will get sent.
         email=current_user.email,
-        framework=query_result[0][0].framework,
+        model_type=query_result[0][0].framework,
     )
     try:
         res = databricks_control.run_pdp_inference(db_req)
