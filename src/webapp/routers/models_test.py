@@ -286,19 +286,18 @@ def test_read_inst_model_outputs(client: TestClient) -> None:
         + "/models/sample_model_for_school_1/runs"
     )
     assert response.status_code == 200
-    assert same_run_info_orderless(
-        response.json()[0],
-        RunInfo(
-            batch_name="batch_foo",
-            created_by="0ad8b77c49fb459a84b18d2c05722c4a",
-            err_msg=None,
-            inst_id="1d7c75c33eda42949c6675ea8af97b55",
-            m_name="sample_model_for_school_1",
-            output_filename="file_output_one",
-            output_valid=False,
-            run_id=123,
-        ),
+    response_model = RunInfo(**response.json()[0])
+    expected_model = RunInfo(
+        batch_name="batch_foo",
+        created_by="0ad8b77c49fb459a84b18d2c05722c4a",
+        err_msg=None,
+        inst_id="1d7c75c33eda42949c6675ea8af97b55",
+        m_name="sample_model_for_school_1",
+        output_filename="file_output_one",
+        output_valid=False,
+        run_id=123,
     )
+    assert same_model_orderless(response_model, expected_model)
 
 
 def test_read_inst_model_output(client: TestClient) -> None:
