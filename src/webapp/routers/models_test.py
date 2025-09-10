@@ -265,14 +265,15 @@ def test_read_inst_model(client: TestClient) -> None:
         + "/models/sample_model_for_school_1"
     )
     assert response.status_code == 200
-    assert same_model_orderless(response.json(),
-        ModelInfo(
-            deleted= None,
-            inst_id= "1d7c75c33eda42949c6675ea8af97b55",
-            m_id="e4862c62829440d8ab4c9c298f02f619",
-            name="sample_model_for_school_1",
-            valid=True,
-        ))
+    response_model = ModelInfo(**response.json())
+    expected_model = ModelInfo(
+        deleted=None,
+        inst_id="1d7c75c33eda42949c6675ea8af97b55",
+        m_id="e4862c62829440d8ab4c9c298f02f619",
+        name="sample_model_for_school_1",
+        valid=True,
+    )
+    assert same_model_orderless(response_model, expected_model)
 
 
 def test_read_inst_model_outputs(client: TestClient) -> None:
