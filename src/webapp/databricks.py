@@ -45,7 +45,7 @@ class DatabricksInferenceRunRequest(BaseModel):
     # Note that the following should be the filepath.
     filepath_to_type: dict[str, list[SchemaType]]
     model_name: str
-    model_type: str = "sklearn"
+    model_type: str
     # The email where notifications will get sent.
     email: str
     gcp_external_bucket_name: str
@@ -193,96 +193,22 @@ class DatabricksControl(BaseModel):
 
         db_inst_name = databricksify_inst_name(req.inst_name)
 
-        if db_inst_name in ["synthetic_2", "synthetic_uni_2"]:
-            db_job_name = PDP_H2O_INFERENCE_JOB_NAME
+        if req.model_type == "sklearn":
+            pipeline_type = PDP_INFERENCE_JOB_NAME
+        elif req.model_type == "h2o":
+            pipeline_type = PDP_H2O_INFERENCE_JOB_NAME
         else:
-            db_job_name = PDP_INFERENCE_JOB_NAME
-
-        # --- Resolve the Databricks Job by name, with diagnostics ---
+            raise ValueError("Invalid model framework assigned to institution model")
         try:
-            # Helpful diagnostics about where we are and who we are
-            try:
-                me = w.current_user.me()
-                LOGGER.info(
-                    "Databricks caller: user_name=%s, user_id=%s",
-                    getattr(me, "user_name", None),
-                    getattr(me, "id", None),
-                )
-            except Exception:
-                LOGGER.info("Could not resolve current user; continuing.")
-
-            host_url = databricks_vars["DATABRICKS_HOST_URL"]
-            LOGGER.info("Databricks host: %s", host_url)
-
-            # Gather visible jobs and log a small sample for troubleshooting
-            visible_jobs = list(w.jobs.list())  # materialize generator
-            LOGGER.info("Visible jobs count: %d", len(visible_jobs))
-
-            log_preview = []
-            for j in visible_jobs[:25]:
-                # In SDK, name commonly lives under settings.name
-                jname = getattr(getattr(j, "settings", None), "name", None)
-                jid = getattr(j, "job_id", None)
-                log_preview.append(f"{jid}:{jname}")
-            LOGGER.info(
-                "First up-to-25 visible jobs (id:name): %s",
-                "; ".join(log_preview) if log_preview else "(none)",
-            )
-
-            # Try to find by name (exact, then case-insensitive, then prefix/close match)
-            def job_name(j: Any) -> str:
-                return (
-                    getattr(getattr(j, "settings", None), "name", None) or ""
-                ).strip()
-
-            target = db_job_name.strip()
-            candidates = [j for j in visible_jobs if job_name(j) == target]
-
-            if not candidates:
-                # Case-insensitive exact
-                candidates = [
-                    j for j in visible_jobs if job_name(j).lower() == target.lower()
-                ]
-
-            if not candidates:
-                # Prefix or contains
-                lowered = target.lower()
-                candidates = [
-                    j for j in visible_jobs if job_name(j).lower().startswith(lowered)
-                ]
-                if not candidates:
-                    candidates = [
-                        j for j in visible_jobs if lowered in job_name(j).lower()
-                    ]
-
-            # If multiple, prefer exact case-insensitive match first; else first candidate
-            job_obj = candidates[0] if candidates else None
-
-            # If still not found, compute close matches to guide debugging
-            if not job_obj:
-                import difflib
-
-                names = [job_name(j) for j in visible_jobs]
-                close = difflib.get_close_matches(target, names, n=5, cutoff=0.6)
+            job = next(w.jobs.list(name=pipeline_type), None)
+            if not job or job.job_id is None:
                 raise ValueError(
-                    f"run_pdp_inference(): Job named '{db_job_name}' not found in workspace {host_url}. "
-                    f"Service principal may lack permissions, or the job name differs. "
-                    f"Close matches: {close}"
+                    f"run_pdp_inference(): Job '{pipeline_type}' was not found or has no job_id."
                 )
-
-            job_id = getattr(job_obj, "job_id", None)
-            if not job_id:
-                raise ValueError(
-                    f"run_pdp_inference(): Found job '{job_name(job_obj)}' but it has no job_id. "
-                    "Check job visibility/permissions and that the SDK is returning full job metadata."
-                )
-
-            LOGGER.info("Resolved job: id=%s, name=%s", job_id, job_name(job_obj))
-
+            job_id = job.job_id
+            LOGGER.info(f"Resolved job ID for '{pipeline_type}': {job_id}")
         except Exception as e:
-            LOGGER.exception(
-                "Job lookup failed for '%s' in '%s'.", db_job_name, db_inst_name
-            )
+            LOGGER.exception(f"Job lookup failed for '{pipeline_type}'.")
             raise ValueError(f"run_pdp_inference(): Failed to find job: {e}")
 
         try:
