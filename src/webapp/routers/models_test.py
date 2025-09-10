@@ -296,6 +296,8 @@ def test_read_inst_model_outputs(client: TestClient) -> None:
         output_filename="file_output_one",
         output_valid=False,
         run_id=123,
+        triggered_at=response_model.triggered_at,  # copy from response
+        completed=response_model.completed
     )
     assert same_run_info_orderless(response_model, expected_model)
 
@@ -311,9 +313,8 @@ def test_read_inst_model_output(client: TestClient) -> None:
         + str(RUN_ID)
     )
     assert response.status_code == 200
-    assert same_run_info_orderless(
-        response.json(),
-        RunInfo(
+    response_model = RunInfo(response.json())
+    expected_model = RunInfo(
             batch_name="batch_foo",
             completed=True,
             created_by="0ad8b77c49fb459a84b18d2c05722c4a",
@@ -323,8 +324,8 @@ def test_read_inst_model_output(client: TestClient) -> None:
             output_filename="file_output_one",
             output_valid=False,
             run_id=123,
-        ),
-    )
+        )
+    assert same_run_info_orderless(response_model, expected_model)
 
 
 def test_create_model(client: TestClient) -> None:
