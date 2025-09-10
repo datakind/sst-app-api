@@ -569,6 +569,7 @@ def trigger_inference_run(
         batch_name=req.batch_name,
         model_id=query_result[0][0].id,
         output_valid=False,
+        framework=query_result[0][0].framework,
     )
     local_session.get().add(job)
     return {
@@ -579,4 +580,5 @@ def trigger_inference_run(
         "triggered_at": triggered_timestamp,
         "batch_name": req.batch_name,
         "output_valid": False,
+        "framework": query_result[0][0].framework,
     }
