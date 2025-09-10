@@ -14,7 +14,6 @@ from ..test_helper import (
     USER_UUID,
     UUID_INVALID,
     DATETIME_TESTING,
-    MODEL_OBJ,
     SAMPLE_UUID,
 )
 from ..main import app
