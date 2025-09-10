@@ -511,6 +511,9 @@ class ModelTable(Base):
     )
     # version is unused. version is not currently supported. The webapp only knows about the name of the model and any usages of a model will only use the live version.
     version: Mapped[int] = mapped_column(Integer, default=0)
+    framework: Mapped[str | None] = mapped_column(
+        String(VAR_CHAR_STANDARD_LENGTH), nullable=False, default='sklearn'
+    )
 
     # Within a given institution, there should be no duplicated model names.
     __table_args__ = (UniqueConstraint("name", "inst_id", name="model_name_inst_uc"),)
