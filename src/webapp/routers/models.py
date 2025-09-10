@@ -96,6 +96,7 @@ class ModelCreationRequest(BaseModel):
     # valid = False, means the model is not ready for use.
     valid: bool = False
     schema_configs: list[list[SchemaConfigObj]]
+    framework: str
 
 
 class ModelInfo(BaseModel):
