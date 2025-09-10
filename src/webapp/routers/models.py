@@ -215,7 +215,7 @@ def create_model(
             created_by=str_to_uuid(current_user.user_id),
             valid=req.valid,
             schema_configs=jsonpickle.encode(req.schema_configs),
-            framework=f if (f := (req.framework or "").strip().lower()) in {"sklearn","h20"} else "sklearn"
+            framework=f if (f := (req.framework or "").strip().lower()) in {"sklearn","h20"} else "sklearn",
         )
         local_session.get().add(model)
         local_session.get().commit()
@@ -253,6 +253,7 @@ def create_model(
         "created_by": uuid_to_str(query_result[0][0].created_by),
         "deleted": query_result[0][0].deleted,
         "valid": query_result[0][0].valid,
+        "framework": query_result[0][0].framework,
     }
 
 
