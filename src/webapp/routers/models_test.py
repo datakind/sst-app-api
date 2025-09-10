@@ -338,6 +338,7 @@ def test_create_model(client: TestClient):
         json={
             "name": "my_model",
             "schema_configs": [[schema_config_1, schema_config_2]],
+            "framework": "h2o",
         },
     )
 
