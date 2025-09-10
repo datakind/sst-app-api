@@ -192,9 +192,9 @@ class DatabricksControl(BaseModel):
 
         db_inst_name = databricksify_inst_name(req.inst_name)
 
-        if req.framework == "sklearn":
+        if req.model_type == "sklearn":
             pipeline_type = PDP_INFERENCE_JOB_NAME
-        elif req.framework == "h20":
+        elif req.model_type == "h20":
             pipeline_type = PDP_H2O_INFERENCE_JOB_NAME
         else:
             raise ValueError(
@@ -228,7 +228,7 @@ class DatabricksControl(BaseModel):
                     ],  # is this value the same PER environ? dev/staging/prod
                     "gcp_bucket_name": req.gcp_external_bucket_name,
                     "model_name": req.model_name,
-                    "model_type": req.framework,
+                    "model_type": req.model_type,
                     "notification_email": req.email,
                 },
             )
