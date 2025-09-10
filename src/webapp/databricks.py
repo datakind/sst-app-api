@@ -194,7 +194,7 @@ class DatabricksControl(BaseModel):
 
         if req.model_type == "sklearn":
             pipeline_type = PDP_INFERENCE_JOB_NAME
-        elif req.model_type == "h20":
+        elif req.model_type == "h2o":
             pipeline_type = PDP_H2O_INFERENCE_JOB_NAME
         else:
             raise ValueError(
