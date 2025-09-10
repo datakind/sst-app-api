@@ -2,6 +2,7 @@
 
 import uuid
 from unittest import mock
+from typing import Any
 import pytest
 import jsonpickle
 from fastapi.testclient import TestClient
@@ -50,32 +51,32 @@ RUN_ID = 123
 
 
 # TODO plumb through schema configs
-def same_model_orderless(a_elem: ModelInfo, b_elem: ModelInfo):
+def same_model_orderless(a_elem: ModelInfo, b_elem: ModelInfo) -> bool:
     """Check ModelInfo equality without order."""
     if (
-        a_elem["inst_id"] != b_elem["inst_id"]
-        or a_elem["name"] != b_elem["name"]
-        or a_elem["m_id"] != b_elem["m_id"]
-        or a_elem["valid"] != b_elem["valid"]
-        or a_elem["deleted"] != b_elem["deleted"]
+        a_elem.inst_id != b_elem.inst_id
+        or a_elem.name != b_elem.name
+        or a_elem.m_id != b_elem.m_id
+        or a_elem.valid != b_elem.valid
+        or a_elem.deleted != b_elem.deleted
     ):
         return False
     return True
 
 
-def same_run_info_orderless(a_elem: RunInfo, b_elem: RunInfo):
+def same_run_info_orderless(a_elem: RunInfo, b_elem: RunInfo) -> bool:
     """Check RunInfo equality without order."""
     if (
-        a_elem["inst_id"] != b_elem["inst_id"]
-        or a_elem["m_name"] != b_elem["m_name"]
-        or a_elem["run_id"] != b_elem["run_id"]
-        or a_elem["created_by"] != b_elem["created_by"]
-        or a_elem["triggered_at"] != b_elem["triggered_at"]
-        or a_elem["output_filename"] != b_elem["output_filename"]
-        or a_elem["output_valid"] != b_elem["output_valid"]
-        or a_elem["err_msg"] != b_elem["err_msg"]
-        or a_elem["batch_name"] != b_elem["batch_name"]
-        or a_elem["completed"] != b_elem["completed"]
+        a_elem.inst_id != b_elem.inst_id
+        or a_elem.m_name != b_elem.m_name
+        or a_elem.run_id != b_elem.run_id
+        or a_elem.created_by != b_elem.created_by
+        or a_elem.triggered_at != b_elem.triggered_at
+        or a_elem.output_filename != b_elem.output_filename
+        or a_elem.output_valid != b_elem.output_valid
+        or a_elem.err_msg != b_elem.err_msg
+        or a_elem.batch_name != b_elem.batch_name
+        or a_elem.completed != b_elem.completed
     ):
         return False
     return True
@@ -200,7 +201,7 @@ def session_fixture():
 
 
 @pytest.fixture(name="client")
-def client_fixture(session: sqlalchemy.orm.Session):
+def client_fixture(session: sqlalchemy.orm.Session) -> Any:
     """Unit test mocks setup."""
 
     def get_session_override():
@@ -226,26 +227,25 @@ def client_fixture(session: sqlalchemy.orm.Session):
     app.dependency_overrides.clear()
 
 
-def test_read_inst_models(client: TestClient):
+def test_read_inst_models(client: TestClient) -> None:
     """Test GET /institutions/345/models."""
     response = client.get(
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/models"
     )
     assert response.status_code == 200
     assert same_model_orderless(
-        response.json()[0],
-        {
-            "created_by": "",
-            "deleted": None,
-            "inst_id": "1d7c75c33eda42949c6675ea8af97b55",
-            "m_id": "e4862c62829440d8ab4c9c298f02f619",
-            "name": "sample_model_for_school_1",
-            "valid": True,
-        },
+        ModelInfo(**response.json()[0]),
+        ModelInfo(
+            m_id="e4862c62829440d8ab4c9c298f02f619",
+            name= "sample_model_for_school_1",
+            inst_id= "1d7c75c33eda42949c6675ea8af97b55",
+            deleted= None,
+            valid= True,
+        ),
     )
 
 
-def test_read_inst_model(client: TestClient):
+def test_read_inst_model(client: TestClient) -> None:
     """Test GET /institutions/345/models/10. For various user access types."""
     # Unauthorized cases.
     response_unauth = client.get(
@@ -266,10 +266,17 @@ def test_read_inst_model(client: TestClient):
         + "/models/sample_model_for_school_1"
     )
     assert response.status_code == 200
-    assert same_model_orderless(response.json(), MODEL_OBJ)
+    assert same_model_orderless(response.json(),
+        ModelInfo(
+            deleted= None,
+            inst_id= "1d7c75c33eda42949c6675ea8af97b55",
+            m_id="e4862c62829440d8ab4c9c298f02f619",
+            name="sample_model_for_school_1",
+            valid=True,
+        ))
 
 
-def test_read_inst_model_outputs(client: TestClient):
+def test_read_inst_model_outputs(client: TestClient) -> None:
     """Test GET /institutions/345/models/10/output."""
     MOCK_STORAGE.list_blobs_in_folder.return_value = []
     # Authorized.
@@ -281,22 +288,20 @@ def test_read_inst_model_outputs(client: TestClient):
     assert response.status_code == 200
     assert same_run_info_orderless(
         response.json()[0],
-        {
-            "batch_name": "batch_foo",
-            "completed": True,
-            "created_by": "0ad8b77c49fb459a84b18d2c05722c4a",
-            "err_msg": None,
-            "inst_id": "1d7c75c33eda42949c6675ea8af97b55",
-            "m_name": "sample_model_for_school_1",
-            "output_filename": "file_output_one",
-            "output_valid": False,
-            "run_id": 123,
-            "triggered_at": "2024-12-24T20:22:20.132022",
-        },
+        RunInfo(
+            batch_name="batch_foo",
+            created_by="0ad8b77c49fb459a84b18d2c05722c4a",
+            err_msg=None,
+            inst_id="1d7c75c33eda42949c6675ea8af97b55",
+            m_name="sample_model_for_school_1",
+            output_filename="file_output_one",
+            output_valid=False,
+            run_id=123,
+        ),
     )
 
 
-def test_read_inst_model_output(client: TestClient):
+def test_read_inst_model_output(client: TestClient) -> None:
     """Test GET /institutions/345/models/10/output/1."""
     # Authorized.
     response = client.get(
@@ -308,22 +313,21 @@ def test_read_inst_model_output(client: TestClient):
     assert response.status_code == 200
     assert same_run_info_orderless(
         response.json(),
-        {
-            "batch_name": "batch_foo",
-            "completed": True,
-            "created_by": "0ad8b77c49fb459a84b18d2c05722c4a",
-            "err_msg": None,
-            "inst_id": "1d7c75c33eda42949c6675ea8af97b55",
-            "m_name": "sample_model_for_school_1",
-            "output_filename": "file_output_one",
-            "output_valid": False,
-            "run_id": 123,
-            "triggered_at": "2024-12-24T20:22:20.132022",
-        },
+        RunInfo(
+            batch_name="batch_foo",
+            completed=True,
+            created_by="0ad8b77c49fb459a84b18d2c05722c4a",
+            err_msg=None,
+            inst_id="1d7c75c33eda42949c6675ea8af97b55",
+            m_name="sample_model_for_school_1",
+            output_filename="file_output_one",
+            output_valid=False,
+            run_id=123,
+        ),
     )
 
 
-def test_create_model(client: TestClient):
+def test_create_model(client: TestClient) -> None:
     """Depending on timeline, fellows may not get to this."""
     schema_config_1 = {
         "schema_type": SchemaType.COURSE,
@@ -345,7 +349,7 @@ def test_create_model(client: TestClient):
     assert response.status_code == 200
 
 
-def test_trigger_inference_run(client: TestClient):
+def test_trigger_inference_run(client: TestClient) -> None:
     """Depending on timeline, fellows may not get to this."""
     MOCK_DATABRICKS.run_pdp_inference.return_value = DatabricksInferenceRunResponse(
         job_run_id=123

@@ -2,7 +2,7 @@
 
 import uuid
 import re
-from typing import Annotated, Final, Any, Optional
+from typing import Annotated, Final, Any, Optional, Tuple, Union
 from urllib.parse import unquote
 from strenum import StrEnum  # needed for python pre 3.11
 import jwt
@@ -215,7 +215,7 @@ class BaseUser(BaseModel):
         return False
 
 
-def get_user(sess: Session, username: str) -> BaseUser:
+def get_user(sess: Session, username: str) -> Optional[BaseUser]:
     """Get user from a given username."""
     if username == "api_key_initial":
         return BaseUser(
@@ -226,17 +226,17 @@ def get_user(sess: Session, username: str) -> BaseUser:
         )
     if username.startswith("api_key_"):
         api_key_uuid = username.removeprefix("api_key_")
-        query_result = sess.execute(
+        apikey_query_result = sess.execute(
             select(ApiKeyTable).where(
                 ApiKeyTable.id == str_to_uuid(api_key_uuid),
             )
         ).all()
-        if len(query_result) == 0 or len(query_result) > 1:
+        if len(apikey_query_result) == 0 or len(apikey_query_result) > 1:
             return None
         return BaseUser(
-            usr=uuid_to_str(query_result[0][0].id),
-            inst=uuid_to_str(query_result[0][0].inst_id),
-            access=query_result[0][0].access_type,
+            usr=uuid_to_str(apikey_query_result[0][0].id),
+            inst=uuid_to_str(apikey_query_result[0][0].inst_id),
+            access=apikey_query_result[0][0].access_type,
             email=username,
         )
     query_result = sess.execute(
@@ -254,7 +254,7 @@ def get_user(sess: Session, username: str) -> BaseUser:
     )
 
 
-def authenticate_api_key(api_key_enduser_tuple: str, sess: Session) -> BaseUser:
+def authenticate_api_key(api_key_enduser_tuple: Tuple[str, Optional[str], Optional[str]], sess: Session) -> Union[BaseUser, bool]:
     """Authenticate an API key."""
     (key, inst, enduser) = api_key_enduser_tuple
     # Check if it's the initial API key. This doesn't have enduser or inst.
@@ -291,7 +291,7 @@ def authenticate_api_key(api_key_enduser_tuple: str, sess: Session) -> BaseUser:
                     user_query = select(AccountTable).where(
                         and_(
                             AccountTable.email == enduser,
-                            AccountTable.inst_id == uuid_to_str(inst),
+                            AccountTable.inst_id == inst,
                         )
                     )
                 user_result = sess.execute(user_query).all()
@@ -330,7 +330,7 @@ async def get_current_user(
         if not token_from_key:
             raise credentials_exception
         payload = jwt.decode(
-            token_from_key, env_vars["SECRET_KEY"], algorithms=env_vars["ALGORITHM"]
+            token_from_key, str(env_vars["SECRET_KEY"]), algorithms=env_vars["ALGORITHM"]
         )
         usrname = payload.get("sub")
         if usrname is None:
@@ -345,14 +345,14 @@ async def get_current_user(
 
 async def get_current_active_user(
     current_user: Annotated[BaseUser, Depends(get_current_user)],
-):
+) -> BaseUser:
     """Get the active user.."""
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
 
-def has_access_to_inst_or_err(inst: str, user: BaseUser):
+def has_access_to_inst_or_err(inst: str, user: BaseUser) -> None:
     """Raise error if a given user does not have access to a given institution."""
     if not user.has_access_to_inst(inst):
         raise HTTPException(
@@ -361,7 +361,7 @@ def has_access_to_inst_or_err(inst: str, user: BaseUser):
         )
 
 
-def has_full_data_access_or_err(user: BaseUser, resource_type: str):
+def has_full_data_access_or_err(user: BaseUser, resource_type: str) -> None:
     """Raise error if a given user does not have data access to a given institution."""
     if not user.has_full_data_access():
         raise HTTPException(
@@ -370,7 +370,7 @@ def has_full_data_access_or_err(user: BaseUser, resource_type: str):
         )
 
 
-def model_owner_and_higher_or_err(user: BaseUser, resource_type: str):
+def model_owner_and_higher_or_err(user: BaseUser, resource_type: str) -> None:
     """Raise error if a given user does not have model ownership or higher."""
     if not user.access_type or user.access_type not in (
         AccessType.MODEL_OWNER,
@@ -382,12 +382,12 @@ def model_owner_and_higher_or_err(user: BaseUser, resource_type: str):
         )
 
 
-def prepend_env_prefix(name: str) -> str:
+def prepend_env_prefix(name: str) -> Any:
     """Prepend the env prefix. At this point the value should not be empty as we checked on app startup."""
-    return env_vars["ENV"].lower() + "_" + name
+    return str(env_vars["ENV"]).lower() + "_" + name
 
 
-def uuid_to_str(uuid_val: uuid.UUID) -> str:
+def uuid_to_str(uuid_val: uuid.UUID) -> Any:
     """Convert UUID obj to string."""
     if uuid_val is None:
         return ""
@@ -399,12 +399,12 @@ def str_to_uuid(hex_str: Optional[str]) -> uuid.UUID:
     return uuid.UUID(hex_str)
 
 
-def get_external_bucket_name_from_uuid(inst_id: uuid.UUID) -> str:
+def get_external_bucket_name_from_uuid(inst_id: uuid.UUID) -> Any:
     """Get the GCP bucket name which has the env prepended taking in the UUID obj."""
     return prepend_env_prefix(uuid_to_str(inst_id))
 
 
-def get_external_bucket_name(inst_id: str) -> str:
+def get_external_bucket_name(inst_id: str) -> Any:
     """Get the GCP bucket name which has the env prepended taking in the uuid as str."""
     return prepend_env_prefix(inst_id)
 

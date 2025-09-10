@@ -1,7 +1,7 @@
 """API functions related to models."""
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 import jsonpickle
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -60,7 +60,7 @@ def check_file_types_valid_schema_configs(
     """Check that a list of files are valid for a given schema configuration."""
     for config in valid_schema_configs:
         found = True
-        map_file_to_schema_config_obj = {}
+        map_file_to_schema_config_obj: dict= {}
         for idx, s in enumerate(file_types):
             for c in config:
                 if c.schema_type in s:
@@ -552,7 +552,7 @@ def trigger_inference_run(
         model_name=model_name,
         gcp_external_bucket_name=get_external_bucket_name(inst_id),
         # The institution email to which pipeline success/failure notifications will get sent.
-        email=current_user.email,
+        email=cast(str, current_user.email),
         model_type=query_result[0][0].framework,
     )
     try:
