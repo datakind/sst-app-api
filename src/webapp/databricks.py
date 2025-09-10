@@ -35,7 +35,7 @@ MEDALLION_LEVELS = ["silver", "gold", "bronze"]
 
 # The name of the deployed pipeline in Databricks. Must match directly.
 PDP_INFERENCE_JOB_NAME = "github_sourced_pdp_inference_pipeline"
-
+PDP_H2O_INFERENCE_JOB_NAME = "github_sourced_pdp_h2o_inference_pipeline"
 
 class DatabricksInferenceRunRequest(BaseModel):
     """Databricks parameters for an inference run."""
@@ -192,8 +192,16 @@ class DatabricksControl(BaseModel):
 
         db_inst_name = databricksify_inst_name(req.inst_name)
 
+        if req.framework == "sklearn":
+            pipeline_type = PDP_INFERENCE_JOB_NAME
+        elif req.framework == "h20":
+            pipeline_type = PDP_H2O_INFERENCE_JOB_NAME
+        else:
+            raise ValueError(
+                f"Invalid model framework assigned to institution model"
+            )
         try:
-            job = next(w.jobs.list(name=PDP_INFERENCE_JOB_NAME), None)
+            job = next(w.jobs.list(name=pipeline_type), None)
             if not job or job.job_id is None:
                 raise ValueError(
                     f"run_pdp_inference(): Job '{PDP_INFERENCE_JOB_NAME}' was not found or has no job_id."
