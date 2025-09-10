@@ -2,7 +2,7 @@
 
 import uuid
 import re
-from typing import Annotated, Final, Any
+from typing import Annotated, Final, Any, Optional
 from urllib.parse import unquote
 from strenum import StrEnum  # needed for python pre 3.11
 import jwt
@@ -394,7 +394,7 @@ def uuid_to_str(uuid_val: uuid.UUID) -> str:
     return uuid_val.hex
 
 
-def str_to_uuid(hex_str: str) -> uuid.UUID:
+def str_to_uuid(hex_str: Optional[str]) -> uuid.UUID:
     """Convert str to UUID obj (database needs UUID obj)."""
     return uuid.UUID(hex_str)
 
