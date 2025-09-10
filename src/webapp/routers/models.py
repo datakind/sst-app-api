@@ -570,7 +570,7 @@ def trigger_inference_run(
         batch_name=req.batch_name,
         model_id=query_result[0][0].id,
         output_valid=False,
-        model_type=query_result[0][0].framework,
+        framework=query_result[0][0].framework,
     )
     local_session.get().add(job)
     return {
