@@ -297,7 +297,8 @@ def test_read_inst_model_outputs(client: TestClient) -> None:
         output_valid=False,
         run_id=123,
     )
-    assert same_model_orderless(response_model, expected_model)
+    assert same_run_info_orderless(response_model, expected_model)
+
 
 
 def test_read_inst_model_output(client: TestClient) -> None:
