@@ -313,7 +313,7 @@ def test_read_inst_model_output(client: TestClient) -> None:
         + str(RUN_ID)
     )
     assert response.status_code == 200
-    response_model = RunInfo(response.json())
+    response_model = RunInfo(**response.json())
     expected_model = RunInfo(
             batch_name="batch_foo",
             completed=True,
