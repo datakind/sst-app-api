@@ -103,9 +103,7 @@ class DatabricksControl(BaseModel):
                 w.schemas.create(name=f"{db_inst_name}_{medallion}", catalog_name=cat_name)
             except Exception as e:
                 LOGGER.exception(
-                    f"Failed to provision schemas in databricks for {db_inst_name}_{medallion}: {e}",
-                    databricks_vars["DATABRICKS_HOST_URL"],
-                    gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+                    f"Failed to provision schemas in databricks for {db_inst_name}_{medallion}: {e}"
                 )
                 raise ValueError(f"setup_new_inst(): Failed to provision schemas in databricks for {db_inst_name}_{medallion}: {e}")
             LOGGER.info(
