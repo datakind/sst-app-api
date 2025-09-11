@@ -504,6 +504,7 @@ def create_batch(
         )
         f_names = [] if not req.file_names else req.file_names
         f_ids = [] if not req.file_ids else strs_to_uuids(req.file_ids)
+        print(f"File names: {f_names}, File Ids: {f_ids}")
         # Check that the files requested for this batch exists.
         # Only valid non-sst generated files can be added to a batch at creation time.
         query_result_files = (
