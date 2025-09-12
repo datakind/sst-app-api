@@ -198,7 +198,9 @@ def validate_dataset(
         df = pd.read_csv(filename, encoding=enc)
     except UnicodeDecodeError as ex:
         # extremely rare: sample passed but full file fails
-        raise HardValidationError(schema_errors="decode_error", failure_cases=[f"{enc}: {ex}"])
+        raise HardValidationError(
+            schema_errors="decode_error", failure_cases=[f"{enc}: {ex}"]
+        )
 
     df = df.rename(columns={c: normalize_col(c) for c in df.columns})
     incoming = set(df.columns)
