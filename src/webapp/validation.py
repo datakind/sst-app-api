@@ -155,6 +155,37 @@ def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
     return DataFrameSchema(columns, strict=False)
 
 
+def sniff_encoding(path: str, sample_bytes: int = 1_048_576) -> str:
+    """
+    Return a best-guess encoding using BOM detection + trial decode on a small sample.
+    Prefers utf-8-sig for BOMmed utf-8 to avoid \ufeff in headers.
+    """
+    with open(path, "rb") as f:
+        chunk = f.read(sample_bytes)
+
+    # BOM checks first
+    if chunk.startswith(b"\xef\xbb\xbf"):
+        return "utf-8-sig"
+    if chunk.startswith(b"\xff\xfe\x00\x00"):
+        return "utf-32le"
+    if chunk.startswith(b"\x00\x00\xfe\xff"):
+        return "utf-32be"
+    if chunk.startswith(b"\xff\xfe"):
+        return "utf-16le"
+    if chunk.startswith(b"\xfe\xff"):
+        return "utf-16be"
+
+    # Try utf-8 (strict) on sample; if it works, it will work for the file
+    try:
+        chunk.decode("utf-8")
+        return "utf-8"
+    except UnicodeDecodeError:
+        pass
+
+    # Last resort: latin-1 (will not fail, but log later if you want)
+    return "latin1"
+
+
 def validate_dataset(
     filename: str,
     base_schema: dict,
@@ -162,15 +193,12 @@ def validate_dataset(
     models: Union[str, List[str], None] = None,
     institution_id: str = "pdp",
 ) -> Dict[str, Any]:
-    read_errs = []
-    for enc in ("utf-8", "utf-8-sig", "latin1"):
-        try:
-            df = pd.read_csv(filename, encoding=enc)
-            break
-        except UnicodeDecodeError as ex:
-            read_errs.append(f"{enc}: {ex}")
-    else:
-        raise HardValidationError(schema_errors="decode_error", failure_cases=read_errs)
+    enc = sniff_encoding(filename)
+    try:
+        df = pd.read_csv(filename, encoding=enc)
+    except UnicodeDecodeError as ex:
+        # extremely rare: sample passed but full file fails
+        raise HardValidationError(schema_errors="decode_error", failure_cases=[f"{enc}: {ex}"])
 
     df = df.rename(columns={c: normalize_col(c) for c in df.columns})
     incoming = set(df.columns)
