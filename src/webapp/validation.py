@@ -6,7 +6,7 @@ import io
 import os
 import json
 import re
-from typing import Union, List, Dict, Optional, Any
+from typing import Union, List, Dict, Optional, Any, BinaryIO, cast
 import logging
 
 import pandas as pd
@@ -155,13 +155,18 @@ def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
     return DataFrameSchema(columns, strict=False)
 
 
-Src = Union[str, os.PathLike, io.BufferedIOBase, io.TextIOWrapper]
+Src = Union[str, os.PathLike[str], BinaryIO, io.TextIOWrapper]
 
 
-def sniff_encoding(
-    src: Src,
-    sample_bytes: int = 1_048_576,
-) -> str:
+def _read_sample(buf: BinaryIO, n: int) -> bytes:
+    pos = buf.tell() if buf.seekable() else None
+    chunk = buf.read(n)  # -> bytes for BinaryIO
+    if pos is not None:
+        buf.seek(pos)
+    return chunk
+
+
+def sniff_encoding(src: Src, sample_bytes: int = 1_048_576) -> str:
     """
     Best-guess encoding via BOM detection + utf-8 trial.
     Works with a filesystem path, a binary stream, or a TextIOWrapper.
@@ -170,25 +175,13 @@ def sniff_encoding(
     # --- read a small binary sample ---
     if isinstance(src, (str, os.PathLike)):
         with open(src, "rb") as f:
-            chunk = f.read(sample_bytes)
+            chunk: bytes = f.read(sample_bytes)
     elif isinstance(src, io.TextIOWrapper):
-        # Text wrapper => use underlying binary buffer (mypy-safe)
-        buf = src.buffer
-        pos = buf.tell() if buf.seekable() else None
-        chunk = buf.read(sample_bytes)
-        if pos is not None:
-            buf.seek(pos)
-    elif isinstance(src, io.BufferedIOBase):
-        # Already binary
-        buf = src
-        pos = buf.tell() if buf.seekable() else None
-        chunk = buf.read(sample_bytes)
-        if pos is not None:
-            buf.seek(pos)
+        # Text wrapper => use underlying binary buffer, cast to BinaryIO for mypy
+        chunk = _read_sample(cast(BinaryIO, src.buffer), sample_bytes)
     else:
-        raise TypeError(
-            "sniff_encoding expects path, io.TextIOWrapper, or binary buffer"
-        )
+        # Already a binary stream
+        chunk = _read_sample(cast(BinaryIO, src), sample_bytes)
 
     # --- BOMs first ---
     if chunk.startswith(b"\xef\xbb\xbf"):
