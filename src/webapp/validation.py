@@ -2,11 +2,10 @@
 pipelines, this is for general file validation.)
 """
 
-from typing import Any
-
+import io, os
 import json
 import re
-from typing import Union, List, Dict, Optional
+from typing import Union, List, Dict, Optional, Any
 import logging
 
 import pandas as pd
@@ -155,15 +154,34 @@ def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
     return DataFrameSchema(columns, strict=False)
 
 
-def sniff_encoding(path: str, sample_bytes: int = 1_048_576) -> str:
+def sniff_encoding(
+    src: Union[str, os.PathLike, io.IOBase], sample_bytes: int = 1_048_576
+) -> str:
     """
-    Return a best-guess encoding using BOM detection + trial decode on a small sample.
-    Prefers utf-8-sig for BOMmed utf-8 to avoid \ufeff in headers.
+    Return best-guess encoding using BOM detection + utf-8 trial decode.
+    Accepts path or file-like. Restores stream position if seekable.
+    If utf-8 fails, raises UnicodeError.
     """
-    with open(path, "rb") as f:
-        chunk = f.read(sample_bytes)
+    # --- read small binary sample ---
+    if isinstance(src, (str, os.PathLike)):
+        with open(src, "rb") as f:
+            chunk = f.read(sample_bytes)
+    else:
+        buf = src.buffer if isinstance(src, io.TextIOBase) else src
+        pos = None
+        try:
+            if buf.seekable():
+                pos = buf.tell()
+        except Exception:
+            pass
+        chunk = buf.read(sample_bytes)
+        if pos is not None:
+            try:
+                buf.seek(pos)
+            except Exception:
+                pass
 
-    # BOM checks first
+    # --- BOMs first ---
     if chunk.startswith(b"\xef\xbb\xbf"):
         return "utf-8-sig"
     if chunk.startswith(b"\xff\xfe\x00\x00"):
@@ -175,14 +193,15 @@ def sniff_encoding(path: str, sample_bytes: int = 1_048_576) -> str:
     if chunk.startswith(b"\xfe\xff"):
         return "utf-16be"
 
-    # Try utf-8 (strict) on sample; if it works, it will work for the file
+    # --- utf-8 strict on sample ---
     try:
         chunk.decode("utf-8")
         return "utf-8"
     except UnicodeDecodeError:
-        pass
-
-    return "latin1"
+        raise UnicodeError(
+            "file is not UTF-8/UTF-16/UTF-32; "
+            "re-export as UTF-8 (with or without BOM)."
+        )
 
 
 def validate_dataset(
