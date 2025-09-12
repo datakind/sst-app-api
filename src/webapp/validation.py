@@ -211,14 +211,19 @@ def validate_dataset(
     models: Union[str, List[str], None] = None,
     institution_id: str = "pdp",
 ) -> Dict[str, Any]:
-    enc = sniff_encoding(filename)
     try:
-        df = pd.read_csv(filename, encoding=enc)
-    except UnicodeDecodeError as ex:
-        # extremely rare: sample passed but full file fails
-        raise HardValidationError(
-            schema_errors="decode_error", failure_cases=[f"{enc}: {ex}"]
-        )
+        enc = sniff_encoding(filename)  # latin-1 is NOT allowed by default
+    except UnicodeError as ex:
+        raise HardValidationError(schema_errors="decode_error", failure_cases=[str(ex)])
+
+    # ensure a file-like starts at beginning, then one real read
+    if hasattr(filename, "seek"):
+        try:
+            filename.seek(0)
+        except Exception:
+            pass
+
+    df = pd.read_csv(filename, encoding=enc)
 
     df = df.rename(columns={c: normalize_col(c) for c in df.columns})
     incoming = set(df.columns)
