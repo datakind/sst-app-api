@@ -182,7 +182,6 @@ def sniff_encoding(path: str, sample_bytes: int = 1_048_576) -> str:
     except UnicodeDecodeError:
         pass
 
-    # Last resort: latin-1 (will not fail, but log later if you want)
     return "latin1"
 
 
