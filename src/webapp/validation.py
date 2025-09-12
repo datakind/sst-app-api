@@ -200,8 +200,7 @@ def sniff_encoding(
         return "utf-8"
     except UnicodeDecodeError:
         raise UnicodeError(
-            "file is not UTF-8/UTF-16/UTF-32; "
-            "re-export as UTF-8 (with or without BOM)."
+            "file is not UTF-8/UTF-16/UTF-32; re-export as UTF-8 (with or without BOM)."
         )
 
 
