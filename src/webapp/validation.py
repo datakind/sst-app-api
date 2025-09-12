@@ -2,7 +2,8 @@
 pipelines, this is for general file validation.)
 """
 
-import io, os
+import io
+import os
 import json
 import re
 from typing import Union, List, Dict, Optional, Any
