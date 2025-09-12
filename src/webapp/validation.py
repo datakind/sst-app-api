@@ -155,32 +155,40 @@ def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
     return DataFrameSchema(columns, strict=False)
 
 
+Src = Union[str, os.PathLike, io.BufferedIOBase, io.TextIOWrapper]
+
+
 def sniff_encoding(
-    src: Union[str, os.PathLike, io.IOBase], sample_bytes: int = 1_048_576
+    src: Src,
+    sample_bytes: int = 1_048_576,
 ) -> str:
     """
-    Return best-guess encoding using BOM detection + utf-8 trial decode.
-    Accepts path or file-like. Restores stream position if seekable.
-    If utf-8 fails, raises UnicodeError.
+    Best-guess encoding via BOM detection + utf-8 trial.
+    Works with a filesystem path, a binary stream, or a TextIOWrapper.
+    Restores stream position if seekable. Raises if latin-1 would be used (by default).
     """
-    # --- read small binary sample ---
+    # --- read a small binary sample ---
     if isinstance(src, (str, os.PathLike)):
         with open(src, "rb") as f:
             chunk = f.read(sample_bytes)
-    else:
-        buf = src.buffer if isinstance(src, io.TextIOBase) else src
-        pos = None
-        try:
-            if buf.seekable():
-                pos = buf.tell()
-        except Exception:
-            pass
+    elif isinstance(src, io.TextIOWrapper):
+        # Text wrapper => use underlying binary buffer (mypy-safe)
+        buf = src.buffer
+        pos = buf.tell() if buf.seekable() else None
         chunk = buf.read(sample_bytes)
         if pos is not None:
-            try:
-                buf.seek(pos)
-            except Exception:
-                pass
+            buf.seek(pos)
+    elif isinstance(src, io.BufferedIOBase):
+        # Already binary
+        buf = src
+        pos = buf.tell() if buf.seekable() else None
+        chunk = buf.read(sample_bytes)
+        if pos is not None:
+            buf.seek(pos)
+    else:
+        raise TypeError(
+            "sniff_encoding expects path, io.TextIOWrapper, or binary buffer"
+        )
 
     # --- BOMs first ---
     if chunk.startswith(b"\xef\xbb\xbf"):
@@ -200,7 +208,7 @@ def sniff_encoding(
         return "utf-8"
     except UnicodeDecodeError:
         raise UnicodeError(
-            "file is not UTF-8/UTF-16/UTF-32; re-export as UTF-8 (with or without BOM)."
+            "file is not UTF-8/UTF-16/UTF-32; please re-export as UTF-8."
         )
 
 
