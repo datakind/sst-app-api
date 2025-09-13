@@ -1,14 +1,10 @@
-import io
-import os
-import json
 import re
 import logging
 from functools import lru_cache
-from typing import Union, List, Dict, Optional, Any, BinaryIO, cast, Tuple
+from typing import List, Dict, Any, Tuple
 
 import pandas as pd
 from pandera import Column, Check, DataFrameSchema
-from pandera.errors import SchemaErrors
 
 logger = logging.getLogger(__name__)
 
