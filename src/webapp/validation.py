@@ -452,7 +452,6 @@ def validate_dataset(
     engine = "c"
     try:
         import pyarrow  # noqa: F401
-
         engine = "pyarrow"
     except Exception:
         pass
