@@ -477,7 +477,7 @@ def validate_dataset(
     # If we used the pyarrow engine, perform datetime parsing post-read (keeps accuracy)
     if engine == "pyarrow" and parse_dates_canons:
         for canon in parse_dates_canons:
-            raw = canon_to_raw.get(canon)
+            raw = str(canon_to_raw.get(canon))
             if raw and raw in df.columns:
                 # coerce invalids to NaT; Pandera will flag according to nullability/checks
                 df[raw] = pd.to_datetime(df[raw], errors="coerce")
