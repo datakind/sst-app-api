@@ -387,16 +387,16 @@ def validate_dataset(
       4) Selective, typed read via pandas (skip unused columns)
       5) Fail-fast validation for required columns; collect soft errors for optional
     """
-    # --- 1) encoding ---
+    # ---------------------------- 1) Encoding
     try:
-        enc = sniff_encoding(filename)  # latin-1 NOT allowed by default
+        enc = sniff_encoding(filename)
     except UnicodeError as ex:
         raise HardValidationError(schema_errors="decode_error", failure_cases=[str(ex)])
 
     # Ensure both header and full reads start at the beginning for file-like handles
     _reset_to_start_if_possible(filename)
 
-    # --- 2) merge requested models ---
+    # ---------------------------- 2) merge requested models
     if models is None:
         model_list: List[str] = []
     elif isinstance(models, str):
@@ -418,7 +418,7 @@ def validate_dataset(
             "unknown_extra_columns": [],
         }
 
-    # --- 3) HEADER-ONLY PASS ---
+    # ----------------------------  3) HEADER-ONLY PASS
     raw_cols, raw_to_canon, missing_required, missing_optional, unknown_extra = (
         _header_pass(filename, enc, merged_specs, fuzzy_threshold=90)
     )
@@ -447,13 +447,22 @@ def validate_dataset(
     }
     parse_dates_raw = [canon_to_raw[c] for c in parse_dates_canons if c in canon_to_raw]
 
-    # --- 4) Selective, typed read ---
+    # ---------------------------- 4) Selective, typed read
     # Default to fast C engine; try pyarrow if available.
     engine = "c"
+    use_threads = None  # only meaningful for pyarrow engine
+    dtype_backend = None
+
     try:
         import pyarrow  # noqa: F401
 
         engine = "pyarrow"
+        use_threads = True  # multi-threaded CSV parsing
+        # pandas>=2.0 can store DataFrame blocks as Arrow arrays (often faster)
+        try:
+            dtype_backend = "pyarrow"
+        except TypeError:
+            dtype_backend = None
     except Exception:
         pass
 
@@ -462,11 +471,12 @@ def validate_dataset(
         usecols=raw_usecols,
         dtype=raw_dtype_map or None,
         engine=engine,
+        dtype_backend=dtype_backend,  # ignored if None / not supported
+        use_threads=use_threads,  # ignored by C engine
     )
     # memory_map works for path-like with the C engine
     if engine == "c" and isinstance(filename, (str, os.PathLike)):
         read_kwargs["memory_map"] = True
-        # only C engine supports parse_dates consistently across versions
         if parse_dates_raw:
             read_kwargs["parse_dates"] = parse_dates_raw
 
@@ -485,7 +495,7 @@ def validate_dataset(
     # Rename raw headers -> canonical names exactly once
     df = df.rename(columns={raw: canon for canon, raw in canon_to_raw.items()})
 
-    # --- 5) Validation: required fail-fast, optional lazy (collect soft errors) ---
+    # ---------------------------- 5) Validation: required fail-fast, optional lazy (collect soft errors)
     required_canons = [
         c for c in present_canons if merged_specs[c].get("required", False)
     ]
