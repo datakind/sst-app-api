@@ -283,18 +283,6 @@ def validate_dataset(
         memory_map=True,  # often helps on local/posix filesystems
         engine="c",  # default fast path; keep behavior stable
     )
-    # optional speed-up if pyarrow is available; behavior stays correct
-    try:
-        import pyarrow  # noqa: F401
-
-        read_kwargs["engine"] = "pyarrow"
-        # pandas>=2: dtype_backend speeds strings/ints; ignore if not supported
-        try:
-            read_kwargs["dtype_backend"] = "pyarrow"
-        except TypeError:
-            pass
-    except Exception:
-        pass
 
     df = pd.read_csv(
         filename, **{k: v for k, v in read_kwargs.items() if v is not None}
