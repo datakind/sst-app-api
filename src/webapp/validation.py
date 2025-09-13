@@ -180,7 +180,7 @@ def _reset_to_start_if_possible(src: Src) -> None:
 
 
 def _spec_alias_lookup(
-    merged_specs: Dict[str, dict]
+    merged_specs: Dict[str, dict],
 ) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
     """
     Build:
@@ -296,7 +296,7 @@ def _header_pass(
 
 
 def _pandas_dtype_and_parse_dates(
-    merged_specs: Dict[str, dict]
+    merged_specs: Dict[str, dict],
 ) -> Tuple[Dict[str, Any], List[str]]:
     """
     Conservative mapping from spec dtype -> pandas read_csv dtype/parse_dates.
