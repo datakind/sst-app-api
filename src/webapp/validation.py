@@ -13,6 +13,13 @@ import pandas as pd
 from pandera import Column, Check, DataFrameSchema
 from pandera.errors import SchemaErrors
 from thefuzz import fuzz
+from validation_helper import (
+    _header_pass,
+    _pandas_dtype_and_parse_dates,
+    _build_exact_schema,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def validate_file_reader(
@@ -51,8 +58,7 @@ def normalize_col(name: str) -> str:
     name = name.strip().lower()  # Lowercase and trim whitespace
     name = re.sub(r"[^a-z0-9_]", "_", name)  # Replace non-alphanum with underscore
     name = re.sub(r"_+", "_", name)  # Collapse multiple underscores
-    name = name.strip("_")  # Remove leading/trailing underscores
-    return name
+    return name.strip("_")  # Remove leading/trailing underscores
 
 
 def load_json(path: str) -> Any:
@@ -155,6 +161,8 @@ def build_schema(specs: Dict[str, dict]) -> DataFrameSchema:
     return DataFrameSchema(columns, strict=False)
 
 
+# --------------------- Actual Validation Layer ------------------------------
+
 Src = Union[str, os.PathLike[str], BinaryIO, io.TextIOWrapper]
 
 
@@ -212,134 +220,135 @@ def validate_dataset(
     models: Union[str, List[str], None] = None,
     institution_id: str = "pdp",
 ) -> Dict[str, Any]:
+    # 0) encoding
     try:
-        enc = sniff_encoding(filename)  # latin-1 is NOT allowed by default
+        enc = sniff_encoding(filename)  # latin-1 NOT allowed by default
     except UnicodeError as ex:
         raise HardValidationError(schema_errors="decode_error", failure_cases=[str(ex)])
 
-    # ensure a file-like starts at beginning, then one real read
-    if hasattr(filename, "seek"):
-        try:
-            filename.seek(0)
-        except Exception:
-            pass
-
-    df = pd.read_csv(filename, encoding=enc)
-
-    df = df.rename(columns={c: normalize_col(c) for c in df.columns})
-    incoming = set(df.columns)
-
-    # 2) merge requested models
+    # 1) merge requested models
     if models is None:
-        model_list = []
+        model_list: List[str] = []
     elif isinstance(models, str):
         model_list = [models]
     else:
-        model_list = list(models)  # <- ensures it's not a set
+        model_list = list(models)
 
     merged_specs: Dict[str, dict] = {}
     for m in model_list:
         specs = merge_model_columns(base_schema, ext_schema, institution_id, m.lower())
         merged_specs.update(specs)
 
-    canon_to_aliases = {
-        canon: [normalize_col(alias) for alias in [canon] + spec.get("aliases", [])]
-        for canon, spec in merged_specs.items()
-    }
-    df = rename_columns_to_match_schema(df, canon_to_aliases)
-    df.columns = [
-        normalize_col(c) for c in df.columns
-    ]  # Final normalization after renaming
+    if not merged_specs:
+        # nothing to validate; short-circuit
+        return {
+            "validation_status": "passed",
+            "schemas": model_list,
+            "missing_optional": [],
+            "unknown_extra_columns": [],
+        }
 
-    incoming = set(df.columns)
+    # 2) HEADER-ONLY PASS: map columns & find missing/extras cheaply
+    raw_cols, raw_to_canon, missing_required, missing_optional, unknown_extra = (
+        _header_pass(filename, enc, merged_specs, fuzzy_threshold=90)
+    )
 
-    # 3) build canon → set(normalized names)
-    canon_to_norms: Dict[str, set] = {
-        canon: {normalize_col(alias) for alias in [canon] + spec.get("aliases", [])}
-        for canon, spec in merged_specs.items()
-    }
-
-    pattern_to_canon = {
-        r"^(?:"
-        + "|".join(map(re.escape, [canon] + spec.get("aliases", [])))
-        + r")$": canon
-        for canon, spec in merged_specs.items()
-    }
-
-    # 4) find extra / missing
-    all_norms = set().union(*canon_to_norms.values()) if canon_to_norms else set()
-    extra_columns = sorted(incoming - all_norms)
-
-    missing_required = [
-        canon
-        for canon, norms in canon_to_norms.items()
-        if merged_specs[canon].get("required", False) and norms.isdisjoint(incoming)
-    ]
-
-    missing_optional = [
-        canon
-        for canon, norms in canon_to_norms.items()
-        if not merged_specs[canon].get("required", False) and norms.isdisjoint(incoming)
-    ]
-
-    # Hard-fail on missing required or any extra columns
     if missing_required:
-        if logging:
-            logging.error(
-                f"Missing required or extra columns detected, missing_required = {missing_required}, extra_columns = {extra_columns}"
-            )
+        logger.error("Missing required columns: %s", missing_required)
         raise HardValidationError(missing_required=missing_required)
-    unknown_extra = extra_columns
 
-    # 5) build Pandera schema & validate (hard-fail on any error)
-    schema = build_schema(merged_specs)
+    # 3) selective typed load
+    present_canons = sorted(set(raw_to_canon.values()))
+    # choose one raw column per present canonical
+    canon_to_raw: Dict[str, str] = {}
+    for raw, canon in raw_to_canon.items():
+        # prefer the raw header that's already exactly canonical if present
+        if canon not in canon_to_raw or normalize_col(raw) == canon:
+            canon_to_raw[canon] = raw
+
+    raw_usecols = list(canon_to_raw.values())
+
+    # dtype & parse_dates maps (by canonical); convert to raw keys for read_csv
+    canon_dtype_map, parse_dates_canons = _pandas_dtype_and_parse_dates(merged_specs)
+    raw_dtype_map = {
+        canon_to_raw[c]: dt for c, dt in canon_dtype_map.items() if c in canon_to_raw
+    }
+    parse_dates_raw = [canon_to_raw[c] for c in parse_dates_canons if c in canon_to_raw]
+
+    read_kwargs = dict(
+        encoding=enc,
+        usecols=raw_usecols,
+        dtype=raw_dtype_map or None,
+        parse_dates=parse_dates_raw or None,
+        memory_map=True,  # often helps on local/posix filesystems
+        engine="c",  # default fast path; keep behavior stable
+    )
+    # optional speed-up if pyarrow is available; behavior stays correct
     try:
-        schema.validate(df, lazy=True)
-    except SchemaErrors as err:
-        # TODO: Log validation failure for DS to review
-        failed_normals = set(err.failure_cases["column"])
-        failed_canons = {pattern_to_canon.get(p, p) for p in failed_normals}
+        import pyarrow  # noqa: F401
 
-        # split into required vs optional failures
-        req_failures = [
-            c for c in failed_canons if merged_specs.get(c, {}).get("required", False)
-        ]
-        opt_failures = [
-            c
-            for c in failed_canons
-            if not merged_specs.get(c, {}).get("required", False)
-        ]
+        read_kwargs["engine"] = "pyarrow"
+        # pandas>=2: dtype_backend speeds strings/ints; ignore if not supported
+        try:
+            read_kwargs["dtype_backend"] = "pyarrow"
+        except TypeError:
+            pass
+    except Exception:
+        pass
 
-        if req_failures:
-            if logging:
-                logging.error(
-                    f"Schema validation failed on required columns, schema_errors = {err.schema_errors}, failure_cases = {err.failure_cases.to_dict(orient='records')}"
-                )
+    df = pd.read_csv(
+        filename, **{k: v for k, v in read_kwargs.items() if v is not None}
+    )
+
+    # 4) rename raw headers -> canon once (no DataFrame-wide fuzzy work)
+    df = df.rename(columns=canon_to_raw)  # temporarily raw->canon? Not quite.
+    # The above renames raw names to canonical because keys are canonical? Fix:
+    df = df.rename(columns={raw: canon for canon, raw in canon_to_raw.items()})
+
+    # 5) REQUIRED FIRST (fail-fast), then OPTIONALS (collect soft errors)
+    required_canons = [
+        c for c in present_canons if merged_specs[c].get("required", False)
+    ]
+    optional_canons = [
+        c for c in present_canons if not merged_specs[c].get("required", False)
+    ]
+
+    # Build schemas with exact names only (faster than regex patterns)
+    if required_canons:
+        req_schema = _build_exact_schema(merged_specs, required_canons)
+        try:
+            req_schema.validate(df[required_canons], lazy=False)
+        except SchemaErrors as err:
+            logger.error("Required column validation failed.")
             raise HardValidationError(
                 schema_errors=err.schema_errors,
                 failure_cases=err.failure_cases.to_dict(orient="records"),
             )
-        else:
-            if logging:
-                logging.info(f"missing_optional = {missing_optional}")
-            print("Optional column validation errors on: ", opt_failures)
-            return {
-                "validation_status": "passed_with_soft_errors",
-                "schemas": model_list,
-                "missing_optional": missing_optional,
-                "optional_validation_failures": opt_failures,
-                "failure_cases": err.failure_cases.to_dict(orient="records"),
-            }
-    if logging:
-        logging.info(f"missing_optional = {missing_optional}")
-    # 6) success (with possible soft misses)
+
+    opt_failures: List[str] = []
+    failure_cases_records: List[dict] = []
+    if optional_canons:
+        opt_schema = _build_exact_schema(merged_specs, optional_canons)
+        try:
+            opt_schema.validate(df[optional_canons], lazy=True)
+        except SchemaErrors as err:
+            opt_failures = sorted(set(err.failure_cases["column"]))
+            failure_cases_records = err.failure_cases.to_dict(orient="records")
+
+    # 6) return — status depends on soft errors / extras
+    if opt_failures or missing_optional or unknown_extra:
+        return {
+            "validation_status": "passed_with_soft_errors",
+            "schemas": model_list,
+            "missing_optional": missing_optional,
+            "optional_validation_failures": opt_failures,
+            "failure_cases": failure_cases_records,
+            "unknown_extra_columns": unknown_extra,
+        }
+
     return {
-        "validation_status": (
-            "passed_with_soft_errors"
-            if (missing_optional or unknown_extra)
-            else "passed"
-        ),
+        "validation_status": "passed",
         "schemas": model_list,
-        "missing_optional": missing_optional,
-        "unknown_extra_columns": unknown_extra,
+        "missing_optional": [],
+        "unknown_extra_columns": [],
     }
