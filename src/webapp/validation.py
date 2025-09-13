@@ -200,18 +200,21 @@ def _spec_alias_lookup(
 
 def _fuzzy_map_unresolved(
     unresolved: List[Tuple[str, str]],  # [(raw_header, normalized_header)]
-    choices: List[str],                 # normalized aliases
+    choices: List[str],  # normalized aliases
     alias2canon: Dict[str, str],
     threshold: int = 90,
-) -> Dict[str, str]:                    # raw_header -> canonical
+) -> Dict[str, str]:  # raw_header -> canonical
     """
     Fuzzy-match only the unresolved headers, using RapidFuzz if available, otherwise thefuzz.
     """
     mapping: Dict[str, str] = {}
     try:
         from rapidfuzz import process, fuzz as rf_fuzz  # type: ignore
+
         for raw, norm in unresolved:
-            hit = process.extractOne(norm, choices, scorer=rf_fuzz.ratio, score_cutoff=threshold)
+            hit = process.extractOne(
+                norm, choices, scorer=rf_fuzz.ratio, score_cutoff=threshold
+            )
             if hit:
                 best_alias, score, _ = hit
                 mapping[raw] = alias2canon[best_alias]  # type: ignore[index]
@@ -268,25 +271,33 @@ def _header_pass(
     # fuzzy match only for unresolved headers
     if unresolved:
         choices = list(known_aliases)
-        fuzzy_map = _fuzzy_map_unresolved(unresolved, choices, alias2canon, threshold=fuzzy_threshold)
+        fuzzy_map = _fuzzy_map_unresolved(
+            unresolved, choices, alias2canon, threshold=fuzzy_threshold
+        )
         raw_to_canon.update(fuzzy_map)
 
     incoming_canons = set(raw_to_canon.values())
     missing_required = [
-        c for c, spec in merged_specs.items()
+        c
+        for c, spec in merged_specs.items()
         if spec.get("required", False) and c not in incoming_canons
     ]
     missing_optional = [
-        c for c, spec in merged_specs.items()
+        c
+        for c, spec in merged_specs.items()
         if not spec.get("required", False) and c not in incoming_canons
     ]
     # normalized headers that remain unmapped and aren't known aliases
-    unknown_extra = sorted({norm for (_, norm) in unresolved if norm not in known_aliases})
+    unknown_extra = sorted(
+        {norm for (_, norm) in unresolved if norm not in known_aliases}
+    )
 
     return raw_cols, raw_to_canon, missing_required, missing_optional, unknown_extra
 
 
-def _pandas_dtype_and_parse_dates(merged_specs: Dict[str, dict]) -> Tuple[Dict[str, Any], List[str]]:
+def _pandas_dtype_and_parse_dates(
+    merged_specs: Dict[str, dict]
+) -> Tuple[Dict[str, Any], List[str]]:
     """
     Conservative mapping from spec dtype -> pandas read_csv dtype/parse_dates.
     Keeps behavior stable while avoiding heavy inference.
@@ -315,7 +326,9 @@ def _pandas_dtype_and_parse_dates(merged_specs: Dict[str, dict]) -> Tuple[Dict[s
     return dtype_map, parse_dates
 
 
-def _build_exact_schema(specs: Dict[str, dict], only_canons: List[str]) -> DataFrameSchema:
+def _build_exact_schema(
+    specs: Dict[str, dict], only_canons: List[str]
+) -> DataFrameSchema:
     """
     Build a Pandera schema with exact column names (no regex).
     This avoids regex matching overhead during validation.
@@ -327,7 +340,11 @@ def _build_exact_schema(specs: Dict[str, dict], only_canons: List[str]) -> DataF
         for chk in spec.get("checks", []):
             args = list(chk.get("args", []))
             # precompile regex patterns once
-            if chk["type"] in {"str_matches", "matches"} and args and isinstance(args[0], str):
+            if (
+                chk["type"] in {"str_matches", "matches"}
+                and args
+                and isinstance(args[0], str)
+            ):
                 args[0] = re.compile(args[0])
             # set-based membership for faster 'isin'
             if chk["type"] in {"isin", "is_in"} and args and isinstance(args[0], list):
@@ -402,8 +419,8 @@ def validate_dataset(
         }
 
     # --- 3) HEADER-ONLY PASS ---
-    raw_cols, raw_to_canon, missing_required, missing_optional, unknown_extra = _header_pass(
-        filename, enc, merged_specs, fuzzy_threshold=90
+    raw_cols, raw_to_canon, missing_required, missing_optional, unknown_extra = (
+        _header_pass(filename, enc, merged_specs, fuzzy_threshold=90)
     )
 
     if missing_required:
@@ -425,7 +442,9 @@ def validate_dataset(
 
     # dtype & parse_dates maps (by canonical) -> convert to raw keys for read_csv
     canon_dtype_map, parse_dates_canons = _pandas_dtype_and_parse_dates(merged_specs)
-    raw_dtype_map = {canon_to_raw[c]: dt for c, dt in canon_dtype_map.items() if c in canon_to_raw}
+    raw_dtype_map = {
+        canon_to_raw[c]: dt for c, dt in canon_dtype_map.items() if c in canon_to_raw
+    }
     parse_dates_raw = [canon_to_raw[c] for c in parse_dates_canons if c in canon_to_raw]
 
     # --- 4) Selective, typed read ---
@@ -433,6 +452,7 @@ def validate_dataset(
     engine = "c"
     try:
         import pyarrow  # noqa: F401
+
         engine = "pyarrow"
     except Exception:
         pass
@@ -450,7 +470,9 @@ def validate_dataset(
         if parse_dates_raw:
             read_kwargs["parse_dates"] = parse_dates_raw
 
-    df = pd.read_csv(filename, **{k: v for k, v in read_kwargs.items() if v is not None})
+    df = pd.read_csv(
+        filename, **{k: v for k, v in read_kwargs.items() if v is not None}
+    )
 
     # If we used the pyarrow engine, perform datetime parsing post-read (keeps accuracy)
     if engine == "pyarrow" and parse_dates_canons:
@@ -464,8 +486,12 @@ def validate_dataset(
     df = df.rename(columns={raw: canon for canon, raw in canon_to_raw.items()})
 
     # --- 5) Validation: required fail-fast, optional lazy (collect soft errors) ---
-    required_canons = [c for c in present_canons if merged_specs[c].get("required", False)]
-    optional_canons = [c for c in present_canons if not merged_specs[c].get("required", False)]
+    required_canons = [
+        c for c in present_canons if merged_specs[c].get("required", False)
+    ]
+    optional_canons = [
+        c for c in present_canons if not merged_specs[c].get("required", False)
+    ]
 
     # Build exact-name schemas (faster than regex)
     if required_canons:
