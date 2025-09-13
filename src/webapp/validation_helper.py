@@ -19,7 +19,7 @@ def normalize_col(name: str) -> str:
 
 
 def _spec_alias_lookup(
-    merged_specs: Dict[str, dict]
+    merged_specs: Dict[str, dict],
 ) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
     """
     Build fast lookups:
@@ -132,7 +132,7 @@ def _header_pass(
 
 
 def _pandas_dtype_and_parse_dates(
-    merged_specs: Dict[str, dict]
+    merged_specs: Dict[str, dict],
 ) -> Tuple[Dict[str, Any], List[str]]:
     """
     Best-effort mapping from your spec dtype -> pandas read_csv dtype/parse_dates.

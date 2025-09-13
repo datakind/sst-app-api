@@ -13,7 +13,7 @@ import pandas as pd
 from pandera import Column, Check, DataFrameSchema
 from pandera.errors import SchemaErrors
 from thefuzz import fuzz
-from validation_helper import (
+from .validation_helper import (
     _header_pass,
     _pandas_dtype_and_parse_dates,
     _build_exact_schema,
