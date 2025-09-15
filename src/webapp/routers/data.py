@@ -1033,143 +1033,225 @@ def validation_helper(
     storage_control: StorageControl,
     sql_session: Session,
 ) -> Any:
-    """Helper function for file validation."""
+    """Helper function for file validation (self-contained & optimized)."""
+    import time
+    import re
+    import os
+
+    # --- access check & quick input validation
     has_access_to_inst_or_err(inst_id, current_user)
-    if file_name.find("/") != -1:
-        raise HTTPException(
-            status_code=422,
-            detail="File name can't contain '/'.",
-        )
+    if "/" in file_name:
+        raise HTTPException(status_code=422, detail="File name can't contain '/'.")
+
+    # --- bind session once
     local_session.set(sql_session)
+    sess = local_session.get()
 
-    allowed_schemas = None
-    if not allowed_schemas:
-        allowed_schemas = infer_models_from_filename(file_name)
+    # --- one-time initialization on the function object (kept in-process)
+    if not hasattr(validation_helper, "_ar_re"):
+        validation_helper._ar_re = re.compile(
+            r"(?<![A-Za-z0-9])ar(?![A-Za-z0-9])", re.IGNORECASE
+        )
+    if not hasattr(validation_helper, "_base_cache"):
+        # {"exp": <monotonic expiry>, "val": (<schema_id>, <json_doc>)}
+        validation_helper._base_cache = {"exp": 0.0, "val": None}
+    if not hasattr(validation_helper, "_ext_cache"):
+        # { str(inst_uuid): (exp, extension_json_doc) }
+        validation_helper._ext_cache = {}
+    if not hasattr(validation_helper, "_pdp_cache"):
+        # PDP-wide extension (active), cached: (exp, doc)
+        validation_helper._pdp_cache = (0.0, None)
 
-    inferred_schemas: list[str] = []
-    # ----------------------- Fetch base schema from DB -------------------------------
-    base_schema = (
-        local_session.get()
-        .execute(
+    AR_RE = validation_helper._ar_re
+    BASE_TTL = 300  # seconds
+    EXT_TTL = 120  # seconds
+
+    # --- filename → allowed_schemas (fast, single pass)
+    name = os.path.basename(file_name).lower()
+    has_course = "course" in name
+    has_semester = "semester" in name
+    has_student = (
+        ("student" in name)
+        or ("cohort" in name)
+        or (
+            (not has_course)
+            and (AR_RE.search(name) is not None or "deidentified" in name)
+        )
+    )
+
+    inferred_from_name: set[str] = set()
+    if has_course:
+        inferred_from_name.add("COURSE")
+    if has_student:
+        inferred_from_name.add("STUDENT")
+    if has_semester:
+        inferred_from_name.add("SEMESTER")
+
+    if not inferred_from_name:
+        raise ValueError(
+            f"Could not infer model(s) from file name: {name}. "
+            "Filenames should be descriptive (e.g., include 'course', 'cohort', 'student', or 'semester')."
+        )
+
+    allowed_schemas = sorted(inferred_from_name)
+
+    # --- fetch active base schema (cached)
+    now = time.monotonic()
+    base_cache = validation_helper._base_cache
+    if now < base_cache["exp"] and base_cache["val"] is not None:
+        base_schema_id, base_schema = base_cache["val"]
+    else:
+        row = sess.execute(
             select(SchemaRegistryTable.schema_id, SchemaRegistryTable.json_doc)
             .where(
                 SchemaRegistryTable.doc_type == DocType.base,
                 SchemaRegistryTable.is_active.is_(True),
             )
             .limit(1)
-        )
-        .first()
-    )
-    if base_schema is None:
-        raise RuntimeError("No active base schema found")
+        ).first()
+        if row is None:
+            raise RuntimeError("No active base schema found")
+        base_schema_id, base_schema = row
+        base_cache["exp"] = now + BASE_TTL
+        base_cache["val"] = (base_schema_id, base_schema)
 
-    base_schema_id, base_schema = base_schema
-    # ----------------------- Fetch inst specific extension schema from DB ---------------------
-    inst = (
-        local_session.get()
-        .execute(select(InstTable).where(InstTable.id == str_to_uuid(inst_id)))
-        .scalar_one_or_none()
-    )
+    # --- fetch institution record
+    inst = sess.execute(
+        select(InstTable).where(InstTable.id == str_to_uuid(inst_id))
+    ).scalar_one_or_none()
     if inst is None:
         raise ValueError(f"Institution {inst_id} not found")
 
-    if inst.pdp_id:  # institution is PDP
-        inst_schema = (
-            local_session.get()
-            .execute(
+    bucket = get_external_bucket_name(inst_id)
+
+    # --- choose / prepare extension schema (try to avoid heavy path)
+    updated_inst_schema: Optional[dict] = None
+
+    def _ext_models_set(doc: Optional[dict]) -> set[str]:
+        """Extract model keys from an extension document (root or institutions.* layout)."""
+        if not doc or not isinstance(doc, dict):
+            return set()
+        # root-level
+        if isinstance(doc.get("data_models"), dict):
+            return {str(k).lower() for k in doc["data_models"].keys()}
+        # nested by institution
+        inst_key_candidates = {str(getattr(inst, "id", "")), inst_id}
+        insts = doc.get("institutions", {})
+        if isinstance(insts, dict):
+            for key in inst_key_candidates:
+                block = insts.get(key)
+                if isinstance(block, dict) and isinstance(
+                    block.get("data_models"), dict
+                ):
+                    return {str(k).lower() for k in block["data_models"].keys()}
+        return set()
+
+    if getattr(inst, "pdp_id", None):
+        # PDP institutions: use active PDP extension (cached)
+        pdp_exp, pdp_doc = validation_helper._pdp_cache
+        if now < pdp_exp and pdp_doc is not None:
+            inst_schema = pdp_doc
+        else:
+            inst_schema = sess.execute(
                 select(SchemaRegistryTable.json_doc)
                 .where(
                     SchemaRegistryTable.is_pdp.is_(True),
                     SchemaRegistryTable.is_active.is_(True),
                 )
                 .limit(1)
-            )
-            .scalar_one_or_none()
-        )
-        updated_inst_schema: dict | None = inst_schema
-    else:  # custom (or none)
-        inst_schema = (
-            local_session.get()
-            .execute(
+            ).scalar_one_or_none()
+            validation_helper._pdp_cache = (now + EXT_TTL, inst_schema)
+        updated_inst_schema = inst_schema
+    else:
+        # custom institutions: try cached extension first
+        ext_cache = validation_helper._ext_cache
+        key = str(getattr(inst, "id", ""))
+        cached = ext_cache.get(key)
+        if cached and now < cached[0]:
+            inst_schema = cached[1]
+        else:
+            inst_schema = sess.execute(
                 select(SchemaRegistryTable.json_doc)
                 .where(
-                    SchemaRegistryTable.inst_id == inst.id,
+                    SchemaRegistryTable.inst_id == getattr(inst, "id", None),
                     SchemaRegistryTable.is_active.is_(True),
-                    SchemaRegistryTable.doc_type == DocType.extension,  # be explicit
+                    SchemaRegistryTable.doc_type == DocType.extension,
                 )
                 .limit(1)
-            )
-            .scalar_one_or_none()
-        )
+            ).scalar_one_or_none()
+            ext_cache[key] = (now + EXT_TTL, inst_schema)
 
-        dbc = DatabricksControl()
-        schema_extension = dbc.create_custom_schema_extension(
-            bucket_name=get_external_bucket_name(inst_id),
-            inst_query=inst,
-            file_name=file_name,
-            base_schema=base_schema,
-            extension_schema=inst_schema,
-        )
-
-        if schema_extension is not None:
-            updated_inst_schema = schema_extension
-            try:
-                new_schema_extension_record = SchemaRegistryTable(
-                    doc_type=DocType.extension,
-                    inst_id=str_to_uuid(inst_id),
-                    is_pdp=False,  # type: ignore
-                    version_label="1.0.0",
-                    extends_schema_id=base_schema_id,
-                    json_doc=schema_extension,
-                    is_active=True,
-                )
-                sess = local_session.get()
-                sess.add(new_schema_extension_record)
-                sess.flush()
-                logging.info("Schema record inserted for '%s'", inst_id)
-            except IntegrityError as e:
-                sess = local_session.get()
-                sess.rollback()
-                logging.warning("IntegrityError: %s", e)
-            except Exception as e:
-                sess = local_session.get()
-                sess.rollback()
-                logging.error("Unexpected DB error: %s", e)
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Unexpected database error while inserting file record: {e}",
-                )
-        else:
-            logging.info(
-                "No-op: extension already contains this model for inst %s", inst_id
-            )
+        # If extension already includes all inferred models, skip Databricks work.
+        inferred_lower = {m.lower() for m in allowed_schemas}
+        ext_models = _ext_models_set(inst_schema)
+        if inferred_lower.issubset(ext_models):
             updated_inst_schema = inst_schema
+        else:
+            # heavy path only when needed
+            dbc = DatabricksControl()
+            schema_extension = dbc.create_custom_schema_extension(
+                bucket_name=bucket,
+                inst_query=inst,
+                file_name=file_name,
+                base_schema=base_schema,
+                extension_schema=inst_schema,
+            )
+            if schema_extension is not None:
+                updated_inst_schema = schema_extension
+                try:
+                    new_schema_extension_record = SchemaRegistryTable(
+                        doc_type=DocType.extension,
+                        inst_id=str_to_uuid(inst_id),
+                        is_pdp=False,  # type: ignore
+                        version_label="1.0.0",
+                        extends_schema_id=base_schema_id,
+                        json_doc=schema_extension,
+                        is_active=True,
+                    )
+                    sess.add(new_schema_extension_record)
+                    sess.flush()
+                    logging.info("Schema record inserted for '%s'", inst_id)
+                    # refresh cache
+                    validation_helper._ext_cache[key] = (
+                        time.monotonic() + EXT_TTL,
+                        schema_extension,
+                    )
+                except IntegrityError as e:
+                    sess.rollback()
+                    logging.warning("IntegrityError: %s", e)
+                except Exception as e:
+                    sess.rollback()
+                    logging.error("Unexpected DB error: %s", e)
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Unexpected database error while inserting file record: {e}",
+                    )
+            else:
+                logging.info(
+                    "No-op: extension already contains this model for inst %s", inst_id
+                )
+                updated_inst_schema = inst_schema
 
-    # ----------------------- File validation logic logic --------------------------------------
+    # --- run file validation (I/O + Pandera work happens inside storage layer)
     try:
         inferred_schemas = storage_control.validate_file(
-            get_external_bucket_name(inst_id),
+            bucket,
             file_name,
             allowed_schemas,
             base_schema,
             updated_inst_schema,
         )
-        logging.debug(
-            "!!!!!!!!!!Inferred Schemas was successful %s", list(inferred_schemas)
-        )
-
+        logging.debug("Inferred Schemas success %s", list(inferred_schemas))
     except HardValidationError as e:
-        logging.debug("!!!!!!!!!!Inferred Schemas FAILED (hard) %s", e)
-        # Build a single string - frontend can render this reliably
-        msg_parts = ["VALIDATION_FAILED"]
+        logging.debug("Inferred Schemas FAILED (hard) %s", e)
+        parts = ["VALIDATION_FAILED"]
         if e.missing_required:
-            msg_parts.append(f"missing_required={e.missing_required}")
+            parts.append(f"missing_required={e.missing_required}")
         if e.extra_columns:
-            msg_parts.append(f"extra_columns={e.extra_columns}")
+            parts.append(f"extra_columns={e.extra_columns}")
         if e.schema_errors is not None:
-            msg_parts.append(f"schema_errors={e.schema_errors}")
+            parts.append(f"schema_errors={e.schema_errors}")
         if e.failure_cases is not None:
-            # keep short; avoid dumping huge tables
             try:
                 sample = (
                     e.failure_cases[:5]
@@ -1178,31 +1260,26 @@ def validation_helper(
                 )
             except Exception:
                 sample = "see server logs"
-            msg_parts.append(f"failure_cases_sample={sample}")
+            parts.append(f"failure_cases_sample={sample}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="; ".join(msg_parts),
+            status_code=status.HTTP_400_BAD_REQUEST, detail="; ".join(parts)
         )
-
     except Exception as e:
-        logging.debug("!!!!!!!!!!Inferred Schemas FAILED (other) %s", e)
+        logging.debug("Inferred Schemas FAILED (other) %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"VALIDATION_ERROR: {type(e).__name__}: {e}",
         )
 
+    # --- upsert file record (cheap path)
     existing_file = (
-        local_session.get()
-        .query(FileTable)
-        .filter_by(
-            name=file_name,
-            inst_id=str_to_uuid(inst_id),
-        )
+        sess.query(FileTable)
+        .filter_by(name=file_name, inst_id=str_to_uuid(inst_id))
         .first()
     )
 
     if existing_file:
-        logging.info(f"File '{file_name}' already exists for institution {inst_id}.")
+        logging.info("File '%s' already exists for institution %s.", file_name, inst_id)
         db_status = f"File '{file_name}' already exists for institution {inst_id}."
     else:
         try:
@@ -1212,20 +1289,21 @@ def validation_helper(
                 uploader=str_to_uuid(current_user.user_id),  # type: ignore
                 source=source_str,
                 sst_generated=False,
-                schemas=list(allowed_schemas),
+                # Store what validation actually inferred (not only filename guess)
+                schemas=list(inferred_schemas),
                 valid=True,
             )
-            local_session.get().add(new_file_record)
-            local_session.get().flush()
-            logging.info(f"File record inserted for '{file_name}'")
+            sess.add(new_file_record)
+            sess.flush()
+            logging.info("File record inserted for '%s'", file_name)
             db_status = f"File record inserted for '{file_name}'"
         except IntegrityError as e:
-            local_session.get().rollback()
-            logging.warning(f"IntegrityError: {e}")
+            sess.rollback()
+            logging.warning("IntegrityError: %s", e)
             db_status = "Already exists"
         except Exception as e:
-            local_session.get().rollback()
-            logging.error(f"Unexpected DB error: {e}")
+            sess.rollback()
+            logging.error("Unexpected DB error: %s", e)
             raise HTTPException(
                 status_code=500,
                 detail=f"Unexpected database error while inserting file record: {e}",
@@ -1234,7 +1312,7 @@ def validation_helper(
     return {
         "name": file_name,
         "inst_id": inst_id,
-        "file_types": list(allowed_schemas),
+        "file_types": list(inferred_schemas),
         "source": source_str,
         "status": db_status,
     }
