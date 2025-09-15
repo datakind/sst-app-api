@@ -1,0 +1,726 @@
+{
+  "version": "1.0.0",
+  "institutions": {
+    "pdp": {
+      "data_models": {
+        "student": {
+          "columns": {
+            "cohort_term": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": ["semester"],
+              "checks": []
+            },
+            "enrollment_type": {
+            "dtype": "string",
+            "coerce": true,
+            "nullable": true,
+            "required": false,
+            "aliases": ["time_status"],
+            "checks": [
+              {"type": "str_length", "args": [], "kwargs": {"min_value": 1}}
+              ]
+            },
+            "number_of_credits_attempted": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": ["credits_attempted", "ug_att", "number_of_credits_attempted_year_1", "number_of_credits_attempted_year_2",
+            "number_of_credits_attempted_year_3", "number_of_credits_attempted_year_4"],
+              "checks": []
+            },
+            "number_of_credits_earned": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": ["credits_earned", "ug_earn", "number_of_credits_earned_year_1", "number_of_credits_earned_year_2",
+            "number_of_credits_earned_year_3", "number_of_credits_earned_year_4"],
+              "checks": [{"type": "ge", "args": [0.0]}]
+            },
+            "attempteddevenglishy1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attempteddevmathy1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attemptedgatewayenglishyear1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attemptedgatewaymathyear1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "attendance_status_term_1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "cohort": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completeddevenglishy1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completeddevmathy1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completedgatewayenglishyear1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "completedgatewaymathyear1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "credential_type_sought_year_1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "dual_and_summer_enrollment": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "english_placement": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "enrollment_intensity_first_term": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_associates_or_certificate_at_other_institution_carnegie": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_associates_or_certificate_at_other_institution_locale": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_associates_or_certificate_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_bachelors_at_other_institution_carnegie": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_bachelors_at_other_institution_locale": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_bachelors_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_associates_or_certificate_at_other_inst": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_bachelor_at_other_inst": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_bachelors_at_cohort_inst": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "foreign_language_completion": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gateway_english_status": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gateway_math_status": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gatewayenglishgradey1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gatewaymathgradey1": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gpa_group_term_1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "institution_id": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_associates_or_certificate_at_other_institution_carnegie": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "persistence": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "reading_placement": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "retention": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "special_program": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "years_of_last_enrollment_at_cohort_institution": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_bachelors_at_cohort_inst": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_associates_or_certificate_at_cohort_inst": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gpa_group_year_1": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "math_placement": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_associates_or_certificate_at_other_institution_locale": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_associates_or_certificate_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_bachelors_at_other_institution_carnegie": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_bachelors_at_other_institution_locale": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_bachelors_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_last_enrollment_at_other_institution_carnegie": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_last_enrollment_at_other_institution_locale": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "most_recent_last_enrollment_at_other_institution_state": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "naspa_first_generation": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+
+            "time_to_credential": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_associates_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_associates_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_certificate_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "first_year_to_certificate_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_associates_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_associates_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_certificate_at_cohort_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_latest_certificate_at_other_inst": {
+              "dtype": "float64",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "years_of_last_enrollment_at_other_institution": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_associates_or_certificate_at_cohort_inst": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_associates_or_certificate_at_other_inst": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "years_to_bachelor_at_other_inst": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            }
+          }
+        },
+        "course": {
+          "columns": {
+            "academic_term": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "academic_year": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "co_requisite_course": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "cohort": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "core_competency_completed": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "core_course_type": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "course_cip": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "course_instructor_employment_status": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "course_instructor_rank": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": false,
+              "aliases": [],
+              "checks": []
+            },
+            "credential_engine_identifier": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "enrolled_at_other_institution_s": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "enrollment_record_at_other_institution_s_carnegie_s": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "enrollment_record_at_other_institution_s_locale_s": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "enrollment_record_at_other_institution_s_state_s": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "ethnicity": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "gender": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "institution_id": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "math_or_english_gateway": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "race": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "term_program_of_study": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "section_id": {
+              "dtype": "string",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            },
+            "student_age": {
+              "dtype": "category",
+              "coerce": true,
+              "nullable": true,
+              "required": true,
+              "aliases": [],
+              "checks": []
+            }
+          }
+        }
+      }
+    }
+  }
+}

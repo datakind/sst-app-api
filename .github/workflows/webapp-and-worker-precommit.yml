@@ -1,0 +1,59 @@
+# precommit actions for develop branch.
+name: test
+
+on:
+  push:
+    branches:
+      - 'develop' # TODO: update branch name to dev
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          # Install a specific version of uv.
+          version: "0.5.7"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: ./.github/actions/setup-python-env
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install the project 
+        run: uv sync --all-extras --dev 
+      - name: Run Black (sst).
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./src/webapp"
+          version: "~= 25.0"
+      - name: Using pylint (sst)
+        run: |
+          uv run pylint $(git ls-files './src/webapp/*.py') --errors-only
+      - name: Test with pytest (sst)
+        run: |
+          uv run coverage run -m pytest  -v -s ./src/webapp/
+      - name: Generate Coverage Report (sst)
+        run: |
+          uv run coverage report -m
+      - name: Run Black (worker).
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./src/worker"
+          version: "~= 25.0"
+      - name: Using pylint (worker)
+        run: |
+          uv run pylint $(git ls-files './src/worker/*.py') --errors-only
+      - name: Test with pytest (worker)
+        run: |
+          uv run coverage run -m pytest  -v -s ./src/worker/
+      - name: Generate Coverage Report (worker)
+        run: |
+          uv run coverage report -m

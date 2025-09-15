@@ -1,0 +1,21 @@
+name: Enforce PR Source Branch
+
+on:
+  pull_request:
+    branches:
+      - staging
+      - prod
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR source branch
+        run: |
+          if [[ "$GITHUB_BASE_REF" == "staging" && "$GITHUB_HEAD_REF" != "develop" ]]; then
+            echo "Only 'develop' can merge into 'staging'"
+            exit 1
+          elif [[ "$GITHUB_BASE_REF" == "prod" && "$GITHUB_HEAD_REF" != "staging" ]]; then
+            echo "Only 'staging' can merge into 'prod'"
+            exit 1
+          fi

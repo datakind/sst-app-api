@@ -1,0 +1,100 @@
+[project]
+name = "src"
+version = "0.2.0.dev"
+description = "School-agnostic lib for implementing Student Success Tool workflows."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "databricks-sdk~=0.38.0",
+    "pydantic~=2.10",
+    "fastapi[standard]~=0.115.4",
+    "google-cloud-storage~=2.18.2",
+    "paramiko~=3.5.0",
+    "cloud-sql-python-connector[pymysql]~=1.14.0",
+    "sqlalchemy~=2.0.36",
+    "pyjwt~=2.10.1",
+    "passlib~=1.7.4",
+    "bcrypt~=4.2.0",
+    "pycryptodome~=3.20.0",
+    "python-dotenv~=1.0.1",
+    "strenum~=0.4.15",
+    "tomli~=2.0; python_version<'3.11'",
+    "jsonpickle~=4.0.1",
+    "requests~=2.32.0",
+    "types-requests~=2.32.0.0",
+    "types-paramiko~=3.5.0.0",
+    "pandas~=2.0",
+    "six~=1.16.0",
+    "thefuzz[speedup]~=0.22.1",
+    "databricks-sql-connector~=3.5.0",
+    "pandera~=0.13",
+    "mlflow~=2.15.0"
+]
+
+[project.urls]
+Repository = "https://github.com/datakind/sst-app-api"
+
+[dependency-groups]
+dev = [
+    "black~=25.1.0",
+    "coverage~=7.6.9",
+    "ipykernel~=6.29",
+    "jupyterlab~=4.2",
+    "mypy~=1.11",
+    "pylint~=3.3.2",
+    "pytest~=8.3",
+    "ruff~=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py310"
+extend-exclude = [
+    "*.ipynb", # TODO: don't exclude ipynbs
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"] # TODO: add "D1" and "D2" for docstring checks
+ignore = [
+    "E402", # module-level import not at top of cell
+    "E501", # line-length violation
+    "E711", # None comparison (common in pandas code)
+    "E712", # True/False comparison (common in pandas code)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# ignore import violations in all init files
+"__init__.py" = ["E402", "F401"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 1
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = ["--verbose", "--import-mode=importlib"]
+filterwarnings = ["ignore::DeprecationWarning"]
+testpaths = ["tests"]
+
+[tool.mypy]
+files = ["src"]
+python_version = "3.10"
+pretty = true
+allow_redefinition = true
+warn_return_any = true
+disallow_incomplete_defs = true
+ignore_missing_imports = true
+follow_imports = "silent"
+# in case of irreconcilable differences, consider telling mypy to ignore all errors
+# ignore_errors = true
