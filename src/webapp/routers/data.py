@@ -1143,7 +1143,7 @@ def validation_helper(
         # PDP institutions: use active PDP extension (cached)
         pdp_exp, pdp_doc = STATE._pdp_cache
         if now < pdp_exp and pdp_doc is not None:
-            inst_schema = pdp_doc
+            inst_schema: Optional[Dict[str, Any]] = pdp_doc
         else:
             inst_schema = sess.execute(
                 select(SchemaRegistryTable.json_doc)
@@ -1182,12 +1182,14 @@ def validation_helper(
         else:
             # heavy path only when needed
             dbc = DatabricksControl()
-            schema_extension = dbc.create_custom_schema_extension(
-                bucket_name=bucket,
-                inst_query=inst,
-                file_name=file_name,
-                base_schema=base_schema,
-                extension_schema=inst_schema,
+            schema_extension: Optional[Dict[str, Any]] = (
+                dbc.create_custom_schema_extension(
+                    bucket_name=bucket,
+                    inst_query=inst,
+                    file_name=file_name,
+                    base_schema=base_schema,
+                    extension_schema=inst_schema,
+                )
             )
             if schema_extension is not None:
                 updated_inst_schema = schema_extension
