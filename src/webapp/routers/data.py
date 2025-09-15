@@ -1277,7 +1277,14 @@ def validation_helper(
         .filter_by(name=file_name, inst_id=str_to_uuid(inst_id))
         .first()
     )
-
+    if set(inferred_schemas) != set(allowed_schemas):
+        logging.info(
+            "Filename inference %s differs from validator result %s for %s; "
+            "returning filename-based types to preserve API contract.",
+            allowed_schemas,
+            inferred_schemas,
+            file_name,
+        )
     if existing_file:
         logging.info("File '%s' already exists for institution %s.", file_name, inst_id)
         db_status = f"File '{file_name}' already exists for institution {inst_id}."
@@ -1289,8 +1296,7 @@ def validation_helper(
                 uploader=str_to_uuid(current_user.user_id),  # type: ignore
                 source=source_str,
                 sst_generated=False,
-                # Store what validation actually inferred (not only filename guess)
-                schemas=list(inferred_schemas),
+                schemas=list(allowed_schemas),
                 valid=True,
             )
             sess.add(new_file_record)
@@ -1312,7 +1318,7 @@ def validation_helper(
     return {
         "name": file_name,
         "inst_id": inst_id,
-        "file_types": list(inferred_schemas),
+        "file_types": list(allowed_schemas),
         "source": source_str,
         "status": db_status,
     }

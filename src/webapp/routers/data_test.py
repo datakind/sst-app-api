@@ -569,7 +569,7 @@ def test_update_batch(client: TestClient) -> None:
 
 def test_validate_success_batch(client: TestClient) -> None:
     """Test PATCH /institutions/<uuid>/batch."""
-    MOCK_STORAGE.validate_file.return_value = ["COURSE"]
+    MOCK_STORAGE.validate_file.return_value = ["UNKNOWN"]
 
     # Use validate for manual upload
     response_upload = client.post(
