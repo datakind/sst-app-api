@@ -1018,7 +1018,6 @@ def validation_helper(
 ) -> Any:
     """Helper function for file validation (self-contained & optimized)."""
     import time
-    import os
 
     # --- access check & quick input validation
     has_access_to_inst_or_err(inst_id, current_user)
