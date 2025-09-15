@@ -213,7 +213,7 @@ class DatabricksControl(BaseModel):
             job = next(w.jobs.list(name=pipeline_type), None)
             if not job or job.job_id is None:
                 raise ValueError(
-                    f"run_pdp_inference(): Job '{pipeline_type}' was not found or has no job_id."
+                    f"run_pdp_inference(): Job '{pipeline_type}' was not found or has no job_id for '{gcs_vars['GCP_SERVICE_ACCOUNT_EMAIL']}' and '{databricks_vars['DATABRICKS_HOST_URL']}'."
                 )
             job_id = job.job_id
             LOGGER.info(f"Resolved job ID for '{pipeline_type}': {job_id}")
