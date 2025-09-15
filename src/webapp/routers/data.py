@@ -1045,7 +1045,6 @@ def validation_helper(
 ) -> Any:
     """Helper function for file validation (self-contained & optimized)."""
     import time
-    import re
     import os
 
     # --- access check & quick input validation
