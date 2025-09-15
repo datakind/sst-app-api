@@ -340,8 +340,9 @@ class StorageControl(BaseModel):
                     f"If you see this file validation was successful {schems}"
                 )
         except Exception as e:
-            blob.delete()
-            raise e
+            logging.exception("Validation failed for %s: %s", file_name, e)
+            raise
+
         new_blob = bucket.blob(new_blob_name)
         if new_blob.exists():
             raise ValueError(new_blob_name + ": File already exists.")

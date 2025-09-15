@@ -35,6 +35,7 @@ MEDALLION_LEVELS = ["silver", "gold", "bronze"]
 
 # The name of the deployed pipeline in Databricks. Must match directly.
 PDP_INFERENCE_JOB_NAME = "github_sourced_pdp_inference_pipeline"
+PDP_H2O_INFERENCE_JOB_NAME = "edvise_github_sourced_pdp_inference_pipeline"
 
 
 class DatabricksInferenceRunRequest(BaseModel):
@@ -44,7 +45,7 @@ class DatabricksInferenceRunRequest(BaseModel):
     # Note that the following should be the filepath.
     filepath_to_type: dict[str, list[SchemaType]]
     model_name: str
-    model_type: str = "sklearn"
+    model_type: str
     # The email where notifications will get sent.
     email: str
     gcp_external_bucket_name: str
@@ -98,7 +99,17 @@ class DatabricksControl(BaseModel):
         db_inst_name = databricksify_inst_name(inst_name)
         cat_name = databricks_vars["CATALOG_NAME"]
         for medallion in MEDALLION_LEVELS:
-            w.schemas.create(name=f"{db_inst_name}_{medallion}", catalog_name=cat_name)
+            try:
+                w.schemas.create(
+                    name=f"{db_inst_name}_{medallion}", catalog_name=cat_name
+                )
+            except Exception as e:
+                LOGGER.exception(
+                    f"Failed to provision schemas in databricks for {db_inst_name}_{medallion}: {e}"
+                )
+                raise ValueError(
+                    f"setup_new_inst(): Failed to provision schemas in databricks for {db_inst_name}_{medallion}: {e}"
+                )
             LOGGER.info(
                 f"Creating medallion level schemas for {db_inst_name} & {medallion}."
             )
@@ -192,16 +203,22 @@ class DatabricksControl(BaseModel):
 
         db_inst_name = databricksify_inst_name(req.inst_name)
 
+        if req.model_type == "sklearn":
+            pipeline_type = PDP_INFERENCE_JOB_NAME
+        elif req.model_type == "h2o":
+            pipeline_type = PDP_H2O_INFERENCE_JOB_NAME
+        else:
+            raise ValueError("Invalid model framework assigned to institution model")
         try:
-            job = next(w.jobs.list(name=PDP_INFERENCE_JOB_NAME), None)
+            job = next(w.jobs.list(name=pipeline_type), None)
             if not job or job.job_id is None:
                 raise ValueError(
-                    f"run_pdp_inference(): Job '{PDP_INFERENCE_JOB_NAME}' was not found or has no job_id."
+                    f"run_pdp_inference(): Job '{pipeline_type}' was not found or has no job_id for '{gcs_vars['GCP_SERVICE_ACCOUNT_EMAIL']}' and '{databricks_vars['DATABRICKS_HOST_URL']}'."
                 )
             job_id = job.job_id
-            LOGGER.info(f"Resolved job ID for '{PDP_INFERENCE_JOB_NAME}': {job_id}")
+            LOGGER.info(f"Resolved job ID for '{pipeline_type}': {job_id}")
         except Exception as e:
-            LOGGER.exception(f"Job lookup failed for '{PDP_INFERENCE_JOB_NAME}'.")
+            LOGGER.exception(f"Job lookup failed for '{pipeline_type}'.")
             raise ValueError(f"run_pdp_inference(): Failed to find job: {e}")
 
         try:

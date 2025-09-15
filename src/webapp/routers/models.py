@@ -1,7 +1,7 @@
 """API functions related to models."""
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 import jsonpickle
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -60,7 +60,7 @@ def check_file_types_valid_schema_configs(
     """Check that a list of files are valid for a given schema configuration."""
     for config in valid_schema_configs:
         found = True
-        map_file_to_schema_config_obj = {}
+        map_file_to_schema_config_obj: dict = {}
         for idx, s in enumerate(file_types):
             for c in config:
                 if c.schema_type in s:
@@ -96,6 +96,7 @@ class ModelCreationRequest(BaseModel):
     # valid = False, means the model is not ready for use.
     valid: bool = False
     schema_configs: list[list[SchemaConfigObj]]
+    framework: str | None = None
 
 
 class ModelInfo(BaseModel):
@@ -215,6 +216,11 @@ def create_model(
             created_by=str_to_uuid(current_user.user_id),
             valid=req.valid,
             schema_configs=jsonpickle.encode(req.schema_configs),
+            framework=(
+                f
+                if (f := (req.framework or "").strip().lower()) in {"sklearn", "h2o"}
+                else "sklearn"
+            ),
         )
         local_session.get().add(model)
         local_session.get().commit()
@@ -252,6 +258,7 @@ def create_model(
         "created_by": uuid_to_str(query_result[0][0].created_by),
         "deleted": query_result[0][0].deleted,
         "valid": query_result[0][0].valid,
+        "framework": query_result[0][0].framework,
     }
 
 
@@ -299,6 +306,7 @@ def read_inst_model(
         "created_by": uuid_to_str(query_result[0][0].created_by),
         "deleted": query_result[0][0].deleted,
         "valid": query_result[0][0].valid,
+        "framework": query_result[0][0].framework,
     }
 
 
@@ -546,7 +554,8 @@ def trigger_inference_run(
         model_name=model_name,
         gcp_external_bucket_name=get_external_bucket_name(inst_id),
         # The institution email to which pipeline success/failure notifications will get sent.
-        email=current_user.email,
+        email=cast(str, current_user.email),
+        model_type=query_result[0][0].framework,
     )
     try:
         res = databricks_control.run_pdp_inference(db_req)
@@ -565,6 +574,7 @@ def trigger_inference_run(
         batch_name=req.batch_name,
         model_id=query_result[0][0].id,
         output_valid=False,
+        framework=query_result[0][0].framework,
     )
     local_session.get().add(job)
     return {
@@ -575,4 +585,5 @@ def trigger_inference_run(
         "triggered_at": triggered_timestamp,
         "batch_name": req.batch_name,
         "output_valid": False,
+        "framework": query_result[0][0].framework,
     }
