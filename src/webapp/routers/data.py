@@ -1093,7 +1093,7 @@ def validation_helper(
     now = time.monotonic()
     base_cache = STATE._base_cache
     if now < base_cache["exp"] and base_cache["val"] is not None:
-        base_schema_id, base_schema = base_cache[
+        base_schema_id, base_schema = base_cache[ # pylint: disable=unpacking-non-sequence
             "val"
         ]  # pylint: disable=unpacking-non-sequence
     else:
