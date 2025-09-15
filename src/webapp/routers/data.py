@@ -998,33 +998,6 @@ def download_url_inst_file(
     )
 
 
-_AR_WORD = re.compile(r"(?<![A-Za-z0-9])ar(?![A-Za-z0-9])", re.IGNORECASE)
-
-
-def infer_models_from_filename(file_path: str) -> List[str]:
-    name = os.path.basename(file_path).lower()
-
-    inferred = set()
-    if "course" in name:
-        inferred.add("COURSE")
-    if "student" in name:
-        inferred.add("STUDENT")
-    if "semester" in name:
-        inferred.add("SEMESTER")
-    if "cohort" in name:
-        inferred.add("STUDENT")
-    if "course" not in name and (_AR_WORD.search(name) or "deidentified" in name):
-        inferred.add("STUDENT")
-
-    if not inferred:
-        raise ValueError(
-            f"Could not infer model(s) from file name: {name}. "
-            "Filenames should be descriptive (e.g., include 'course', 'cohort', 'student', or 'semester')."
-        )
-
-    return sorted(inferred)
-
-
 class _ValidationState:
     _ar_re = re.compile(r"(?<![A-Za-z0-9])ar(?![A-Za-z0-9])", re.IGNORECASE)
     _base_cache: Dict[str, Any] = {"exp": 0.0, "val": None}
