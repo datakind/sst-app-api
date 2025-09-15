@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, date
 from databricks.sdk import WorkspaceClient
-from typing import Annotated, Any, Dict, List, cast, IO, Optional
+from typing import Annotated, Any, Dict, List, cast, IO, Optional, Tuple
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from fastapi.responses import FileResponse
@@ -1025,6 +1025,16 @@ def infer_models_from_filename(file_path: str) -> List[str]:
     return sorted(inferred)
 
 
+class _ValidationState:
+    _ar_re = re.compile(r"(?<![A-Za-z0-9])ar(?![A-Za-z0-9])", re.IGNORECASE)
+    _base_cache: Dict[str, Any] = {"exp": 0.0, "val": None}
+    _ext_cache: Dict[str, Tuple[float, Any]] = {}
+    _pdp_cache: Tuple[float, Optional[dict]] = (0.0, None)
+
+
+STATE = _ValidationState()
+
+
 def validation_helper(
     source_str: str,
     inst_id: str,
@@ -1047,22 +1057,7 @@ def validation_helper(
     local_session.set(sql_session)
     sess = local_session.get()
 
-    # --- one-time initialization on the function object (kept in-process)
-    if not hasattr(validation_helper, "_ar_re"):
-        validation_helper._ar_re = re.compile(
-            r"(?<![A-Za-z0-9])ar(?![A-Za-z0-9])", re.IGNORECASE
-        )
-    if not hasattr(validation_helper, "_base_cache"):
-        # {"exp": <monotonic expiry>, "val": (<schema_id>, <json_doc>)}
-        validation_helper._base_cache = {"exp": 0.0, "val": None}
-    if not hasattr(validation_helper, "_ext_cache"):
-        # { str(inst_uuid): (exp, extension_json_doc) }
-        validation_helper._ext_cache = {}
-    if not hasattr(validation_helper, "_pdp_cache"):
-        # PDP-wide extension (active), cached: (exp, doc)
-        validation_helper._pdp_cache = (0.0, None)
-
-    AR_RE = validation_helper._ar_re
+    AR_RE = STATE._ar_re
     BASE_TTL = 300  # seconds
     EXT_TTL = 120  # seconds
 
@@ -1097,7 +1092,7 @@ def validation_helper(
 
     # --- fetch active base schema (cached)
     now = time.monotonic()
-    base_cache = validation_helper._base_cache
+    base_cache = STATE._base_cache
     if now < base_cache["exp"] and base_cache["val"] is not None:
         base_schema_id, base_schema = base_cache["val"]
     else:
@@ -1123,7 +1118,6 @@ def validation_helper(
         raise ValueError(f"Institution {inst_id} not found")
 
     bucket = get_external_bucket_name(inst_id)
-
     # --- choose / prepare extension schema (try to avoid heavy path)
     updated_inst_schema: Optional[dict] = None
 
@@ -1148,7 +1142,7 @@ def validation_helper(
 
     if getattr(inst, "pdp_id", None):
         # PDP institutions: use active PDP extension (cached)
-        pdp_exp, pdp_doc = validation_helper._pdp_cache
+        pdp_exp, pdp_doc = STATE._pdp_cache
         if now < pdp_exp and pdp_doc is not None:
             inst_schema = pdp_doc
         else:
@@ -1160,11 +1154,11 @@ def validation_helper(
                 )
                 .limit(1)
             ).scalar_one_or_none()
-            validation_helper._pdp_cache = (now + EXT_TTL, inst_schema)
+            STATE._pdp_cache = (now + EXT_TTL, inst_schema)
         updated_inst_schema = inst_schema
     else:
         # custom institutions: try cached extension first
-        ext_cache = validation_helper._ext_cache
+        ext_cache = STATE._ext_cache
         key = str(getattr(inst, "id", ""))
         cached = ext_cache.get(key)
         if cached and now < cached[0]:
@@ -1212,7 +1206,7 @@ def validation_helper(
                     sess.flush()
                     logging.info("Schema record inserted for '%s'", inst_id)
                     # refresh cache
-                    validation_helper._ext_cache[key] = (
+                    STATE._ext_cache[key] = (
                         time.monotonic() + EXT_TTL,
                         schema_extension,
                     )
