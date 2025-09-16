@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, date
 from databricks.sdk import WorkspaceClient
-from typing import Annotated, Any, Dict, List, cast, IO, Optional, Tuple, Sequence
+from typing import Annotated, Any, Dict, List, cast, IO, Optional, Tuple
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from fastapi.responses import FileResponse
@@ -1771,7 +1771,8 @@ def get_model_cards(
         )
 
     try:
-        env = str(env_vars["ENV"]).strip().upper()
+        env_vals: Sequence[str] = env_vars.get("ENV", [])
+        env = (env_vals[0] if env_vals else "").strip().upper()
         SCHEMAS = {"DEV": "dev_sst_02", "STAGING": "staging_sst_01"}
         if env not in SCHEMAS:
             raise ValueError(
