@@ -1771,7 +1771,7 @@ def get_model_cards(
         )
 
     try:
-        env = env_vars["ENV"].strip().upper()
+        env = str(env_vars["ENV"]).strip().upper()
         SCHEMAS = {"DEV": "dev_sst_02", "STAGING": "staging_sst_01"}
         if env not in SCHEMAS:
             raise ValueError(
