@@ -1774,7 +1774,9 @@ def get_model_cards(
         env = (env_vars.get("ENV") or "").strip().upper()
         SCHEMAS = {"DEV": "dev_sst_02", "STAGING": "staging_sst_01"}
         if env not in SCHEMAS:
-            raise ValueError(f"Unsupported ENV {env_vars.get('ENV')!r}; expected DEV or STAGING")
+            raise ValueError(
+                f"Unsupported ENV {env_vars.get('ENV')!r}; expected DEV or STAGING"
+            )
         env_schema = SCHEMAS[env]
 
         volume_path = f"/Volumes/{env_schema}/{databricksify_inst_name(query_result[0][0].name)}_gold/gold_volume/model_cards/model-card-{model_name}.pdf"
