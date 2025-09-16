@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, date
 from databricks.sdk import WorkspaceClient
-from typing import Annotated, Any, Dict, List, cast, IO, Optional, Tuple
+from typing import Annotated, Any, Dict, List, cast, IO, Optional, Tuple, Sequence
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from fastapi.responses import FileResponse
@@ -1771,7 +1771,16 @@ def get_model_cards(
         )
 
     try:
-        volume_path = f"/Volumes/staging_sst_01/{databricksify_inst_name(query_result[0][0].name)}_gold/gold_volume/model_cards/model-card-{model_name}.pdf"
+        env_vals: Sequence[str] = env_vars.get("ENV", [])
+        env = (env_vals[0] if env_vals else "").strip().upper()
+        SCHEMAS = {"DEV": "dev_sst_02", "STAGING": "staging_sst_01"}
+        if env not in SCHEMAS:
+            raise ValueError(
+                f"Unsupported ENV {env_vars.get('ENV')!r}; expected DEV or STAGING"
+            )
+        env_schema = SCHEMAS[env]
+
+        volume_path = f"/Volumes/{env_schema}/{databricksify_inst_name(query_result[0][0].name)}_gold/gold_volume/model_cards/model-card-{model_name}.pdf"
         LOGGER.info(f"Attempting to download from {volume_path}")
         response = w.files.download(volume_path)
         stream = cast(IO[bytes], response.contents)
