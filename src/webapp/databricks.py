@@ -34,8 +34,7 @@ LOGGER = logging.getLogger(__name__)
 MEDALLION_LEVELS = ["silver", "gold", "bronze"]
 
 # The name of the deployed pipeline in Databricks. Must match directly.
-PDP_INFERENCE_JOB_NAME = "github_sourced_pdp_inference_pipeline"
-PDP_H2O_INFERENCE_JOB_NAME = "edvise_github_sourced_pdp_inference_pipeline"
+PDP_INFERENCE_JOB_NAME = "edvise_github_sourced_pdp_inference_pipeline"
 
 
 class DatabricksInferenceRunRequest(BaseModel):
@@ -203,12 +202,7 @@ class DatabricksControl(BaseModel):
 
         db_inst_name = databricksify_inst_name(req.inst_name)
 
-        if req.model_type == "sklearn":
-            pipeline_type = PDP_INFERENCE_JOB_NAME
-        elif req.model_type == "h2o":
-            pipeline_type = PDP_H2O_INFERENCE_JOB_NAME
-        else:
-            raise ValueError("Invalid model framework assigned to institution model")
+        pipeline_type = PDP_INFERENCE_JOB_NAME
         try:
             job = next(w.jobs.list(name=pipeline_type), None)
             if not job or job.job_id is None:
