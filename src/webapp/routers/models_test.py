@@ -939,3 +939,51 @@ def test_trigger_es_inference_run_genai_unknown_only_schemas(
     assert db_req.is_genai_institution is True
     assert db_req.batch_id == uuid_to_str(genai_batch.id)
     MOCK_DATABRICKS.run_pdp_inference.assert_not_called()
+
+
+def test_uc_decimal_model_name_is_displayed_as_dot(
+    client: TestClient, session: sqlalchemy.orm.Session
+) -> None:
+    """UC stores 4d5; list/detail responses should show 4.5 and accept either spelling."""
+    uc_name = "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
+    display_name = "graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits"
+    session.add(
+        ModelTable(
+            id=uuid.uuid4(),
+            inst_id=USER_VALID_INST_UUID,
+            name=uc_name,
+            valid=True,
+        )
+    )
+    session.commit()
+
+    inst = uuid_to_str(USER_VALID_INST_UUID)
+    names = [m["name"] for m in client.get(f"/institutions/{inst}/models").json()]
+    assert display_name in names
+    assert uc_name not in names
+
+    by_display = client.get(f"/institutions/{inst}/models/{display_name}")
+    assert by_display.status_code == 200
+    assert by_display.json()["name"] == display_name
+
+    by_uc = client.get(f"/institutions/{inst}/models/{uc_name}")
+    assert by_uc.status_code == 200
+    assert by_uc.json()["name"] == display_name
+
+
+def test_create_model_encodes_decimal_dots_for_storage(
+    client: TestClient, session: sqlalchemy.orm.Session
+) -> None:
+    """New models with 4.5 are stored as 4d5 but returned as 4.5."""
+    display_name = "graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits"
+    uc_name = "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
+    response = client.post(
+        "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/models/",
+        json={"name": display_name},
+    )
+    assert response.status_code == 200
+    assert response.json()["name"] == display_name
+    stored = session.execute(
+        sqlalchemy.select(ModelTable).where(ModelTable.name == uc_name)
+    ).scalar_one()
+    assert stored.name == uc_name
