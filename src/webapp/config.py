@@ -1,7 +1,10 @@
 """Helper dict to retrieve OS env variables. This list includes all environment variables needed."""
 
+import logging
 import os
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # defaults to unit test values.
 env_vars = {
@@ -26,22 +29,13 @@ engine_vars = {
     "DB_PORT": "",
 }
 
-# For deployments that connect directly to a Cloud SQL instance without
-# using the Cloud SQL Proxy, configuring SSL certificates will ensure the
-# connection is encrypted.
-# root cert: e.g. '/path/to/server-ca.pem'
-# cert: e.g. '/path/to/client-cert.pem'
-# key: e.g. '/path/to/client-key.pem'
-ssl_env_vars = {
-    "DB_ROOT_CERT": "",
-    "DB_CERT": "",
-    "DB_KEY": "",
-}
-
 gcs_vars = {
     "GCP_REGION": "",
     "GCP_SERVICE_ACCOUNT_EMAIL": "",
 }
+
+# Databricks catalogs that contain institution silver and gold volumes.
+ENV_TO_VOLUME_SCHEMA = {"DEV": "dev_sst_02", "STAGING": "staging_sst_01"}
 
 # databricks vars needed for databricks integration
 databricks_vars = {
@@ -115,24 +109,45 @@ def startup_env_vars():
             databricks_vars[name] = env_var
 
 
+def db_connection() -> str:
+    value = (os.environ.get("DB_CONNECTION") or "").strip().lower()
+    if not value:
+        return (
+            "sqlite" if os.environ.get("ENV", "LOCAL").upper() == "LOCAL" else "mysql"
+        )
+    if value not in ("sqlite", "mysql"):
+        raise ValueError("DB_CONNECTION must be sqlite or mysql.")
+    return value
+
+
+def ssl_connect_args() -> dict:
+    args = {}
+    missing = []
+    for env_name, arg_name in (
+        ("DB_ROOT_CERT", "ssl_ca"),
+        ("DB_CERT", "ssl_cert"),
+        ("DB_KEY", "ssl_key"),
+    ):
+        value = os.environ.get(env_name)
+        if value:
+            args[arg_name] = value
+        else:
+            missing.append(env_name)
+    if missing and os.environ.get("ENV", "LOCAL").upper() != "LOCAL":
+        logger.warning(
+            "Connecting without SSL client certs; unset: %s", ", ".join(missing)
+        )
+    return args
+
+
 def setup_database_vars():
     """Setup function to get db environment variables. Should be called at db startup time."""
     global engine_vars
     for name in engine_vars:
         env_var = os.environ.get(name)
+        if name == "DB_PASS":
+            engine_vars[name] = env_var or ""
+            continue
         if not env_var:
             raise ValueError("Missing " + name + " value missing. Required.")
         engine_vars[name] = env_var
-
-    if env_vars["ENV"] in ("LOCAL"):
-        # doesn't require ssl vars
-        return
-
-    global ssl_env_vars
-    for name in ssl_env_vars:
-        env_var = os.environ.get(name)
-        if not os.environ.get(name):
-            raise ValueError(
-                "Missing " + name + " value missing. Required for SSL connection."
-            )
-        ssl_env_vars[name] = env_var

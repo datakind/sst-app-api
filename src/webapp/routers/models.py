@@ -202,6 +202,13 @@ def check_file_types_valid_schema_configs(
     return False
 
 
+def _unique_batch_schema_types(batch: BatchTable) -> list[list[SchemaType]]:
+    """Return unique batch file schemas as SchemaType values."""
+    return [
+        [SchemaType(schema) for schema in {s for f in batch.files for s in f.schemas}]
+    ]
+
+
 class ModelCreationRequest(BaseModel):
     """Model creation request object."""
 
@@ -220,6 +227,7 @@ class ModelInfo(BaseModel):
     valid: bool = True
     deleted: bool | None = None
     archived: bool = False
+    archived_at: datetime | None = None
 
     @field_serializer("name")
     def _display_name(self, name: str) -> str:
@@ -270,6 +278,68 @@ class InferenceRunRequest(BaseModel):
     # Legacy schools inference parameters (optional passthrough; ignored for PDP)
     config_file_name: str | None = None
     features_table_name: str | None = None
+    # Academic terms, e.g. ["fall 2024-25"]; omitted to use the pipeline config.
+    term_filter: list[str] | None = None
+
+
+def _validated_term_filter(term_filter: list[str] | None) -> list[str] | None:
+    """Validate and normalize an optional inference academic-term filter."""
+    if term_filter is None:
+        return None
+    if not term_filter:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one term is required when term_filter is provided.",
+        )
+    normalized = [str(label).strip().lower() for label in term_filter]
+    if any(not label for label in normalized):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="term_filter values must be non-empty strings.",
+        )
+    return normalized
+
+
+def require_named_inference_model(
+    session: Session, inst_id: str, model_name: str
+) -> ModelTable:
+    """Return the unique model for this institution and name, matching run-inference."""
+    result = session.execute(
+        select(ModelTable).where(
+            and_(
+                ModelTable.name == model_name,
+                ModelTable.inst_id == str_to_uuid(inst_id),
+            )
+        )
+    ).all()
+    if len(result) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unexpected number of models found: Expected 1, got "
+            + str(len(result)),
+        )
+    return cast(ModelTable, result[0][0])
+
+
+def require_named_inference_batch(
+    session: Session, inst_id: str, batch_name: str
+) -> BatchTable:
+    """Return the unique batch for this institution and name, matching run-inference."""
+    result = session.execute(
+        select(BatchTable).where(
+            and_(
+                BatchTable.name == batch_name,
+                BatchTable.inst_id == str_to_uuid(inst_id),
+            )
+        )
+    ).all()
+    if len(result) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unexpected number of batches found: Expected 1, got "
+            + str(len(result)),
+        )
+    return cast(BatchTable, result[0][0])
 
 
 # Model related operations. Or model specific data.
@@ -310,6 +380,7 @@ def read_inst_models(
                 "deleted": elem[0].deleted,
                 "valid": elem[0].valid,
                 "archived": bool(elem[0].archived),
+                "archived_at": elem[0].archived_at,
             }
         )
     return res
@@ -388,6 +459,7 @@ def create_model(
         "deleted": query_result[0][0].deleted,
         "valid": query_result[0][0].valid,
         "archived": bool(query_result[0][0].archived),
+        "archived_at": query_result[0][0].archived_at,
     }
 
 
@@ -436,6 +508,7 @@ def read_inst_model(
         "deleted": query_result[0][0].deleted,
         "valid": query_result[0][0].valid,
         "archived": bool(query_result[0][0].archived),
+        "archived_at": query_result[0][0].archived_at,
     }
 
 
@@ -513,12 +586,14 @@ def archive_model(
         )
 
     model.archived = 1
+    model.archived_at = func.now()
     sess.commit()
 
     return {
         "inst_id": inst_id,
         "model_name": transformed_model_name,
         "archived": 1,
+        "archived_at": model.archived_at,
         "status": "Model archived",
     }
 
@@ -771,12 +846,13 @@ def trigger_inference_run(
     sql_session: Annotated[Session, Depends(get_session)],
     databricks_control: Annotated[DatabricksControl, Depends(DatabricksControl)],
 ) -> Any:
-    """Returns top-level info around all executions of a given model.
+    """Trigger inference, optionally limited to academic terms.
 
     Only visible to users of that institution or Datakinder access types.
     """
     model_name = decode_url_piece(model_name)
     has_access_to_inst_or_err(inst_id, current_user)
+    term_filter = _validated_term_filter(req.term_filter)
     local_session.set(sql_session)
     inst_result = (
         local_session.get()
@@ -816,48 +892,13 @@ def trigger_inference_run(
 
     # Legacy, Edvise Schema (ES), and GenAI inference
     if is_legacy or is_edvise:
-        # or: legacy_or_edvise_model_result ?
-        shared_model_result = (
-            local_session.get()
-            .execute(
-                select(ModelTable).where(
-                    and_(
-                        ModelTable.name == model_name,
-                        ModelTable.inst_id == str_to_uuid(inst_id),
-                    )
-                )
-            )
-            .all()
+        model = require_named_inference_model(local_session.get(), inst_id, model_name)
+        batch = require_named_inference_batch(
+            local_session.get(), inst_id, req.batch_name
         )
-        if len(shared_model_result) != 1:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unexpected number of models found: Expected 1, got "
-                + str(len(shared_model_result)),
-            )
-
-        batch_result = (
-            local_session.get()
-            .execute(
-                select(BatchTable).where(
-                    and_(
-                        BatchTable.name == req.batch_name,
-                        BatchTable.inst_id == str_to_uuid(inst_id),
-                    )
-                )
-            )
-            .all()
-        )
-        if len(batch_result) != 1:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unexpected number of batches found: Expected 1, got "
-                + str(len(batch_result)),
-            )
-        batch = batch_result[0][0]
-        inst_file_schemas = [list({s for f in batch.files for s in f.schemas})]
+        inst_file_schemas = _unique_batch_schema_types(batch)
         schema_configs = resolve_model_schema_configs(
-            shared_model_result[0][0].schema_configs,
+            model.schema_configs,
             inst.schemas,
         )
         if not check_file_types_valid_schema_configs(
@@ -879,6 +920,7 @@ def trigger_inference_run(
             batch_id=uuid_to_str(batch.id),
             validated_blob_paths=batch_input_validated_blob_paths(batch.files),
             is_genai_institution=bool(genai_id),
+            term_filter=term_filter,
         )
         try:
             if is_legacy:
@@ -893,6 +935,12 @@ def trigger_inference_run(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Databricks {op} error. Error = {str(e)}",
             ) from e
+        logging.info(
+            "run-inference: user=%s term_filter=%s job_run_id=%s",
+            current_user.email,
+            term_filter,
+            res.job_run_id,
+        )
         triggered_timestamp = datetime.now()
         latest_model_version = databricks_control.fetch_model_version(
             catalog_name=str(env_vars["CATALOG_NAME"]),
@@ -906,7 +954,7 @@ def trigger_inference_run(
             triggered_at=triggered_timestamp,
             created_by=str_to_uuid(current_user.user_id),
             batch_name=req.batch_name,
-            model_id=shared_model_result[0][0].id,
+            model_id=model.id,
             output_valid=False,
             model_version=model_version,
             model_run_id=model_run_id,
@@ -930,48 +978,12 @@ def trigger_inference_run(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="Currently, only PDP, Legacy, and Edvise Schema (ES) schools inference are supported.",
         )
-    query_result = (
-        local_session.get()
-        .execute(
-            select(ModelTable).where(
-                and_(
-                    ModelTable.name == model_name,
-                    ModelTable.inst_id == str_to_uuid(inst_id),
-                )
-            )
-        )
-        .all()
-    )
-    if len(query_result) != 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unexpected number of models found: Expected 1, got "
-            + str(len(query_result)),
-        )
-
+    model = require_named_inference_model(local_session.get(), inst_id, model_name)
+    batch = require_named_inference_batch(local_session.get(), inst_id, req.batch_name)
     # Get all the files in the batch and check that it matches the model specifications.
-    batch_result = (
-        local_session.get()
-        .execute(
-            select(BatchTable).where(
-                and_(
-                    BatchTable.name == req.batch_name,
-                    BatchTable.inst_id == str_to_uuid(inst_id),
-                )
-            )
-        )
-        .all()
-    )
-    if len(batch_result) != 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unexpected number of batches found: Expected 1, got "
-            + str(len(inst_result)),
-        )
-    # inst_file_schemas = [x.schemas for x in batch_result[0][0].files]
-    inst_file_schemas = [list({s for f in batch_result[0][0].files for s in f.schemas})]
+    inst_file_schemas = _unique_batch_schema_types(batch)
     schema_configs = resolve_model_schema_configs(
-        query_result[0][0].schema_configs,
+        model.schema_configs,
         inst.schemas,
     )
 
@@ -986,11 +998,12 @@ def trigger_inference_run(
     # Note to Datakind: In the long-term, this is where you would have a case block or something that would call different types of pipelines.
     pdp_db_req = DatabricksPDPInferenceRunRequest(
         inst_name=inst_result[0][0].name,
-        filepath_to_type=convert_files_to_dict(batch_result[0][0].files),
+        filepath_to_type=convert_files_to_dict(batch.files),
         model_name=model_name,
         gcp_external_bucket_name=get_external_bucket_name(inst_id),
         # The institution email to which pipeline success/failure notifications will get sent.
         email=cast(str, current_user.email),
+        term_filter=term_filter,
     )
     try:
         res = databricks_control.run_pdp_inference(pdp_db_req)
@@ -1001,6 +1014,12 @@ def trigger_inference_run(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Databricks run_pdp_inference error. Error = {str(e)}",
         ) from e
+    logging.info(
+        "run-inference: user=%s term_filter=%s job_run_id=%s",
+        current_user.email,
+        term_filter,
+        res.job_run_id,
+    )
     triggered_timestamp = datetime.now()
     latest_model_version = databricks_control.fetch_model_version(
         catalog_name=str(env_vars["CATALOG_NAME"]),
@@ -1014,7 +1033,7 @@ def trigger_inference_run(
         triggered_at=triggered_timestamp,
         created_by=str_to_uuid(current_user.user_id),
         batch_name=req.batch_name,
-        model_id=query_result[0][0].id,
+        model_id=model.id,
         output_valid=False,
         model_version=model_version,
         model_run_id=model_run_id,

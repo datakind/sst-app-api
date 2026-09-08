@@ -38,7 +38,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.sql import func
 from sqlalchemy.pool import StaticPool
-from .config import engine_vars, ssl_env_vars, setup_database_vars
+from .config import engine_vars, setup_database_vars, db_connection, ssl_connect_args
 from .authn import get_password_hash, get_api_key_hash
 
 
@@ -647,6 +647,10 @@ class ModelTable(Base):
     # If true, the model has been approved and is ready for use.
     valid: Mapped[bool] = mapped_column(nullable=True)
     archived: Mapped[int] = mapped_column(Integer, default=0)
+    # The time the model was archived. Null while the model is not archived.
+    archived_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # The time the deletion request was set.
     deleted_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -871,33 +875,17 @@ def connect_tcp_socket(
 def init_connection_pool() -> sqlalchemy.engine.Engine:
     """Helper function to return SQLAlchemy connection pool."""
     setup_database_vars()
-    # Set up ssl context for the connection args.
-    ssl_args = {
-        "ssl_ca": ssl_env_vars["DB_ROOT_CERT"],
-        "ssl_cert": ssl_env_vars["DB_CERT"],
-        "ssl_key": ssl_env_vars["DB_KEY"],
-    }
-    return connect_tcp_socket(engine_vars, ssl_args)
+    return connect_tcp_socket(engine_vars, ssl_connect_args())
 
 
 def setup_db(env: str) -> Any:
     """Setup Database. Called by all environments."""
-    # initialize connection pool
     global db_engine
-    if env == "LOCAL":
+    if env == "LOCAL" and db_connection() == "sqlite":
         db_engine = init_connection_pool_local()
+        Base.metadata.create_all(db_engine)
+        init_db(env)
     else:
         db_engine = init_connection_pool()
-    # Integrating FastAPI with SQL DB
-    # create SQLAlchemy ORM session
     global LocalSession
     LocalSession = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
-    # Cloud / shared DB: schema changes via Alembic (api-migrate job). Local SQLite
-    # still uses create_all for a self-contained bootstrap.
-    # Non-LOCAL environments must already have tables (historical create_all or
-    # alembic upgrade/stamp) before init_db runs on DEV.
-    if env == "LOCAL":
-        Base.metadata.create_all(db_engine)
-    if env in ("LOCAL", "DEV"):
-        # Creates a fake user in the local db
-        init_db(env)

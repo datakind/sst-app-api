@@ -16,17 +16,240 @@ from .databricks import (
     DatabricksControl,
     DatabricksPDPInferenceRunRequest,
     DatabricksSharedInferenceRunRequest,
+    _build_pdp_inference_job_parameters,
     _build_shared_inference_job_parameters,
     _build_validated_bronze_sync_job_parameters,
+    _parse_training_config,
     _resolve_pipeline_job,
     _resolve_validated_bronze_sync_job_id,
 )
 from .utilities import SchemaType
 
+VALID_PDP_TRAINING_TOML = b"""
+institution_id = "test_inst"
+institution_name = "Test School"
+
+[datasets]
+raw_course = "course.csv"
+raw_cohort = "cohort.csv"
+
+[preprocessing.features]
+min_passing_grade = 1.0
+min_num_credits_full_time = 12.0
+
+[preprocessing.selection]
+student_criteria = { enrollment_type = "FIRST-TIME" }
+
+[preprocessing.checkpoint]
+name = "first_within_cohort"
+type_ = "first_within_cohort"
+
+[preprocessing.target]
+name = "retention"
+type_ = "retention"
+max_academic_year = "2024"
+
+[modeling.training]
+primary_metric = "logloss"
+cohort = ["fall 2022-23", "spring 2022-23"]
+
+[inference]
+term = ["fall 2024-25"]
+"""
+
+VALID_LEGACY_TRAINING_TOML = b"""
+institution_id = "legacy_inst"
+institution_name = "Legacy School"
+student_group_cols = []
+
+[datasets.bronze]
+[datasets.silver.modeling]
+train_table_path = "catalog.schema.modeling"
+[datasets.silver.model_features]
+predict_table_path = "catalog.schema.features"
+[datasets.gold]
+
+[preprocessing.selection]
+student_criteria = { enrollment_type = "FIRST-TIME" }
+student_criteria_aliases = { enrollment_type = "Enrollment Type" }
+
+[preprocessing.checkpoint]
+name = "30_credits"
+unit = "credit"
+value = 30
+
+[preprocessing.target]
+name = "graduation"
+category = "graduation"
+unit = "pct_completion"
+value = 150
+
+[modeling.training]
+cohort = ["fall 2022-23"]
+"""
+
 
 @pytest.fixture
 def ctrl():
     return DatabricksControl()
+
+
+@pytest.mark.parametrize(
+    ("schema_type", "student_id_col"),
+    [("pdp", "student_id"), ("edvise", "learner_id")],
+)
+def test_parse_training_config_returns_selection_and_training_cohorts(
+    schema_type: str,
+    student_id_col: str,
+) -> None:
+    assert _parse_training_config(VALID_PDP_TRAINING_TOML, schema_type) == {
+        "student_id_col": student_id_col,
+        "student_criteria": {"enrollment_type": "FIRST-TIME"},
+        "training_cohorts": ["fall 2022-23", "spring 2022-23"],
+    }
+
+
+def test_parse_training_config_supports_legacy_schema() -> None:
+    assert _parse_training_config(VALID_LEGACY_TRAINING_TOML, "legacy") == {
+        "student_id_col": "student_id",
+        "student_criteria": {"enrollment_type": "FIRST-TIME"},
+        "training_cohorts": ["fall 2022-23"],
+    }
+
+
+def test_parse_training_config_rejects_invalid_or_missing_selection():
+    assert _parse_training_config(b"not valid {{{", "pdp") is None
+    assert _parse_training_config(b"[modeling.training]\ncohort = []", "pdp") is None
+    assert (
+        _parse_training_config(
+            b"""
+institution_id = "test_inst"
+institution_name = "Test School"
+[datasets]
+raw_course = "course.csv"
+raw_cohort = "cohort.csv"
+""",
+            "pdp",
+        )
+        is None
+    )
+
+
+def test_parse_training_config_rejects_cross_schema_config() -> None:
+    assert _parse_training_config(VALID_PDP_TRAINING_TOML, "legacy") is None
+
+
+def test_read_volume_training_config_reads_model_run_toml(
+    monkeypatch: pytest.MonkeyPatch,
+    ctrl: DatabricksControl,
+) -> None:
+    import src.webapp.databricks as db_mod
+
+    monkeypatch.setitem(db_mod.env_vars, "ENV", "DEV")
+    response = mock.Mock()
+    response.contents.read.return_value = VALID_PDP_TRAINING_TOML
+    workspace = mock.Mock()
+    workspace.files.list_directory_contents.return_value = [
+        SimpleNamespace(
+            path="/Volumes/dev_sst_02/test_school_silver/silver_volume/run-1/training/config.toml",
+            name="config.toml",
+            is_directory=False,
+        )
+    ]
+    workspace.files.download.return_value = response
+
+    with mock.patch.object(db_mod, "WorkspaceClient", return_value=workspace):
+        config = ctrl.read_volume_training_config("Test School", "run-1", "pdp")
+
+    assert config == {
+        "student_id_col": "student_id",
+        "student_criteria": {"enrollment_type": "FIRST-TIME"},
+        "training_cohorts": ["fall 2022-23", "spring 2022-23"],
+    }
+    workspace.files.list_directory_contents.assert_called_once_with(
+        "/Volumes/dev_sst_02/test_school_silver/silver_volume/run-1/training/"
+    )
+
+
+def test_read_volume_training_config_returns_none_when_training_dir_missing(
+    monkeypatch: pytest.MonkeyPatch,
+    ctrl: DatabricksControl,
+) -> None:
+    import src.webapp.databricks as db_mod
+
+    monkeypatch.setitem(db_mod.env_vars, "ENV", "DEV")
+    workspace = mock.Mock()
+    workspace.files.list_directory_contents.side_effect = FileNotFoundError("missing")
+
+    with mock.patch.object(db_mod, "WorkspaceClient", return_value=workspace):
+        assert ctrl.read_volume_training_config("Test School", "run-1", "pdp") is None
+
+    workspace.files.list_directory_contents.assert_called_once_with(
+        "/Volumes/dev_sst_02/test_school_silver/silver_volume/run-1/training/"
+    )
+    workspace.files.download.assert_not_called()
+
+
+def test_read_volume_training_config_does_not_fallback_from_invalid_config_toml(
+    monkeypatch: pytest.MonkeyPatch,
+    ctrl: DatabricksControl,
+) -> None:
+    import src.webapp.databricks as db_mod
+
+    monkeypatch.setitem(db_mod.env_vars, "ENV", "DEV")
+    response = mock.Mock()
+    response.contents.read.return_value = b"invalid {{{"
+    workspace = mock.Mock()
+    workspace.files.list_directory_contents.return_value = [
+        SimpleNamespace(
+            path="/training/config.toml",
+            name="config.toml",
+            is_directory=False,
+        ),
+        SimpleNamespace(
+            path="/training/other.toml",
+            name="other.toml",
+            is_directory=False,
+        ),
+    ]
+    workspace.files.download.return_value = response
+
+    with mock.patch.object(db_mod, "WorkspaceClient", return_value=workspace):
+        assert ctrl.read_volume_training_config("Test School", "run-1", "pdp") is None
+
+    workspace.files.download.assert_called_once_with("/training/config.toml")
+
+
+def test_read_volume_training_config_rejects_ambiguous_tomls(
+    monkeypatch: pytest.MonkeyPatch,
+    ctrl: DatabricksControl,
+) -> None:
+    import src.webapp.databricks as db_mod
+
+    monkeypatch.setitem(db_mod.env_vars, "ENV", "DEV")
+    workspace = mock.Mock()
+    workspace.files.list_directory_contents.return_value = [
+        SimpleNamespace(path="/training/one.toml", name="one.toml", is_directory=False),
+        SimpleNamespace(path="/training/two.toml", name="two.toml", is_directory=False),
+    ]
+
+    with mock.patch.object(db_mod, "WorkspaceClient", return_value=workspace):
+        assert ctrl.read_volume_training_config("Test School", "run-1", "pdp") is None
+
+    workspace.files.download.assert_not_called()
+
+
+@pytest.mark.parametrize("environment", ["LOCAL", "PROD"])
+def test_read_volume_training_config_returns_none_without_volume_mapping(
+    monkeypatch: pytest.MonkeyPatch,
+    ctrl: DatabricksControl,
+    environment: str,
+) -> None:
+    import src.webapp.databricks as db_mod
+
+    monkeypatch.setitem(db_mod.env_vars, "ENV", environment)
+
+    assert ctrl.read_volume_training_config("Test School", "run-1", "pdp") is None
 
 
 def test_exact_literal_case_insensitive(ctrl):
@@ -316,6 +539,39 @@ def test_build_shared_inference_job_parameters_shape() -> None:
         params["validated_blob_paths_json"]
         == '["validated/course.csv","validated/student.csv"]'
     )
+    assert "term_filter" not in params
+
+
+def test_inference_job_parameters_include_term_filter_for_all_pipelines() -> None:
+    term_filter = ["fall 2024-25", "spring 2024-25"]
+    pdp_request = DatabricksPDPInferenceRunRequest(
+        inst_name="Test School",
+        filepath_to_type={
+            "student.csv": [SchemaType.STUDENT],
+            "course.csv": [SchemaType.COURSE],
+        },
+        model_name="retention_model",
+        email="user@example.com",
+        gcp_external_bucket_name="bucket-a",
+        term_filter=term_filter,
+    )
+    shared_request = DatabricksSharedInferenceRunRequest(
+        inst_name="Test School",
+        model_name="retention_model",
+        gcp_external_bucket_name="bucket-a",
+        term_filter=term_filter,
+    )
+
+    assert (
+        _build_pdp_inference_job_parameters(pdp_request, "test_school")["term_filter"]
+        == '["fall 2024-25", "spring 2024-25"]'
+    )
+    assert (
+        _build_shared_inference_job_parameters(shared_request, "test_school")[
+            "term_filter"
+        ]
+        == '["fall 2024-25", "spring 2024-25"]'
+    )
 
 
 def test_download_bronze_training_inputs_rejects_path_traversal(
@@ -455,3 +711,4 @@ def test_run_pdp_inference_sends_datakind_notification_email_params(
     assert params["datakind_notification_email"] == "user@example.com"
     assert params["DK_CC_EMAIL"] == "user@example.com"
     assert "notification_email" not in params
+    assert "term_filter" not in params

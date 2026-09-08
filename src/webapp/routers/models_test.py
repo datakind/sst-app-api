@@ -5,6 +5,7 @@ from unittest import mock
 from typing import Any
 import pytest
 import jsonpickle
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 import sqlalchemy
 from sqlalchemy.pool import StaticPool
@@ -36,6 +37,7 @@ from .models import (
     SchemaConfigObj,
     default_schema_configs_from_inst_schemas,
     resolve_model_schema_configs,
+    _validated_term_filter,
 )
 from ..utilities import batch_input_validated_blob_paths
 from ..gcsutil import StorageControl
@@ -52,6 +54,22 @@ FILE_UUID_3 = uuid.UUID("fbe67a2e-50e0-40c7-b7b8-07043cb813a5")
 BATCH_UUID = uuid.UUID("5b2420f3-1035-46ab-90eb-74d5df97de43")
 created_by_UUID = uuid.UUID("0ad8b77c-49fb-459a-84b1-8d2c05722c4a")
 RUN_ID = 123
+
+
+def test_validated_term_filter_normalizes_academic_term_labels() -> None:
+    assert _validated_term_filter([" Fall 2024-25 ", "SPRING 2024-25"]) == [
+        "fall 2024-25",
+        "spring 2024-25",
+    ]
+    assert _validated_term_filter(None) is None
+
+
+@pytest.mark.parametrize("term_filter", [[], [""], ["   "]])
+def test_validated_term_filter_rejects_empty_values(term_filter: list[str]) -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        _validated_term_filter(term_filter)
+
+    assert exc_info.value.status_code == 400
 
 
 # TODO plumb through schema configs
@@ -293,7 +311,9 @@ def test_archive_model(client: TestClient, session: sqlalchemy.orm.Session) -> N
 
     response = client.patch(base + "sample_model_for_school_1/archive")
     assert response.status_code == 200
-    assert response.json() == {
+    payload = response.json()
+    assert payload.pop("archived_at") is not None
+    assert payload == {
         "inst_id": uuid_to_str(USER_VALID_INST_UUID),
         "model_name": "sample_model_for_school_1",
         "archived": 1,
@@ -302,6 +322,7 @@ def test_archive_model(client: TestClient, session: sqlalchemy.orm.Session) -> N
     model_row = session.get(ModelTable, SAMPLE_UUID)
     assert model_row is not None
     assert model_row.archived == 1
+    assert model_row.archived_at is not None
     assert client.patch(base + "sample_model_for_school_1/archive").status_code == 409
 
     # Confirm the archived state is reflected on the model read endpoints.
@@ -313,11 +334,11 @@ def test_archive_model(client: TestClient, session: sqlalchemy.orm.Session) -> N
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/models"
     )
     assert list_response.status_code == 200
-    assert next(
-        m["archived"]
-        for m in list_response.json()
-        if m["name"] == "sample_model_for_school_1"
+    listed_model = next(
+        m for m in list_response.json() if m["name"] == "sample_model_for_school_1"
     )
+    assert listed_model["archived"]
+    assert listed_model["archived_at"] is not None
 
 
 def test_read_inst_model_outputs(client: TestClient) -> None:
@@ -465,6 +486,7 @@ def test_trigger_inference_run(client: TestClient) -> None:
         json={
             "batch_name": "batch_foo",
             "is_pdp": True,
+            "term_filter": [" Fall 2024-25 "],
         },
     )
 
@@ -477,6 +499,48 @@ def test_trigger_inference_run(client: TestClient) -> None:
     assert response.json()["batch_name"] == "batch_foo"
     assert response.json()["model_run_id"] == "run-inference"
     assert response.json()["model_version"] == "1"
+    pdp_request = MOCK_DATABRICKS.run_pdp_inference.call_args[0][0]
+    assert pdp_request.term_filter == ["fall 2024-25"]
+
+
+def test_trigger_inference_run_rejects_empty_term_filter(client: TestClient) -> None:
+    response = client.post(
+        "/institutions/"
+        + uuid_to_str(USER_VALID_INST_UUID)
+        + "/models/sample_model_for_school_1/run-inference",
+        json={
+            "batch_name": "batch_foo",
+            "is_pdp": True,
+            "term_filter": [],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "At least one term is required when term_filter is provided."
+    )
+
+
+@pytest.mark.parametrize("payload", [{}, {"term_filter": None}])
+def test_trigger_inference_run_passes_omitted_or_null_term_filter(
+    client: TestClient, payload: dict[str, object]
+) -> None:
+    MOCK_DATABRICKS.run_pdp_inference.return_value = DatabricksInferenceRunResponse(
+        job_run_id=123
+    )
+    MOCK_DATABRICKS.fetch_model_version.return_value = mock.Mock(
+        version=1, run_id="run-inference"
+    )
+    response = client.post(
+        "/institutions/"
+        + uuid_to_str(USER_VALID_INST_UUID)
+        + "/models/sample_model_for_school_1/run-inference",
+        json={"batch_name": "batch_foo", "is_pdp": True, **payload},
+    )
+
+    assert response.status_code == 200
+    pdp_request = MOCK_DATABRICKS.run_pdp_inference.call_args[0][0]
+    assert pdp_request.term_filter is None
 
 
 def test_check_file_types_valid_schema_configs():
@@ -750,7 +814,11 @@ def test_trigger_es_inference_run_edvise_institution(
         "/institutions/"
         + uuid_to_str(EDVISE_INST_UUID)
         + "/models/es_model/run-inference",
-        json={"batch_name": "es_batch_foo", "config_file_name": "config.toml"},
+        json={
+            "batch_name": "es_batch_foo",
+            "config_file_name": "config.toml",
+            "term_filter": [" Fall 2024-25 "],
+        },
     )
 
     assert response.status_code == 200
@@ -765,6 +833,99 @@ def test_trigger_es_inference_run_edvise_institution(
         "validated/es_student.csv",
     ]
     assert db_req.is_genai_institution is False
+    assert db_req.term_filter == ["fall 2024-25"]
+    MOCK_DATABRICKS.run_pdp_inference.assert_not_called()
+
+
+def test_trigger_legacy_inference_passes_normalized_term_filter(
+    client: TestClient, session: sqlalchemy.orm.Session
+) -> None:
+    app.dependency_overrides[get_current_active_user] = lambda: DATAKINDER
+    MOCK_DATABRICKS.reset_mock()
+    legacy_inst = InstTable(
+        id=uuid.uuid4(),
+        name="legacy_school",
+        legacy_id="legacy_test_1",
+        schemas=[SchemaType.STUDENT, SchemaType.COURSE],
+        created_at=DATETIME_TESTING,
+        updated_at=DATETIME_TESTING,
+    )
+    legacy_model = ModelTable(
+        id=uuid.uuid4(),
+        inst_id=legacy_inst.id,
+        name="legacy_model",
+        schema_configs=jsonpickle.encode(
+            [
+                [
+                    SchemaConfigObj(schema_type=SchemaType.COURSE),
+                    SchemaConfigObj(schema_type=SchemaType.STUDENT),
+                ]
+            ]
+        ),
+        valid=True,
+    )
+    legacy_batch = BatchTable(
+        id=uuid.uuid4(),
+        inst_id=legacy_inst.id,
+        name="legacy_batch",
+        created_by=created_by_UUID,
+        created_at=DATETIME_TESTING,
+        updated_at=DATETIME_TESTING,
+    )
+    session.add_all(
+        [
+            legacy_inst,
+            legacy_model,
+            legacy_batch,
+            FileTable(
+                id=uuid.uuid4(),
+                inst_id=legacy_inst.id,
+                name="legacy_course.csv",
+                source="MANUAL_UPLOAD",
+                batches={legacy_batch},
+                created_at=DATETIME_TESTING,
+                updated_at=DATETIME_TESTING,
+                sst_generated=False,
+                valid=True,
+                schemas=[SchemaType.COURSE],
+            ),
+            FileTable(
+                id=uuid.uuid4(),
+                inst_id=legacy_inst.id,
+                name="legacy_student.csv",
+                source="MANUAL_UPLOAD",
+                batches={legacy_batch},
+                created_at=DATETIME_TESTING,
+                updated_at=DATETIME_TESTING,
+                sst_generated=False,
+                valid=True,
+                schemas=[SchemaType.STUDENT],
+            ),
+        ]
+    )
+    session.commit()
+    MOCK_DATABRICKS.run_legacy_inference.return_value = DatabricksInferenceRunResponse(
+        job_run_id=792
+    )
+    MOCK_DATABRICKS.fetch_model_version.return_value = mock.Mock(
+        version=1, run_id="run-legacy"
+    )
+
+    response = client.post(
+        "/institutions/"
+        + uuid_to_str(legacy_inst.id)
+        + "/models/legacy_model/run-inference",
+        json={
+            "batch_name": "legacy_batch",
+            "term_filter": [" Fall 2024-25 "],
+        },
+    )
+
+    assert response.status_code == 200
+    MOCK_DATABRICKS.run_legacy_inference.assert_called_once()
+    request = MOCK_DATABRICKS.run_legacy_inference.call_args[0][0]
+    assert request.term_filter == ["fall 2024-25"]
+    MOCK_DATABRICKS.run_es_inference.assert_not_called()
     MOCK_DATABRICKS.run_pdp_inference.assert_not_called()
 
 

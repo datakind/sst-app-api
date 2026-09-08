@@ -10,11 +10,17 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import pool, create_engine
 from sqlalchemy.engine.url import URL
 
-from webapp.database import Base
 from webapp.alembic_filters import include_object
+from webapp.config import db_connection, ssl_connect_args
+from webapp.database import Base
+
+_env_file = os.environ.get("ENV_FILE_PATH")
+if _env_file:
+    load_dotenv(_env_file)
 
 config = context.config
 
@@ -39,30 +45,17 @@ def _database_url() -> str:
     if override:
         return override
 
-    env = os.environ.get("ENV", "LOCAL").upper()
-    if env == "LOCAL":
-        # File-backed SQLite for local alembic commands (in-memory loses state).
+    if db_connection() == "sqlite":
         return os.environ.get("ALEMBIC_SQLITE_URL", "sqlite:///./alembic_local.db")
 
     return URL.create(
         drivername="mysql+pymysql",
         username=_require_env("DB_USER"),
-        password=_require_env("DB_PASS"),
+        password=os.environ.get("DB_PASS") or "",
         host=_require_env("INSTANCE_HOST"),
         port=int(os.environ.get("DB_PORT", "3306")),
         database=_require_env("DB_NAME"),
     ).render_as_string(hide_password=False)
-
-
-def _connect_args() -> dict:
-    env = os.environ.get("ENV", "LOCAL").upper()
-    if env == "LOCAL" or os.environ.get("ALEMBIC_DATABASE_URL"):
-        return {}
-    return {
-        "ssl_ca": _require_env("DB_ROOT_CERT"),
-        "ssl_cert": _require_env("DB_CERT"),
-        "ssl_key": _require_env("DB_KEY"),
-    }
 
 
 def run_migrations_offline() -> None:
@@ -81,13 +74,12 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connect_args = _connect_args()
     url = _database_url()
 
     connectable = create_engine(
         url,
         poolclass=pool.NullPool,
-        connect_args=connect_args,
+        connect_args=ssl_connect_args() if db_connection() == "mysql" else {},
     )
 
     with connectable.connect() as connection:

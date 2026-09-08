@@ -2,6 +2,7 @@
 
 import os
 import logging
+import tomllib
 from pydantic import BaseModel, field_validator
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import DatabricksError
@@ -14,8 +15,10 @@ from databricks.sdk.service.sql import (
 )
 from google.cloud import storage
 from google.api_core import exceptions as gcs_errors
-from .config import databricks_vars, gcs_vars
-from .utilities import databricksify_inst_name, SchemaType, uc_model_name
+from edvise.configs.schema_type import project_config_class
+
+from .config import ENV_TO_VOLUME_SCHEMA, databricks_vars, env_vars, gcs_vars
+from .utilities import databricksify_inst_name, SchemaType
 from typing import List, Any, Dict, Optional
 import requests
 import hashlib
@@ -339,6 +342,7 @@ class DatabricksPDPInferenceRunRequest(BaseModel):
     # The email where notifications will get sent.
     email: str
     gcp_external_bucket_name: str
+    term_filter: list[str] | None = None
 
 
 class DatabricksSharedInferenceRunRequest(BaseModel):
@@ -357,6 +361,7 @@ class DatabricksSharedInferenceRunRequest(BaseModel):
     validated_blob_paths: list[str] = []
     # ES: True when institution has genai_id; False for edvise_id schools.
     is_genai_institution: bool = True
+    term_filter: list[str] | None = None
 
     @field_validator("config_file_name", "features_table_name", "email", mode="before")
     @classmethod
@@ -388,12 +393,36 @@ class DatabricksBronzeSyncResponse(BaseModel):
     job_run_id: int
 
 
+def _build_pdp_inference_job_parameters(
+    req: DatabricksPDPInferenceRunRequest,
+    databricks_institution_name: str,
+) -> dict[str, str]:
+    """Build PDP inference parameters, including an optional academic-term filter."""
+    parameters = {
+        "cohort_file_name": get_filepath_of_filetype(
+            req.filepath_to_type, SchemaType.STUDENT
+        ),
+        "course_file_name": get_filepath_of_filetype(
+            req.filepath_to_type, SchemaType.COURSE
+        ),
+        "databricks_institution_name": databricks_institution_name,
+        "DB_workspace": databricks_vars["DATABRICKS_WORKSPACE"],
+        "gcp_bucket_name": req.gcp_external_bucket_name,
+        "model_name": req.model_name,
+        "datakind_notification_email": req.email,
+        "DK_CC_EMAIL": req.email,
+    }
+    if req.term_filter is not None:
+        parameters["term_filter"] = json.dumps(req.term_filter)
+    return parameters
+
+
 def _build_shared_inference_job_parameters(
     req: DatabricksSharedInferenceRunRequest,
     databricks_institution_name: str,
 ) -> dict[str, str]:
     """Build common job_parameters for legacy and ES inference runs."""
-    return {
+    parameters = {
         "databricks_institution_name": databricks_institution_name,
         "DB_workspace": databricks_vars["DATABRICKS_WORKSPACE"],
         "model_name": uc_model_name(req.model_name),
@@ -406,6 +435,9 @@ def _build_shared_inference_job_parameters(
             req.validated_blob_paths, separators=(",", ":")
         ),
     }
+    if req.term_filter is not None:
+        parameters["term_filter"] = json.dumps(req.term_filter)
+    return parameters
 
 
 def _build_validated_bronze_sync_job_parameters(
@@ -453,6 +485,86 @@ def _sha256_json(obj: Any) -> str:
             obj, ensure_ascii=False, separators=(",", ":"), sort_keys=True
         ).encode("utf-8")
     ).hexdigest()
+
+
+def _parse_training_config(raw: bytes, schema_type: str) -> dict[str, Any] | None:
+    """Validate a training TOML with the schema-specific Pydantic config."""
+    try:
+        data = tomllib.loads(raw.decode("utf-8"))
+        cfg = project_config_class(schema_type).model_validate(data)
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError, ValueError):
+        LOGGER.debug(
+            "Training config failed validation for schema_type=%s",
+            schema_type,
+            exc_info=True,
+        )
+        return None
+
+    if cfg.preprocessing is None or cfg.modeling is None:
+        LOGGER.debug(
+            "Training config lacks preprocessing or modeling for schema_type=%s",
+            schema_type,
+        )
+        return None
+
+    student_criteria = dict(cfg.preprocessing.selection.student_criteria)
+    cohorts = cfg.modeling.training.cohort or []
+    training_cohorts = [str(label).strip() for label in cohorts if str(label).strip()]
+    return {
+        "student_id_col": cfg.student_id_col,
+        "student_criteria": student_criteria,
+        "training_cohorts": training_cohorts,
+    }
+
+
+def _find_training_config_in_training_dir(
+    workspace: WorkspaceClient,
+    training_directory: str,
+    schema_type: str,
+) -> dict[str, Any] | None:
+    """Load the training config TOML from the model run's training directory."""
+    try:
+        entries = list(workspace.files.list_directory_contents(training_directory))
+    except Exception:
+        LOGGER.debug(
+            "Could not list Databricks training config path %s",
+            training_directory,
+            exc_info=True,
+        )
+        return None
+    toml_entries = [
+        (entry.name, entry.path)
+        for entry in entries
+        if entry.path is not None
+        and not entry.is_directory
+        and entry.name is not None
+        and entry.name.lower().endswith(".toml")
+    ]
+    config_entries = [
+        entry for entry in toml_entries if entry[0].lower() == "config.toml"
+    ]
+    if len(config_entries) == 1:
+        _entry_name, entry_path = config_entries[0]
+    elif not config_entries and len(toml_entries) == 1:
+        _entry_name, entry_path = toml_entries[0]
+    else:
+        LOGGER.warning(
+            "Expected one training config TOML in %s; found %d",
+            training_directory,
+            len(toml_entries),
+        )
+        return None
+
+    try:
+        response = workspace.files.download(entry_path)
+        if response.contents is None:
+            return None
+        raw = response.contents.read()
+        raw_bytes = raw if isinstance(raw, bytes) else raw.encode("utf-8")
+    except Exception:
+        LOGGER.debug("Could not read Databricks config %s", entry_path, exc_info=True)
+        return None
+    return _parse_training_config(raw_bytes, schema_type)
 
 
 L1_RESP_CACHE_TTL = int("600")  # seconds
@@ -761,22 +873,7 @@ class DatabricksControl(BaseModel):
         try:
             run_job: Any = w.jobs.run_now(
                 job_id,
-                job_parameters={
-                    "cohort_file_name": get_filepath_of_filetype(
-                        req.filepath_to_type, SchemaType.STUDENT
-                    ),
-                    "course_file_name": get_filepath_of_filetype(
-                        req.filepath_to_type, SchemaType.COURSE
-                    ),
-                    "databricks_institution_name": db_inst_name,
-                    "DB_workspace": databricks_vars[
-                        "DATABRICKS_WORKSPACE"
-                    ],  # is this value the same PER environ? dev/staging/prod
-                    "gcp_bucket_name": req.gcp_external_bucket_name,
-                    "model_name": uc_model_name(req.model_name),
-                    "datakind_notification_email": req.email,
-                    "DK_CC_EMAIL": req.email,
-                },
+                job_parameters=_build_pdp_inference_job_parameters(req, db_inst_name),
             )
             LOGGER.info(
                 f"Successfully triggered job run. Run ID: {run_job.response.run_id}"
@@ -1114,13 +1211,29 @@ class DatabricksControl(BaseModel):
 
         records: Any = []
 
-        # Helper: consume one chunk-like object (first result or subsequent chunk)
+        def _link_attr(link_obj: Any, name: str) -> Any:
+            if isinstance(link_obj, dict):
+                return link_obj.get(name)
+            return getattr(link_obj, name, None)
+
+        def _next_chunk_index(chunk_obj: Any) -> int | None:
+            """Return next chunk index for EXTERNAL_LINKS (on links) or INLINE."""
+            links = getattr(chunk_obj, "external_links", None) or []
+            next_idx: int | None = None
+            for link_obj in links:
+                idx = _link_attr(link_obj, "next_chunk_index")
+                if idx is not None:
+                    next_idx = int(idx)
+            if next_idx is not None:
+                return next_idx
+            idx = getattr(chunk_obj, "next_chunk_index", None)
+            return int(idx) if idx is not None else None
+
         def _consume_chunk(chunk_obj: Any) -> int | None:
+            """Download EXTERNAL_LINKS payloads; return next_chunk_index if any."""
             links = getattr(chunk_obj, "external_links", None) or []
             for link_obj in links:
-                url = getattr(link_obj, "external_link", None)
-                if url is None and isinstance(link_obj, dict):
-                    url = link_obj.get("external_link")
+                url = _link_attr(link_obj, "external_link")
                 if not url:
                     continue
                 # IMPORTANT: do not send Databricks auth header to presigned URLs.
@@ -1135,20 +1248,37 @@ class DatabricksControl(BaseModel):
                     if not isinstance(row, list):
                         raise ValueError("Unexpected row shape (expected list).")
                     records.append(dict(zip(cols, row)))
-            return getattr(chunk_obj, "next_chunk_index", None)
+            return _next_chunk_index(chunk_obj)
 
-        # First batch is in resp.result
-        if not resp.result:
-            return records
-        next_idx = _consume_chunk(resp.result)
+        total_chunks = getattr(resp.manifest, "total_chunk_count", None)
+        expected_rows = getattr(resp.manifest, "total_row_count", None)
 
-        # Remaining batches by chunk index
-        while next_idx is not None:
-            chunk = w.statement_execution.get_statement_result_chunk_n(
-                statement_id=stmt_id,
-                chunk_index=next_idx,
+        # Prefer manifest chunk count: EXTERNAL_LINKS next_chunk_index is on each
+        # link, and relying only on result.next_chunk_index truncates large tables.
+        if total_chunks is not None and int(total_chunks) > 0:
+            if resp.result:
+                _consume_chunk(resp.result)
+            for chunk_index in range(1, int(total_chunks)):
+                chunk = w.statement_execution.get_statement_result_chunk_n(
+                    statement_id=stmt_id,
+                    chunk_index=chunk_index,
+                )
+                _consume_chunk(chunk)
+        elif resp.result:
+            next_idx = _consume_chunk(resp.result)
+            while next_idx is not None:
+                chunk = w.statement_execution.get_statement_result_chunk_n(
+                    statement_id=stmt_id,
+                    chunk_index=next_idx,
+                )
+                next_idx = _consume_chunk(chunk)
+
+        if expected_rows is not None and len(records) != int(expected_rows):
+            raise ValueError(
+                f"Incomplete Databricks EXTERNAL_LINKS fetch for {table_fqn}: "
+                f"got {len(records)} rows, expected {expected_rows} "
+                f"(chunks={total_chunks})"
             )
-            next_idx = _consume_chunk(chunk)
 
         with _L1_LOCK:
             if records:
@@ -1209,6 +1339,39 @@ class DatabricksControl(BaseModel):
         latest_version = max(model_versions, key=lambda v: int(v.version))
 
         return latest_version
+
+    def read_volume_training_config(
+        self, inst_name: str, model_run_id: str, schema_type: str
+    ) -> dict[str, Any] | None:
+        """Read selection criteria and training cohorts from a model run."""
+        if not inst_name.strip() or not model_run_id.strip() or not schema_type.strip():
+            return None
+        env_schema = ENV_TO_VOLUME_SCHEMA.get(str(env_vars["ENV"]).strip().upper())
+        if env_schema is None:
+            LOGGER.warning(
+                "Training config volumes are not configured for ENV=%r",
+                env_vars["ENV"],
+            )
+            return None
+        try:
+            inst_slug = databricksify_inst_name(inst_name)
+            workspace = WorkspaceClient(
+                host=databricks_vars["DATABRICKS_HOST_URL"],
+                google_service_account=gcs_vars["GCP_SERVICE_ACCOUNT_EMAIL"],
+            )
+        except Exception:
+            LOGGER.exception(
+                "Could not initialize training config lookup for %s", inst_name
+            )
+            return None
+
+        training_directory = (
+            f"/Volumes/{env_schema}/{inst_slug}_silver/silver_volume/"
+            f"{model_run_id}/training/"
+        )
+        return _find_training_config_in_training_dir(
+            workspace, training_directory, schema_type
+        )
 
     def delete_model(self, catalog_name: str, inst_name: str, model_name: str) -> None:
         schema = databricksify_inst_name(inst_name)

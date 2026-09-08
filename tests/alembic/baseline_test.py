@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 
 from webapp.database import Base
@@ -26,6 +27,13 @@ API_TABLES = {
 
 BASELINE_REVISION = "20260803_596894"
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _script_head(cfg: Config) -> str:
+    """Current head revision, so adding a revision does not break these tests."""
+    head = ScriptDirectory.from_config(cfg).get_current_head()
+    assert head is not None
+    return head
 
 
 @pytest.fixture()
@@ -63,7 +71,7 @@ def test_alembic_upgrade_creates_api_tables_without_users(
     assert "alembic_version" in tables
     with engine.connect() as conn:
         version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-    assert version == BASELINE_REVISION
+    assert version == _script_head(cfg)
 
 
 def test_alembic_upgrade_is_noop_after_stamp(
@@ -79,7 +87,7 @@ def test_alembic_upgrade_is_noop_after_stamp(
     command.stamp(cfg, "head")
     with engine.connect() as conn:
         stamped = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
-    assert stamped == BASELINE_REVISION
+    assert stamped == _script_head(cfg)
 
     before = set(inspect(engine).get_table_names())
     command.upgrade(cfg, "head")
@@ -91,4 +99,4 @@ def test_alembic_upgrade_is_noop_after_stamp(
         after_version = conn.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar()
-    assert after_version == BASELINE_REVISION
+    assert after_version == _script_head(cfg)
