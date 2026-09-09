@@ -18,7 +18,7 @@ from google.api_core import exceptions as gcs_errors
 from edvise.configs.schema_type import project_config_class
 
 from .config import ENV_TO_VOLUME_SCHEMA, databricks_vars, env_vars, gcs_vars
-from .utilities import databricksify_inst_name, SchemaType
+from .utilities import databricksify_inst_name, SchemaType, uc_model_name
 from typing import List, Any, Dict, Optional
 import requests
 import hashlib

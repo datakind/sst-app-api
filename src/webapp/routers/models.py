@@ -5,7 +5,7 @@ from typing import Annotated, Any, cast
 import jsonpickle
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, field_serializer
-from sqlalchemy import and_, update, or_
+from sqlalchemy import and_, func, update, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 from ..databricks import (

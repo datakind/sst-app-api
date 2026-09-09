@@ -2,7 +2,7 @@
 
 import uuid
 import re
-from typing import Annotated, Final, Any, Iterable, Optional, Tuple, Union
+from typing import Annotated, Final, Any, Iterable, Optional, Tuple, Union, cast
 from urllib.parse import unquote_plus
 from strenum import StrEnum  # needed for python pre 3.11
 import jwt
@@ -36,16 +36,18 @@ def decode_url_piece(src: str) -> str:
     Decimal time limits (``4.5y``) are encoded to ``4d5y`` so DB and Databricks
     lookups use the Unity Catalog name. UC always has ``4d5``, never ``4.5``.
     """
-    return encode_uc_model_name(unquote_plus(src))
+    # cast: edvise is untyped under mypy follow_imports=silent
+    return cast(str, encode_uc_model_name(unquote_plus(src)))
 
 
 def display_model_name(name: str) -> str:
     """Frontend-only: show ``4.5y`` for a UC name that is always stored as ``4d5y``."""
-    return decode_uc_model_name(name)
+    return cast(str, decode_uc_model_name(name))
 
 
-# Databricks / UC id encoding (same as :func:`encode_uc_model_name`).
-uc_model_name = encode_uc_model_name
+def uc_model_name(name: str) -> str:
+    """Encode display decimals for Unity Catalog / Databricks ids (``4.5y`` → ``4d5y``)."""
+    return cast(str, encode_uc_model_name(name))
 
 
 def file_name_variants_for_lookup(name: str) -> set[str]:
