@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated, Any, cast
 import jsonpickle
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, field_validator
 from sqlalchemy import and_, func, update, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
@@ -229,9 +229,10 @@ class ModelInfo(BaseModel):
     archived: bool = False
     archived_at: datetime | None = None
 
-    @field_serializer("name")
-    def _display_name(self, name: str) -> str:
-        # UC always has 4d5; 4.5 is frontend display only.
+    @field_validator("name")
+    @classmethod
+    def _display_name(cls, name: str) -> str:
+        # Webapp display only. UC / DB lookups stay 4d5y.
         return display_model_name(name)
 
 
@@ -262,9 +263,10 @@ class RunInfo(BaseModel):
     model_run_id: str | None = None
     model_version: str | None = None
 
-    @field_serializer("m_name")
-    def _display_m_name(self, m_name: str) -> str:
-        # UC always has 4d5; 4.5 is frontend display only.
+    @field_validator("m_name")
+    @classmethod
+    def _display_m_name(cls, m_name: str) -> str:
+        # Webapp display only. UC / DB lookups stay 4d5y.
         return display_model_name(m_name)
 
 
