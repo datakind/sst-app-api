@@ -1148,6 +1148,8 @@ def test_create_model_encodes_decimal_dots_for_storage(
         )
         assert response.status_code == 200
         assert response.json()["name"] == display_name
+        assert "4.5y" not in response.text
+        assert "4d5y" not in response.json()["name"]
     stored = session.execute(
         sqlalchemy.select(ModelTable).where(ModelTable.name == uc_name)
     ).scalar_one()

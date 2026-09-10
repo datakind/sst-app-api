@@ -377,7 +377,7 @@ def read_inst_models(
             {
                 "m_id": uuid_to_str(elem[0].id),
                 "inst_id": uuid_to_str(elem[0].inst_id),
-                "name": elem[0].name,
+                "name": display_model_name(elem[0].name),
                 "created_by": uuid_to_str(elem[0].created_by),
                 "deleted": elem[0].deleted,
                 "valid": elem[0].valid,
@@ -456,7 +456,7 @@ def create_model(
     return {
         "m_id": uuid_to_str(query_result[0][0].id),
         "inst_id": uuid_to_str(query_result[0][0].inst_id),
-        "name": query_result[0][0].name,
+        "name": display_model_name(query_result[0][0].name),
         "created_by": uuid_to_str(query_result[0][0].created_by),
         "deleted": query_result[0][0].deleted,
         "valid": query_result[0][0].valid,
@@ -505,7 +505,7 @@ def read_inst_model(
     return {
         "m_id": uuid_to_str(query_result[0][0].id),
         "inst_id": uuid_to_str(query_result[0][0].inst_id),
-        "name": query_result[0][0].name,
+        "name": display_model_name(query_result[0][0].name),
         "created_by": uuid_to_str(query_result[0][0].created_by),
         "deleted": query_result[0][0].deleted,
         "valid": query_result[0][0].valid,
@@ -652,7 +652,7 @@ def read_inst_model_outputs(
             {
                 # JobTable doesn't have inst_id, so we retrieve that from the model query.
                 "inst_id": uuid_to_str(query_result[0][0].inst_id),
-                "m_name": query_result[0][0].name,
+                "m_name": display_model_name(query_result[0][0].name),
                 "run_id": elem.id,
                 "model_run_id": elem.model_run_id,
                 "model_version": elem.model_version,
@@ -716,7 +716,7 @@ def read_inst_model_output(
             # TODO: if the output_filename is empty make a query to Databricks
             return {
                 "inst_id": uuid_to_str(query_result[0][0].inst_id),
-                "m_name": query_result[0][0].name,
+                "m_name": display_model_name(query_result[0][0].name),
                 "run_id": elem.id,
                 "created_by": uuid_to_str(elem.created_by),
                 "triggered_at": elem.triggered_at,
@@ -964,7 +964,7 @@ def trigger_inference_run(
         local_session.get().add(job)
         return {
             "inst_id": inst_id,
-            "m_name": model_name,
+            "m_name": display_model_name(model_name),
             "run_id": res.job_run_id,
             "created_by": current_user.user_id,
             "triggered_at": triggered_timestamp,
@@ -1043,7 +1043,7 @@ def trigger_inference_run(
     local_session.get().add(job)
     return {
         "inst_id": inst_id,
-        "m_name": model_name,
+        "m_name": display_model_name(model_name),
         "run_id": res.job_run_id,
         "created_by": current_user.user_id,
         "triggered_at": triggered_timestamp,
