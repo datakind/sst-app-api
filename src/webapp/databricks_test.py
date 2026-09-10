@@ -524,6 +524,14 @@ def test_build_shared_inference_job_parameters_shape() -> None:
     assert params["databricks_institution_name"] == "test_school"
     assert params["model_name"] == "retention_model"
     assert params["config_file_name"] == "config.toml"
+    decimal_req = req.model_copy(
+        update={"model_name": "graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits"}
+    )
+    decimal_params = _build_shared_inference_job_parameters(decimal_req, "test_school")
+    assert (
+        decimal_params["model_name"]
+        == "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
+    )
     assert params["gcp_bucket_name"] == "bucket-a"
     assert params["datakind_notification_email"] == "user@example.com"
     assert params["batch_id"] == "5b2420f3103546ab90eb74d5df97de43"

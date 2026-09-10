@@ -2,7 +2,7 @@
 
 import uuid
 import re
-from typing import Annotated, Final, Any, Iterable, Optional, Tuple, Union
+from typing import Annotated, Final, Any, Iterable, Optional, Tuple, Union, cast
 from urllib.parse import unquote_plus
 from strenum import StrEnum  # needed for python pre 3.11
 import jwt
@@ -13,6 +13,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 from sqlalchemy import and_
 from fastapi.security import HTTPAuthorizationCredentials
+from edvise.utils.uc_model_name import (
+    decode_uc_model_name,
+    encode_uc_model_name,
+)
 
 from .authn import (
     verify_api_key,
@@ -28,8 +32,22 @@ def decode_url_piece(src: str) -> str:
     Uses :func:`urllib.parse.unquote_plus` so ``+`` is treated as a space (common
     when clients apply form-style encoding to paths). A literal ``+`` in a name
     must be sent as ``%2B``.
+
+    Decimal time limits (``4.5y``) are encoded to ``4d5y`` so DB and Databricks
+    lookups use the Unity Catalog name. UC always has ``4d5``, never ``4.5``.
     """
-    return unquote_plus(src)
+    # cast: edvise is untyped under mypy follow_imports=silent
+    return cast(str, encode_uc_model_name(unquote_plus(src)))
+
+
+def display_model_name(name: str) -> str:
+    """Frontend-only: show ``4.5y`` for a UC name that is always stored as ``4d5y``."""
+    return cast(str, decode_uc_model_name(name))
+
+
+def uc_model_name(name: str) -> str:
+    """Encode display decimals for Unity Catalog / Databricks ids (``4.5y`` → ``4d5y``)."""
+    return cast(str, encode_uc_model_name(name))
 
 
 def file_name_variants_for_lookup(name: str) -> set[str]:

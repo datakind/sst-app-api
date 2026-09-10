@@ -17,6 +17,7 @@ from ..utilities import (
     str_to_uuid,
     get_current_active_user,
     databricksify_inst_name,
+    uc_model_name,
 )
 
 from ..database import (
@@ -455,7 +456,7 @@ def get_model_cards(
         )
 
     run_id = job_result.model_run_id
-    model_name = job_result.model.name
+    model_name = uc_model_name(job_result.model.name)
 
     try:
         w = WorkspaceClient(

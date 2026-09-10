@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated, Any, cast
 import jsonpickle
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from sqlalchemy import and_, func, update, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
@@ -24,6 +24,7 @@ from ..utilities import (
     get_external_bucket_name,
     SchemaType,
     decode_url_piece,
+    display_model_name,
     LEGACY_TO_NEW_SCHEMA,
     batch_input_validated_blob_paths,
 )
@@ -228,6 +229,11 @@ class ModelInfo(BaseModel):
     archived: bool = False
     archived_at: datetime | None = None
 
+    @field_serializer("name")
+    def _display_name(self, name: str) -> str:
+        # UC always has 4d5; 4.5 is frontend display only.
+        return display_model_name(name)
+
 
 def _model_version_as_str(version: Any) -> str | None:
     """Databricks model versions are ints; RunInfo and job rows store them as str."""
@@ -255,6 +261,11 @@ class RunInfo(BaseModel):
     err_msg: str | None = None
     model_run_id: str | None = None
     model_version: str | None = None
+
+    @field_serializer("m_name")
+    def _display_m_name(self, m_name: str) -> str:
+        # UC always has 4d5; 4.5 is frontend display only.
+        return display_model_name(m_name)
 
 
 class InferenceRunRequest(BaseModel):
@@ -391,12 +402,13 @@ def create_model(
     has_access_to_inst_or_err(inst_id, current_user)
     model_owner_and_higher_or_err(current_user, "model training")
     local_session.set(sql_session)
+    req_name = decode_url_piece(req.name.strip())
     query_result = (
         local_session.get()
         .execute(
             select(ModelTable).where(
                 and_(
-                    ModelTable.name == req.name,
+                    ModelTable.name == req_name,
                     ModelTable.inst_id == str_to_uuid(inst_id),
                 )
             )
@@ -405,7 +417,7 @@ def create_model(
     )
     if len(query_result) == 0:
         model = ModelTable(
-            name=req.name,
+            name=req_name,
             inst_id=str_to_uuid(inst_id),
             created_by=str_to_uuid(current_user.user_id),
             valid=True,
@@ -417,7 +429,7 @@ def create_model(
             .execute(
                 select(ModelTable).where(
                     and_(
-                        ModelTable.name == req.name,
+                        ModelTable.name == req_name,
                         ModelTable.inst_id == str_to_uuid(inst_id),
                     )
                 )
