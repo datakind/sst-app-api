@@ -39,14 +39,26 @@ def decode_url_piece(src: str) -> str:
     return uc_model_name(unquote_plus(src))
 
 
+# Compact display uses ``3Y``; uppercase the unit after decoding ``4d5y`` → ``4.5Y``.
+_DECIMAL_TIME_UNIT = re.compile(r"(\d+\.\d+)([yYmM])")
+
+
 def display_model_name(name: str) -> str:
-    """Frontend-only: show ``4.5Y`` for a UC name that is always stored as ``4d5y``."""
-    return cast(str, decode_uc_model_name(name)).replace("4.5y", "4.5Y")
+    """Frontend-only: decode a UC name and uppercase the decimal time-limit unit."""
+    return _DECIMAL_TIME_UNIT.sub(
+        lambda m: m.group(1) + m.group(2).upper(),
+        cast(str, decode_uc_model_name(name)),
+    )
 
 
 def uc_model_name(name: str) -> str:
     """Encode display decimals for Unity Catalog / Databricks ids (``4.5Y`` → ``4d5y``)."""
-    return cast(str, encode_uc_model_name(name.replace("4.5Y", "4.5y")))
+    return cast(
+        str,
+        encode_uc_model_name(
+            _DECIMAL_TIME_UNIT.sub(lambda m: m.group(1) + m.group(2).lower(), name)
+        ),
+    )
 
 
 def file_name_variants_for_lookup(name: str) -> set[str]:

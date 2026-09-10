@@ -122,6 +122,7 @@ def test_display_model_name_decodes_uc_decimals() -> None:
         display_model_name("graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits")
         == "graduation_in_3y_ft_4.5Y_pt_checkpoint_30_credits"
     )
+    assert display_model_name("graduation_in_2d5y") == "graduation_in_2.5Y"
     assert (
         display_model_name("sample_model_for_school_1") == "sample_model_for_school_1"
     )
