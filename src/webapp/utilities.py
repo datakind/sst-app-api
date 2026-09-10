@@ -33,21 +33,20 @@ def decode_url_piece(src: str) -> str:
     when clients apply form-style encoding to paths). A literal ``+`` in a name
     must be sent as ``%2B``.
 
-    Decimal time limits (``4.5y``) are encoded to ``4d5y`` so DB and Databricks
+    Decimal time limits (``4.5Y``) are encoded to ``4d5y`` so DB and Databricks
     lookups use the Unity Catalog name. UC always has ``4d5``, never ``4.5``.
     """
-    # cast: edvise is untyped under mypy follow_imports=silent
-    return cast(str, encode_uc_model_name(unquote_plus(src)))
+    return uc_model_name(unquote_plus(src))
 
 
 def display_model_name(name: str) -> str:
-    """Frontend-only: show ``4.5y`` for a UC name that is always stored as ``4d5y``."""
-    return cast(str, decode_uc_model_name(name))
+    """Frontend-only: show ``4.5Y`` for a UC name that is always stored as ``4d5y``."""
+    return cast(str, decode_uc_model_name(name)).replace("4.5y", "4.5Y")
 
 
 def uc_model_name(name: str) -> str:
-    """Encode display decimals for Unity Catalog / Databricks ids (``4.5y`` → ``4d5y``)."""
-    return cast(str, encode_uc_model_name(name))
+    """Encode display decimals for Unity Catalog / Databricks ids (``4.5Y`` → ``4d5y``)."""
+    return cast(str, encode_uc_model_name(name.replace("4.5Y", "4.5y")))
 
 
 def file_name_variants_for_lookup(name: str) -> set[str]:

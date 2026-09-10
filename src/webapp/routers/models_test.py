@@ -1105,9 +1105,9 @@ def test_trigger_es_inference_run_genai_unknown_only_schemas(
 def test_uc_decimal_model_name_is_displayed_as_dot(
     client: TestClient, session: sqlalchemy.orm.Session
 ) -> None:
-    """UC stores 4d5; list/detail responses should show 4.5 and accept either spelling."""
+    """UC stores 4d5; list/detail responses should show 4.5Y and accept either spelling."""
     uc_name = "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
-    display_name = "graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits"
+    display_name = "graduation_in_3y_ft_4.5Y_pt_checkpoint_30_credits"
     session.add(
         ModelTable(
             id=uuid.uuid4(),
@@ -1135,8 +1135,8 @@ def test_uc_decimal_model_name_is_displayed_as_dot(
 def test_create_model_encodes_decimal_dots_for_storage(
     client: TestClient, session: sqlalchemy.orm.Session
 ) -> None:
-    """New models with 4.5 are stored as 4d5 but returned as 4.5."""
-    display_name = "graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits"
+    """New models with 4.5 are stored as 4d5 but returned as 4.5Y."""
+    display_name = "graduation_in_3y_ft_4.5Y_pt_checkpoint_30_credits"
     uc_name = "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
     response = client.post(
         "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/models/",
