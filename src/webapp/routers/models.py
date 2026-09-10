@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated, Any, cast
 import jsonpickle
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_serializer
 from sqlalchemy import and_, func, update, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
@@ -229,10 +229,9 @@ class ModelInfo(BaseModel):
     archived: bool = False
     archived_at: datetime | None = None
 
-    @field_validator("name")
-    @classmethod
-    def _display_name(cls, name: str) -> str:
-        # Webapp display only. UC / DB lookups stay 4d5y.
+    @field_serializer("name")
+    def _display_name(self, name: str) -> str:
+        # UC always has 4d5; 4.5 is frontend display only.
         return display_model_name(name)
 
 
@@ -263,10 +262,9 @@ class RunInfo(BaseModel):
     model_run_id: str | None = None
     model_version: str | None = None
 
-    @field_validator("m_name")
-    @classmethod
-    def _display_m_name(cls, m_name: str) -> str:
-        # Webapp display only. UC / DB lookups stay 4d5y.
+    @field_serializer("m_name")
+    def _display_m_name(self, m_name: str) -> str:
+        # UC always has 4d5; 4.5 is frontend display only.
         return display_model_name(m_name)
 
 
@@ -652,7 +650,7 @@ def read_inst_model_outputs(
             {
                 # JobTable doesn't have inst_id, so we retrieve that from the model query.
                 "inst_id": uuid_to_str(query_result[0][0].inst_id),
-                "m_name": display_model_name(query_result[0][0].name),
+                "m_name": query_result[0][0].name,
                 "run_id": elem.id,
                 "model_run_id": elem.model_run_id,
                 "model_version": elem.model_version,
@@ -716,7 +714,7 @@ def read_inst_model_output(
             # TODO: if the output_filename is empty make a query to Databricks
             return {
                 "inst_id": uuid_to_str(query_result[0][0].inst_id),
-                "m_name": display_model_name(query_result[0][0].name),
+                "m_name": query_result[0][0].name,
                 "run_id": elem.id,
                 "created_by": uuid_to_str(elem.created_by),
                 "triggered_at": elem.triggered_at,
@@ -964,7 +962,7 @@ def trigger_inference_run(
         local_session.get().add(job)
         return {
             "inst_id": inst_id,
-            "m_name": display_model_name(model_name),
+            "m_name": model_name,
             "run_id": res.job_run_id,
             "created_by": current_user.user_id,
             "triggered_at": triggered_timestamp,
@@ -1043,7 +1041,7 @@ def trigger_inference_run(
     local_session.get().add(job)
     return {
         "inst_id": inst_id,
-        "m_name": display_model_name(model_name),
+        "m_name": model_name,
         "run_id": res.job_run_id,
         "created_by": current_user.user_id,
         "triggered_at": triggered_timestamp,

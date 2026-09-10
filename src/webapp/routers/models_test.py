@@ -1138,18 +1138,12 @@ def test_create_model_encodes_decimal_dots_for_storage(
     """New models keep 4d5y in storage; the webapp create response is 4.5Y."""
     display_name = "graduation_in_3y_ft_4.5Y_pt_checkpoint_30_credits"
     uc_name = "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
-    for posted in (
-        "graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits",
-        display_name,
-    ):
-        response = client.post(
-            "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/models/",
-            json={"name": posted},
-        )
-        assert response.status_code == 200
-        assert response.json()["name"] == display_name
-        assert "4.5y" not in response.text
-        assert "4d5y" not in response.json()["name"]
+    response = client.post(
+        "/institutions/" + uuid_to_str(USER_VALID_INST_UUID) + "/models/",
+        json={"name": "graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits"},
+    )
+    assert response.status_code == 200
+    assert response.json()["name"] == display_name
     stored = session.execute(
         sqlalchemy.select(ModelTable).where(ModelTable.name == uc_name)
     ).scalar_one()

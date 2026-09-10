@@ -31,7 +31,6 @@ from ..utilities import (
     DataSource,
     get_external_bucket_name,
     decode_url_piece,
-    display_model_name,
     expand_batch_file_name_lookups,
     file_name_variants_for_lookup,
     SchemaType,
@@ -2439,7 +2438,7 @@ def add_custom_school_job(
 
         return {
             "inst_id": inst_id,
-            "m_name": display_model_name(model_name),
+            "m_name": model_name,
             "run_id": job_run_id,
             "output_filename": f"{job_run_id}/inference_output.csv",
             "model_version": model_version,
