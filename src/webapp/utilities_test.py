@@ -109,14 +109,18 @@ def test_decode_url_piece_treats_plus_as_space() -> None:
         decode_url_piece("graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits")
         == "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
     )
+    assert (
+        decode_url_piece("graduation_in_3y_ft_4.5Y_pt_checkpoint_30_credits")
+        == "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
+    )
     assert decode_url_piece("1.2.csv") == "1.2.csv"
 
 
 def test_display_model_name_decodes_uc_decimals() -> None:
-    """UC stores 4d5y; the frontend should see 4.5y."""
+    """UC stores 4d5y; the frontend should see 4.5Y to match compact 3Y."""
     assert (
         display_model_name("graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits")
-        == "graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits"
+        == "graduation_in_3y_ft_4.5Y_pt_checkpoint_30_credits"
     )
     assert (
         display_model_name("sample_model_for_school_1") == "sample_model_for_school_1"
@@ -127,6 +131,10 @@ def test_uc_model_name_encodes_decimal_time_limits() -> None:
     """Unity Catalog rejects `.`; encode 4.5y as 4d5y at the Databricks boundary."""
     assert (
         uc_model_name("graduation_in_3y_ft_4.5y_pt_checkpoint_30_credits")
+        == "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
+    )
+    assert (
+        uc_model_name("graduation_in_3y_ft_4.5Y_pt_checkpoint_30_credits")
         == "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
     )
     assert (
