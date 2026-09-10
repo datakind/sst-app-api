@@ -1135,7 +1135,7 @@ def test_uc_decimal_model_name_is_displayed_as_dot(
 def test_create_model_encodes_decimal_dots_for_storage(
     client: TestClient, session: sqlalchemy.orm.Session
 ) -> None:
-    """New models keep 4d5y in storage; the webapp create response is 4.5Y."""
+    """New models with 4.5 are stored as 4d5 but returned as 4.5Y."""
     display_name = "graduation_in_3y_ft_4.5Y_pt_checkpoint_30_credits"
     uc_name = "graduation_in_3y_ft_4d5y_pt_checkpoint_30_credits"
     response = client.post(
